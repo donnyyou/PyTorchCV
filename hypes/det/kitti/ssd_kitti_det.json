@@ -1,0 +1,138 @@
+{
+    "dataset": "kitti",
+    "task": "det",
+    "method": "single_shot_detector",
+    "data": {
+      "train_batch_size": 6,
+      "val_batch_size": 6,
+      "input_size": [768, 256],
+      "num_classes": 2,
+      "data_dir": "/data/DataSet/KITTI",
+      "workers": 8
+    },
+    "train_trans": {
+      "pad_ratio": 0.0,
+      "brightness_ratio": 0.0,
+      "blur_ratio": 0.0,
+      "hsv_ratio": 0.0,
+      "flip_ratio": 0.5,
+      "resize_ratio": 0.0,
+      "rotate_ratio": 0.0,
+      "crop_ratio": 0.0,
+      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
+                    "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "resize"]
+    },
+    "val_trans": {
+      "pad_ratio":0.0,
+      "brightness_ratio": 0.0,
+      "blur_ratio": 0.0,
+      "hsv_ratio": 0.0,
+      "flip_ratio": 0.5,
+      "resize_ratio": 0.0,
+      "rotate_ratio": 0.0,
+      "crop_ratio": 0.0,
+      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
+                    "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "resize"]
+    },
+    "trans_params": {
+      "random_pad":{
+        "pad_border": 2
+      },
+      "random_brightness": {
+        "shift_value": 30
+      },
+      "random_gauss_blur": {
+        "max_blur": 4
+      },
+      "random_hsv": {
+        "h_range": [1.0, 1.0],
+        "s_range": [0.7, 1.3],
+        "v_range": [0.7, 1.3]
+      },
+      "random_hflip": {
+        "swap_pair": []
+      },
+      "random_resize": {
+        "scale_min": 0.75,
+        "scale_max": 1.25
+      },
+      "random_rotate": {
+        "rotate_degree": 40
+      },
+      "random_crop":{
+        "crop_size": [1024, 512],
+        "method": "grid",
+        "grid":[3, 2]
+      },
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    },
+    "details": {
+      "anchor_method": "ssd",
+      "iou_threshold": 0.5,
+      "num_anchor_list": [6, 6, 6, 6, 6],
+      "num_feature_list": [256, 256, 256, 256, 256],
+      "stride_list": [8, 16, 32, 64, 128],
+      "default_ratio_list": [0.066, 0.2, 0.37, 0.54, 0.71, 0.88],
+      "aspect_ratio_list": [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]],
+
+      "color_list": [[255, 170, 30]],
+      "name_id_dict": {
+        "car":1
+      },
+      "name_seq": ["car"]
+    },
+    "checkpoints": {
+      "checkpoints_name": "ssd_kitti_det",
+      "checkpoints_dir": "checkpoints/det/kitti",
+      "save_iters": 10000
+    },
+
+    "network":{
+      "backbone": "dilated_mobilenetv2",
+      "width_mult": 1.0,
+      "model_name": "dense_aspp",
+      "init": "kaiming_normal"
+    },
+    "logging": {
+      "logfile_level": "info",
+      "stdout_level": "info",
+      "log_file": "./log/det/ssd_kitti_det.log",
+      "log_format": "%(asctime)s %(levelname)-7s %(message)s",
+      "rewrite": true
+    },
+    "lr": {
+      "base_lr": 0.00005,
+      "lr_policy": "step",
+      "step": {
+        "gamma": 0.1,
+        "step_size": 400
+      }
+    },
+    "solver": {
+      "display_iter": 100,
+      "test_interval": 1000,
+      "max_epoch": 1000
+    },
+    "optim": {
+      "optim_method": "adam",
+      "adam": {
+        "betas": [0.9, 0.999],
+        "eps": 1e-08,
+        "weight_decay": 0.0001
+      },
+      "sgd":{
+        "weight_decay": 0.0001,
+        "momentum": 0.9
+      }
+    },
+    "nms": {
+      "mode": "union",
+      "overlap_threshold": 0.45
+    },
+    "vis": {
+      "conf_threshold": 0.0
+    }
+}

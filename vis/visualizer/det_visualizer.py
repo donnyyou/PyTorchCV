@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+#-*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
+# Visualize the tensor of the detection.
+
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import os
+import numpy as np
+import cv2
+import torch
+
+from datasets.tools.transforms import DeNormalize
+from utils.tools.logger import Logger as log
+
+
+DET_DIR = 'vis/results/det'
+
+
+class DetVisualizer(object):
+
+    def __init__(self, configer):
+        self.configer = configer
+
+    def vis_bboxes(self, image_in, bboxes_list,
+                   name='default', sub_dir='bbox'):
+        """
+          Show the diff bbox of individuals.
+        """
+        base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
+
+        image = image_in.copy()
+        if not os.path.exists(base_dir):
+            log.error('Dir:{} not exists!'.format(base_dir))
+            os.makedirs(base_dir)
+
+        img_path = os.path.join(base_dir, '{}.jpg'.format(name))
+
+        for bbox in bboxes_list:
+            image = cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), -1)
+
+        image = cv2.resize(image, tuple(self.configer.get('data', 'input_size')))
+        cv2.imwrite(img_path, image)
+
+    def vis_ssd_encode(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
+        base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
+
+        if not os.path.exists(base_dir):
+            log.error('Dir:{} not exists!'.format(base_dir))
+            os.makedirs(base_dir)
+
+        if not isinstance(ori_img_in, np.ndarray):
+            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
+                                  std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+            ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
+            ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+        else:
+            ori_img = ori_img_in.copy()
+
+        assert labels.size(0) == default_bboxes.size(0)
+
+        default_bboxes = torch.cat([default_bboxes[:, :2] - default_bboxes[:, 2:] / 2,
+                                    default_bboxes[:, :2] + default_bboxes[:, 2:] / 2], 1)
+        height, width, _ = ori_img.shape
+        for i in range(labels.size(0)):
+            if labels[i] == 0:
+                continue
+
+            class_name = self.configer.get('details', 'name_seq')[labels[i] - 1]
+            color_num = len(self.configer.get('details', 'color_list'))
+
+            cv2.rectangle(ori_img,
+                          (int(default_bboxes[i][0] * width), int(default_bboxes[i][1] * width)),
+                          (int(default_bboxes[i][2] * height), int(default_bboxes[i][3] * height)),
+                          color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=3)
+
+            cv2.putText(ori_img, class_name,
+                        (int(default_bboxes[i][0] * width) + 5, int(default_bboxes[i][3] * height) - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
+                        color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=2)
+
+        ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
+        img_path = os.path.join(base_dir, '{}.jpg'.format(name))
+
+        cv2.imwrite(img_path, ori_img)

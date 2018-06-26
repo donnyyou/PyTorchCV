@@ -1,0 +1,12 @@
+.reviewboardrc
+*.pyc
+*.pth
+*.so
+/log
+/checkpoints
+/test/results
+/.idea
+/val/results
+/vis/results
+.ipynb_checkpoints
+/models/backbones/pretrained
