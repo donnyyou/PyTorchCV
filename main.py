@@ -68,13 +68,15 @@ if __name__ == "__main__":
     parser.add_argument('--resume_level', default='full', type=str,
                         dest='network:resume_level', help='The resume level of networks.')
 
-    # ***********  Params for lr policy.  **********
+    # ***********  Params for solver.  **********
+    parser.add_argument('--optim_method', default='sgd', type=str,
+                        dest='optim:optim_method', help='The optim method that used.')
     parser.add_argument('--base_lr', default=None, type=float,
                         dest='lr:base_lr', help='The learning rate.')
     parser.add_argument('--lr_policy', default='step', type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
 
-    # ***********  Params for solver.  **********
+    # ***********  Params for display.  **********
     parser.add_argument('--max_epoch', default=None, type=int,
                         dest='solver:max_epoch', help='The max epoch of training.')
     parser.add_argument('--display_iter', default=None, type=int,
