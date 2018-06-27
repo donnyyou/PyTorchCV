@@ -148,7 +148,7 @@
       "routing_iter": 3
     },
     "vis": {
-      "num_threshold": 3,
+      "num_threshold":4,
       "stick_width": 4,
       "circle_radius": 4,
       "part_threshold": 0.05,

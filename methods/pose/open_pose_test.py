@@ -310,7 +310,12 @@ class OpenPoseTest(object):
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)
 
+            img_count = 0
             for filename in FileHelper.list_dir(test_dir):
+                img_count += 1
+                if img_count > 500:
+                    break
+
                 image_path = os.path.join(test_dir, filename)
                 json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
