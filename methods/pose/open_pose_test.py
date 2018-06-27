@@ -73,7 +73,10 @@ class OpenPoseTest(object):
         json_dict['image_width'] = width
         object_list = list()
         for n in range(len(subset)):
-            if subset[n][-1] <= self.configer.get('vis', 'num_threshold'):
+            if subset[n][-1] < self.configer.get('vis', 'num_threshold'):
+                continue
+
+            if subset[n][-2] / subset[n][-1] < self.configer.get('vis', 'avg_threshold'):
                 continue
 
             object_dict = dict()
@@ -159,6 +162,21 @@ class OpenPoseTest(object):
 
             peaks = zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0])  # note reverse
             peaks = list(peaks)
+
+            del_flag = [0 for i in range(len(peaks))]
+            for i in range(len(peaks)):
+                if del_flag[i] == 0:
+                    for j in range(i+1, len(peaks)):
+                        if max(abs(peaks[i][0] - peaks[j][0]), abs(peaks[i][1] - peaks[j][1])) <= 6:
+                            del_flag[j] = 1
+
+            new_peaks = list()
+            for i in range(len(peaks)):
+                if del_flag[i] == 0:
+                    new_peaks.append(peaks[i])
+
+            peaks = new_peaks
+
             peaks_with_score = [x + (map_ori[x[1], x[0]],) for x in peaks]
             ids = range(peak_counter, peak_counter + len(peaks))
             peaks_with_score_and_id = [peaks_with_score[i] + (ids[i],) for i in range(len(ids))]

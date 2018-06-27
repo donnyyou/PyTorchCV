@@ -148,11 +148,12 @@
       "routing_iter": 3
     },
     "vis": {
-      "num_threshold":4,
+      "num_threshold":3,
+      "avg_threshold": 0.10,
       "stick_width": 4,
       "circle_radius": 4,
-      "part_threshold": 0.05,
-      "limb_threshold": 0.05,
+      "part_threshold": 0.03,
+      "limb_threshold": 0.03,
       "mid_point_num": 10,
       "limb_pos_ratio": 0.8
     }

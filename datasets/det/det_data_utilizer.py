@@ -56,7 +56,17 @@ class DetDataUtilizer(object):
         iou = inter / (area1 + area2 - inter)
         return iou
 
-    def ssd_encode(self, bboxes, labels):
+    def ssd_batch_encode(self, bboxes, labels):
+        target_bboxes = list()
+        target_labels = list()
+        for i in range(len(bboxes)):
+            loc, conf = self.ssd_item_encode(bboxes[i], labels[i])
+            target_bboxes.append(loc)
+            target_labels.append(conf)
+
+        return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
+
+    def ssd_item_encode(self, bboxes, labels):
         """Transform target bounding boxes and class labels to SSD boxes and classes.
 
         Match each object box to all the default boxes, pick the ones with the Jaccard-Index > threshold:

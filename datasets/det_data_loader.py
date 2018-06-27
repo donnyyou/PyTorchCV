@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import torch
 from torch.utils import data
 
 import datasets.tools.aug_transforms as aug_trans
@@ -39,7 +40,7 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
 
             return trainloader
 
@@ -50,7 +51,7 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
 
             return trainloader
 
@@ -66,7 +67,7 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
 
             return valloader
 
@@ -77,10 +78,32 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
 
             return valloader
 
         else:
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
+
+    @staticmethod
+    def _detection_collate(batch):
+        """Custom collate fn for dealing with batches of images that have a different
+            number of associated object annotations (bounding boxes).
+            Arguments:
+                batch: (tuple) A tuple of tensor images and lists of annotations
+            Return:
+                A tuple containing:
+                    1) (tensor) batch of images stacked on their 0 dim
+                    2) (list of tensors) annotations for a given image are stacked on
+                                         0 dim
+            """
+        imgs = []
+        bboxes = []
+        labels = []
+        for sample in batch:
+            imgs.append(sample[0])
+            bboxes.append(sample[1])
+            labels.append(sample[2])
+
+        return torch.stack(imgs, 0), bboxes, labels

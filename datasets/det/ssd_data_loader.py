@@ -39,12 +39,11 @@ class SSDDataLoader(data.Dataset):
             img, bboxes = self.aug_transform(img, bboxes=bboxes)
 
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
-        bboxes_target, labels_target = self.det_data_utilizer.ssd_encode(bboxes, labels)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, bboxes_target, labels_target
+        return img, bboxes, labels
 
     def __len__(self):
 
