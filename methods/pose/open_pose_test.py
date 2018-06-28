@@ -193,7 +193,6 @@ class OpenPoseTest(object):
 
         for k in range(len(self.configer.get('details', 'limb_seq'))):
             score_mid = paf_avg[:, :, [k*2, k*2+1]]
-            # self.pose_visualizer.vis_paf(score_mid, img_raw, name='pa{}'.format(k))
             candA = all_peaks[self.configer.get('details', 'limb_seq')[k][0] - 1]
             candB = all_peaks[self.configer.get('details', 'limb_seq')[k][1] - 1]
             nA = len(candA)
@@ -331,7 +330,7 @@ class OpenPoseTest(object):
             img_count = 0
             for filename in FileHelper.list_dir(test_dir):
                 img_count += 1
-                if img_count > 500:
+                if img_count > 1200:
                     break
 
                 image_path = os.path.join(test_dir, filename)

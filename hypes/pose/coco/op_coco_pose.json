@@ -65,7 +65,8 @@
       "random_crop":{
         "crop_size": [368, 368],
         "method": "focus",
-        "grid":[3, 2]
+        "grid":[3, 2],
+        "center_jitter": 20
       },
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]

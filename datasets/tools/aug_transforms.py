@@ -467,10 +467,11 @@ class RandomCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, task_type='pose'):
+    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, center_jitter=None, task_type='pose'):
         self.ratio = crop_ratio
         self.method = method
         self.grid = grid
+        self.center_jitter = center_jitter
         self.task_type = task_type
 
         if isinstance(crop_size, float):
@@ -484,12 +485,14 @@ class RandomCrop(object):
         max_center = [img_size[0] / 2, img_size[1] / 2]
 
         if self.method == 'center':
-            return max_center
+            return max_center, -1
 
         elif bboxes is None or len(bboxes) == 0 or self.method == 'random':
-            x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
-            y = random.randint(self.size[1] // 2, img_size[1] - self.size[1] // 2)
-            return [x, y]
+            x = random.randint(min(self.size[0] // 2, img_size[0] // 2 - 1),
+                               max(img_size[0] - self.size[0] // 2, img_size[0] // 2))
+            y = random.randint(min(self.size[1] // 2, img_size[1] // 2 - 1),
+                               max(img_size[1] - self.size[1] // 2, img_size[1] // 2))
+            return [x, y], -1
 
         elif self.method == 'focus':
             max_index = 0
@@ -500,9 +503,11 @@ class RandomCrop(object):
                     max_index = i
                     max_center = [(bboxes[i][0] + bboxes[i][2]) / 2, (bboxes[i][1] + bboxes[i][3]) / 2]
 
-            jitter = random.randint(-20, 20)
-            max_center[0] += jitter
-            max_center[1] += jitter
+            if self.center_jitter is not None:
+                jitter = random.randint(-self.center_jitter, self.center_jitter)
+                max_center[0] += jitter
+                jitter = random.randint(-self.center_jitter, self.center_jitter)
+                max_center[1] += jitter
 
             return max_center, max_index
 
@@ -511,7 +516,7 @@ class RandomCrop(object):
             grid_y = random.randint(0, self.grid[1] - 1)
             x = self.size[0] // 2 + grid_x * ((img_size[0] - self.size[0]) // (self.grid[0] - 1))
             y = self.size[1] // 2 + grid_y * ((img_size[1] - self.size[1]) // (self.grid[1] - 1))
-            return [x, y]
+            return [x, y], -1
 
         else:
             Log.error('Crop method {} is invalid.'.format(self.method))
@@ -650,6 +655,7 @@ class AugCompose(object):
                     crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                     method=self.configer.get('trans_params', 'random_crop')['method'],
                     grid=self.configer.get('trans_params', 'random_crop')['grid'],
+                    center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                     crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
                     task_type=self.configer.get('task')
                 ),
@@ -693,6 +699,7 @@ class AugCompose(object):
                     crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                     method=self.configer.get('trans_params', 'random_crop')['method'],
                     grid=self.configer.get('trans_params', 'random_crop')['grid'],
+                    center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                     crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
                     task_type=self.configer.get('task')
                 ),
