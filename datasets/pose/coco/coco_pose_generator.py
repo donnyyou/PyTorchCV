@@ -108,7 +108,7 @@ class CocoPoseGenerator(object):
                 persons.append(dic)
                 person_centers.append(np.append(person_center, max(img_anns[p]['bbox'][2], img_anns[p]['bbox'][3])))
 
-            if len(persons) > 0:
+            if len(persons) >= 0:
                 persons = self.__coco_to_ours(persons)
                 json_dict['objects'] = persons
 
