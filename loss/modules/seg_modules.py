@@ -20,14 +20,41 @@ class CrossEntropyLoss(nn.Module):
         weight = None
         if not self.configer.is_empty('cross_entropy_loss', 'weight'):
             weight = self.configer.get('cross_entropy_loss', 'weight')
+            weight = torch.FloatTensor(weight).cuda()
 
-        size_average = self.configer.get('cross_entropy_loss', 'size_average')
-        reduce = self.configer.get("cross_entropy_loss", "reduce")
+        size_average = True
+        if not self.configer.is_empty('cross_entropy_loss', 'size_average'):
+            size_average = self.configer.get('cross_entropy_loss', 'size_average')
 
-        self.nll_loss = nn.NLLLoss(weight=weight, size_average=size_average, reduce=reduce)
+        reduce = True
+        if not self.configer.is_empty('cross_entropy_loss', 'reduce'):
+            reduce = self.configer.get("cross_entropy_loss", "reduce")
 
-    def forward(self, inputs, targets, maskmap=None):
-        return self.nll_loss(F.log_softmax(inputs, dim=1), targets)
+        ignore_index = -100
+        if not self.configer.is_empty('cross_entropy_loss', 'ignore_index'):
+            ignore_index = self.configer.get('cross_entropy_loss', 'ignore_index')
+
+        self.nll_loss = nn.NLLLoss(weight=weight,
+                                   size_average=size_average,
+                                   ignore_index=ignore_index,
+                                   reduce=reduce)
+
+    def forward(self, inputs, targets, weights=None):
+        loss = 0.0
+        if isinstance(inputs, list):
+            if weights is None:
+                weights = [1.0] * len(inputs)
+
+            for i in range(len(inputs)):
+                if isinstance(targets, list):
+                    loss += weights[i] * self.nll_loss(F.log_softmax(inputs[i], dim=1), targets[i])
+                else:
+                    loss += weights[i] * self.nll_loss(F.log_softmax(inputs[i], dim=1), targets)
+
+        else:
+            loss = self.nll_loss(F.log_softmax(inputs, dim=1), targets)
+
+        return loss
 
 
 class FocalLoss(nn.Module):
@@ -46,6 +73,46 @@ class FocalLoss(nn.Module):
         weight_nll = alpha * focus_p * nll_feature
         loss = weight_nll.mean()
         return loss
+
+
+class SegEncodeLoss(nn.Module):
+    def __init__(self, configer):
+        super(SegEncodeLoss, self).__init__()
+        self.configer = configer
+        weight = None
+        if not self.configer.is_empty('seg_encode_loss', 'weight'):
+            weight = self.configer.get('seg_encode_loss', 'weight')
+            weight = torch.FloatTensor(weight).cuda()
+
+        size_average = True
+        if not self.configer.is_empty('seg_encode_loss', 'size_average'):
+            size_average = self.configer.get('seg_encode_loss', 'size_average')
+
+        reduce = True
+        if not self.configer.is_empty('seg_encode_loss', 'reduce'):
+            reduce = self.configer.get("seg_encode_loss", "reduce")
+
+        self.bce_loss = nn.BCELoss(weight, size_average, reduce=reduce)
+
+    def forward(self, preds, targets):
+        if len(targets.size()) == 2:
+            return self.bce_loss(F.sigmoid(preds), targets)
+
+        se_target = self._get_batch_label_vector(targets, self.configer.get('data', 'num_classes')).type_as(preds)
+        return self.bceloss(F.sigmoid(preds), se_target)
+
+    @staticmethod
+    def _get_batch_label_vector(target, num_classes):
+        # target is a 3D Variable BxHxW, output is 2D BxnClass
+        batch = target.size(0)
+        tvect = torch.zeros(batch, num_classes)
+        for i in range(batch):
+            hist = torch.histc(target[i].cpu().data.float(),
+                               bins=num_classes, min=0, max=num_classes - 1)
+            vect = hist>0
+            tvect[i] = vect
+
+        return tvect
 
 
 class Ege_loss(nn.Module):
