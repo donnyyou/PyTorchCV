@@ -20,7 +20,10 @@ class CrossEntropyLoss(nn.Module):
         if not self.configer.is_empty('cross_entropy_loss', 'weight'):
             weight = self.configer.get('cross_entropy_loss', 'weight')
 
-        size_average = self.configer.get('cross_entropy_loss', 'size_average')
+        size_average = True
+        if not self.configer.is_empty('cross_entropy_loss', 'size_average'):
+            size_average = self.configer.get('cross_entropy_loss', 'size_average')
+
         self.cross_entropy_loss = nn.CrossEntropyLoss(weight=weight, size_average=size_average)
 
     def forward(self, inputs, targets):
