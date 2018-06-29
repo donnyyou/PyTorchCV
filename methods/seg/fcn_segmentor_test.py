@@ -76,7 +76,7 @@ class FCNSegmentorTest(object):
         return label_dst
 
     def test(self):
-        base_dir = os.path.join(self.configer.get('output_dir'),
+        base_dir = os.path.join(self.configer.get('project_dir'),
                                 'val/results/seg', self.configer.get('dataset'))
 
         test_img = self.configer.get('test_img')

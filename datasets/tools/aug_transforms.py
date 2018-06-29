@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 
-from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
 
@@ -307,7 +306,7 @@ class RandomResize(object):
     @staticmethod
     def get_scale(output_size, bboxes):
         scale = 1.0
-        if bboxes is not None and len(bboxes) > 0:
+        if output_size is not None and bboxes is not None and len(bboxes) > 0:
             bboxes = np.array(bboxes)
             border = bboxes[:, 2:] - bboxes[:, 0:2]
             scale = 0.6 / max(max(border[:, 0]) / output_size[0], max(border[:, 1]) / output_size[1])
