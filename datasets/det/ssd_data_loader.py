@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# Author: Zhixiang Duan(zhixiangduan@deepmotion.ai)
-# KITTI dataset loader
+# Author: Donny You(youansheng@gmail.com)
+# Single Shot Detector data loader
 
 
 from __future__ import absolute_import

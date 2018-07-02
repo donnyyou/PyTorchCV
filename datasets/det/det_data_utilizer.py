@@ -10,14 +10,11 @@ from __future__ import print_function
 
 import torch
 
-from utils.layers.det.priorbox_layer import SSDPriorBoxLayer
-
 
 class DetDataUtilizer(object):
 
     def __init__(self, configer):
         self.configer = configer
-        self.default_boxes = SSDPriorBoxLayer(configer)()
 
     def _iou(self, box1, box2):
         """Compute the intersection over union of two set of boxes, each box is [x1,y1,x2,y2].
@@ -56,17 +53,26 @@ class DetDataUtilizer(object):
         iou = inter / (area1 + area2 - inter)
         return iou
 
-    def ssd_batch_encode(self, bboxes, labels):
+    def rpn_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
+        pass
+
+    def rpn_item_encode(self, gt_bboxes, gt_labels, default_boxes):
+        pass
+
+    def roi_batch_encode(self, gt_bboxes, gt_labels, rois):
+        pass
+
+    def ssd_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
         target_bboxes = list()
         target_labels = list()
-        for i in range(len(bboxes)):
-            loc, conf = self.ssd_item_encode(bboxes[i], labels[i])
+        for i in range(len(gt_bboxes)):
+            loc, conf = self.ssd_item_encode(gt_bboxes[i], gt_labels[i], default_boxes)
             target_bboxes.append(loc)
             target_labels.append(conf)
 
         return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
 
-    def ssd_item_encode(self, bboxes, labels):
+    def ssd_item_encode(self, gt_bboxes, gt_labels, default_boxes):
         """Transform target bounding boxes and class labels to SSD boxes and classes.
 
         Match each object box to all the default boxes, pick the ones with the Jaccard-Index > threshold:
@@ -81,28 +87,28 @@ class DetDataUtilizer(object):
           classes(tensor): class labels, sized [8732,]
 
         """
-        if bboxes is None or len(bboxes) == 0:
-            loc = torch.zeros_like(self.default_boxes.size)
-            conf = torch.zeros((self.default_boxes.size(0), )).long()
+        if gt_bboxes is None or len(gt_bboxes) == 0:
+            loc = torch.zeros_like(default_boxes.size)
+            conf = torch.zeros((default_boxes.size(0), )).long()
 
             return loc, conf
 
-        iou = self._iou(bboxes, torch.cat([self.default_boxes[:, :2] - self.default_boxes[:, 2:]/2,
-                                           self.default_boxes[:, :2] + self.default_boxes[:, 2:]/2], 1))  # [#obj,8732]
+        iou = self._iou(gt_bboxes, torch.cat([default_boxes[:, :2] - default_boxes[:, 2:]/2,
+                                              default_boxes[:, :2] + default_boxes[:, 2:]/2], 1))  # [#obj,8732]
 
         prior_box_iou, max_idx = iou.max(0)  # [1,8732]
         max_idx.squeeze_(0)  # [8732,]
         prior_box_iou.squeeze_(0)  # [8732,]
 
-        boxes = bboxes[max_idx]  # [8732,4]
+        boxes = gt_bboxes[max_idx]  # [8732,4]
         variances = [0.1, 0.2]
-        cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - self.default_boxes[:, :2]  # [8732,2]
-        cxcy /= variances[0] * self.default_boxes[:, 2:]
-        wh = (boxes[:, 2:] - boxes[:, :2]) / self.default_boxes[:, 2:]  # [8732,2]
+        cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
+        cxcy /= variances[0] * default_boxes[:, 2:]
+        wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]  # [8732,2]
         wh = torch.log(wh) / variances[1]
         loc = torch.cat([cxcy, wh], 1)  # [8732,4]
 
-        conf = 1 + labels[max_idx]  # [8732,], background class = 0
+        conf = 1 + gt_labels[max_idx]  # [8732,], background class = 0
 
         if self.configer.get('details', 'anchor_method') == 'retina':
             conf[prior_box_iou < self.configer.get('details', 'iou_threshold')] = -1
@@ -114,7 +120,7 @@ class DetDataUtilizer(object):
         # Then if the IOU is lower than the threshold, the class label is 0(background).
         class_iou, prior_box_idx = iou.max(1, keepdim=False)
         conf_class_idx = prior_box_idx.cpu().numpy()
-        conf[conf_class_idx] = labels + 1
+        conf[conf_class_idx] = gt_labels + 1
 
         return loc, conf
 
