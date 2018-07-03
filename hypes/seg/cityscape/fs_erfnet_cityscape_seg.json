@@ -3,12 +3,11 @@
     "task": "seg",
     "method": "fcn_segmentor",
     "data": {
-      "train_batch_size": 8,
-      "val_batch_size": 8,
+      "train_batch_size": 1,
+      "val_batch_size": 1,
       "input_size": [1024, 512],
-      "rotate_degree": 0,
       "num_classes": 19,
-      "data_dir": "/dev/shm/DataSet/cityscapes",
+      "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
     },
     "train_trans": {
@@ -19,9 +18,9 @@
       "flip_ratio": 0.5,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
-                    "random_hflip", "random_resize", "random_rotate",
+      "crop_ratio": 1.0,
+      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
+                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "resize"]
     },
     "val_trans": {
@@ -32,9 +31,9 @@
       "flip_ratio": 0.5,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
-                    "random_hflip", "random_resize", "random_rotate",
+      "crop_ratio": 1.0,
+      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
+                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "resize"]
     },
     "trans_params": {
@@ -78,21 +77,21 @@
                      [0, 80, 100], [0, 0, 230], [119, 11, 32]]
     },
     "checkpoints": {
-      "checkpoints_name": "deeplabv3plus",
-      "checkpoints_dir": "./checkpoints/seg/cityscape",
-      "save_iters": 2000
+      "checkpoints_name": "fs_erfnet_seg",
+      "checkpoints_dir": "checkpoints/seg/cityscape",
+      "save_iters": 3000
     },
+
     "network":{
-      "model_name": "deeplabv3_plus",
+      "model_name": "erf_net",
       "stride": 1,
       "out_channels": 20,
-      "pretrained": true,
       "init": "kaiming_normal"
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/seg/deeplabv3_plus.log",
+      "log_file": "./log/seg/fs_erfnet_seg.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
@@ -101,7 +100,7 @@
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
-        "step_size": 400
+        "step_size": 1
       }
     },
     "solver": {
@@ -132,6 +131,5 @@
                      10.287888526917, 10.289801597595, 10.405355453491, 10.138095855713, 0.0],
       "size_average": true,
       "reduce": true
-    },
-    "output_dir": "/dev/shm/DataSet/output"
+    }
 }
