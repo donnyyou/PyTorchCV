@@ -1,11 +1,11 @@
 # SynBN_version of DenseAspp
+import re
+
 import torch
 from torch import nn
-
 from torchvision.models import DenseNet
-import re
-from encoding.nn import BatchNorm2d
 
+from extensions.layers.encoding import BatchNorm2d
 from models.backbones.backbone_selector import BackboneSelector
 
 
