@@ -131,6 +131,5 @@
                      10.287888526917, 10.289801597595, 10.405355453491, 10.138095855713, 0.0],
       "size_average": true,
       "reduce": true
-    },
-    "output_dir": "/dev/shm/DataSet/output"
+    }
 }
