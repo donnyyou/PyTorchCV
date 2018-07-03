@@ -13,13 +13,13 @@ import collections
 import threading
 
 import torch
-from encoding.parallel import allreduce
 from torch.nn.functional import batch_norm
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
 
+from extensions.layers.encoding.parallel import allreduce
 from extensions.layers.encoding.functions import *
-from .comm import SyncMaster
+from extensions.layers.encoding.comm import SyncMaster
 
 __all__ = ['BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d', 'Module', 'Sequential', 'Conv1d',
            'Conv2d', 'ConvTranspose2d', 'ReLU', 'Sigmoid', 'MaxPool2d', 'AvgPool2d',

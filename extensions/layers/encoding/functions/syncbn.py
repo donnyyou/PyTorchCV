@@ -10,7 +10,7 @@
 """Synchronized Cross-GPU Batch Normalization functions"""
 from torch.autograd import Function
 
-from .. import lib
+from extensions.layers.encoding import lib
 
 __all__ = ['sum_square', 'batchnormtrain']
 

@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Function, Variable
 
-from .. import lib
+from extensions.layers.encoding import lib
 
 __all__ = ['aggregate', 'scaledL2', 'pairwise_cosine']
 

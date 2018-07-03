@@ -18,10 +18,12 @@ from torch.nn.parallel.data_parallel import DataParallel
 from torch.nn.parallel.parallel_apply import get_a_var
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
 
+
 torch_ver = torch.__version__[:3]
 
 __all__ = ['allreduce', 'DataParallelModel', 'DataParallelCriterion',
            'patch_replication_callback']
+
 
 def allreduce(*inputs):
     """Cross GPU all reduce autograd operation for calculate mean and
