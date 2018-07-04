@@ -1,0 +1,21 @@
+ninja_required_version = 1.3
+cxx = c++
+
+cflags = -DTORCH_EXTENSION_NAME=enclib_cpu -I/usr/local/lib/python3.5/dist-packages/torch/lib/include -I/usr/local/lib/python3.5/dist-packages/torch/lib/include/TH -I/usr/local/lib/python3.5/dist-packages/torch/lib/include/THC -I/usr/include/python3.5m -fPIC -std=c++11
+ldflags = -shared
+
+rule compile
+  command = $cxx -MMD -MF $out.d $cflags -c $in -o $out
+  depfile = $out.d
+  deps = gcc
+
+rule link
+  command = $cxx $in $ldflags -o $out
+
+build roi_align.o: compile /home/donny/Projects/PyTorchCV/extensions/layers/encoding/lib/cpu/roi_align.cpp
+build roi_align_cpu.o: compile /home/donny/Projects/PyTorchCV/extensions/layers/encoding/lib/cpu/roi_align_cpu.cpp
+
+build enclib_cpu.so: link roi_align.o roi_align_cpu.o
+
+default enclib_cpu.so
+
