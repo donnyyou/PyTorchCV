@@ -8,18 +8,15 @@ from __future__ import division
 from __future__ import print_function
 
 import torch.nn as nn
-from extensions.layers.encoding.syncbn import BatchNorm2d
+from extensions.layers.encoding.syncbn import BatchNorm2d as sync_bn
 
 
-class ModuleHelper(object):
+class BatchNorm2d(object):
 
-    def __init__(self, configer):
-        self.configer = configer
-
-    def bn(self):
-        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
-            return BatchNorm2d
+    def __call__(self, inchannels, sync=False):
+        if not sync:
+            return nn.BatchNorm2d(inchannels)
 
         else:
-            return nn.BatchNorm2d
-        
+            return sync_bn(inchannels)
+
