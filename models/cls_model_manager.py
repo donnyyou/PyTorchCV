@@ -10,9 +10,9 @@ from __future__ import print_function
 
 from models.cls.mlp import MLP
 from models.cls.vgg import VGG19
-from models.cls.mobilenet import MobileNet
-from utils.tools.logger import Logger as Log
 
+from models.cls.img.mobilenet import MobileNet
+from utils.tools.logger import Logger as Log
 
 CLS_MODEL_DICT = {
     'mlp': MLP,

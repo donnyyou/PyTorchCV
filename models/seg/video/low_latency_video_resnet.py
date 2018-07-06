@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 from extensions.layers.nn import SynchronizedBatchNorm2d
 from models.seg.deeplab_resnet_synbn import _ResidualBlockMulGrid, ModelBuilder
-from models.seg.deeplab_v3_resnet import _ASPPModule
+from models.seg.semantic.deeplabv3 import _ASPPModule
 
 
 class WeightPredictor(nn.Module):

@@ -9,9 +9,9 @@ from __future__ import division
 from __future__ import print_function
 
 from models.det.dense_aspp_ssd import DenseASPPSSD
-from models.det.ori_ssd import OriSSD
-from utils.tools.logger import Logger as Log
 
+from models.det.img.ori_ssd import OriSSD
+from utils.tools.logger import Logger as Log
 
 DET_MODEL_DICT = {
     'dense_aspp_ssd': DenseASPPSSD,

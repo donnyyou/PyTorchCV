@@ -1,11 +1,15 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
 # SynBN_version of DenseAspp
-import re
 
+
+import re
 import torch
 from torch import nn
 from torchvision.models import DenseNet
 
-from extensions.layers.encoding import BatchNorm2d
+from extensions.layers.encoding.syncbn import BatchNorm2d
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -19,9 +23,9 @@ class SyncBNDenseASPP(nn.Module):
         dropout0 = 0.1
         dropout1 = 0.1
 
-        self.features = BackboneSelector(configer).get_backbone()
+        self.backbone = BackboneSelector(configer).get_backbone()
 
-        num_features = self.features.get_num_features()
+        num_features = self.backbone.get_num_features()
 
         self.trans = _Transition(num_input_features=self.num_features, num_output_features=self.num_features // 2)
 
@@ -60,7 +64,7 @@ class SyncBNDenseASPP(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-        feature = self.features(x)
+        feature = self.backbone(x)
 
         aspp3 = self.ASPP_3(feature)
         feature = torch.cat((aspp3, feature), dim=1)
