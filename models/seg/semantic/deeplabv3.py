@@ -25,7 +25,7 @@ class _ConvBatchNormReluBlock(nn.Module):
         x = self.bn(self.conv(x))
         if self.relu:
             x = self.relu_f(x)
-            
+
         return x
 
 
