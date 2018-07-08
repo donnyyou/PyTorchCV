@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 
 
@@ -10,6 +10,7 @@ from __future__ import print_function
 import torch.nn as nn
 
 from models.backbones.densenet.densenet_models import DenseNetModels
+from models.backbones.densenet.syncbn_densenet_models import SyncBNDenseNetModels
 
 
 class NormalDensenetBackbone(nn.Module):
@@ -144,6 +145,7 @@ class DenseNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.densenet_models = DenseNetModels(self.configer)
+        self.syncbn_densenet_models = SyncBNDenseNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
@@ -157,6 +159,14 @@ class DenseNetBackbone(object):
 
         elif arch == 'densenet121_dilated16':
             orig_densenet = self.densenet_models.densenet121()
+            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
+
+        elif arch == 'sync_densenet121_dilated8':
+            orig_densenet = self.syncbn_densenet_models.densenet121()
+            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=8)
+
+        elif arch == 'syncbn_densenet121_dilated16':
+            orig_densenet = self.syncbn_densenet_models.densenet121()
             arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
 
         elif arch == 'densenet169':
