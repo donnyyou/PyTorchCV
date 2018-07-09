@@ -12,8 +12,12 @@
 
 
 import torch
+import torch.nn as nn
 from torch.nn import Module, Sequential, Conv2d, ReLU, AdaptiveAvgPool2d
 from torch.nn import functional as F
+
+from extensions.layers.dcn.deform_conv import DeformConv2d
+
 
 torch_ver = torch.__version__[:3]
 
@@ -124,3 +128,66 @@ class PyramidPooling(Module):
         feat3 = F.upsample(self.conv3(self.pool3(x)), (h, w), **self._up_kwargs)
         feat4 = F.upsample(self.conv4(self.pool4(x)), (h, w), **self._up_kwargs)
         return torch.cat((x, feat1, feat2, feat3, feat4), 1)
+
+
+class AdaptiveBottleneck(nn.Module):
+    """ResNet Bottleneck
+    """
+    # pylint: disable=unused-argument
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, max_dilation=1):
+        super(AdaptiveBottleneck, self).__init__()
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(
+            planes, planes, kernel_size=3, stride=stride,
+            padding=max_dilation, dilation=max_dilation, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.stride =stride
+        self.max_dilation = max_dilation
+        self.conv2_offset = nn.Conv2d(planes, max_dilation, kernel_size=3, stride=(stride, stride),
+                                      padding=1, bias=False)
+
+        self.adapt_conv = DeformConv2d(planes, planes, kernel_size=3, stride=stride, padding=1,
+                                       num_deformable_groups=1)
+
+        self.conv3 = nn.Conv2d(
+            planes, planes * 4, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes * 4)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+        self.vector = torch.tensor([-1, -1, -1, 0, -1, 1,
+                                    0, -1, 0, 0, 0, 1,
+                                    1, -1, 1, 0, 1, 1]).view(1, 18, 1, 1).cuda(self.adapt_conv.device)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        offset = self.conv2_offset(out)
+        dilated = torch.argmax(offset, dim=1, keepdim=True)  # channel dimension attention
+        offset = dilated.repeat(1, 18, 1, 1) * self.vector
+
+        if self.max_dilation == 1:
+            out = self.conv2(out)
+        else:
+            out = self.adapt_conv(out, offset)
+
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
