@@ -31,6 +31,7 @@ def allreduce(*inputs):
     """
     return AllReduce.apply(*inputs)
 
+
 class AllReduce(Function):
     @staticmethod
     def forward(ctx, num_inputs, *inputs):
