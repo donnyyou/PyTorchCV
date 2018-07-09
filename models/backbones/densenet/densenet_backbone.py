@@ -43,7 +43,8 @@ class NormalDensenetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x):
+    def forward(self, x, is_tuple=False):
+        tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
         x = self.relu0(x)
@@ -51,20 +52,25 @@ class NormalDensenetBackbone(nn.Module):
 
         x = self.denseblock1(x)
         x = self.transition1(x)
+        tuple_features.append(x)
         x = self.transition1_pool(x)
 
         x = self.denseblock2(x)
         x = self.transition2(x)
+        tuple_features.append(x)
         x = self.transition2_pool(x)
 
         x = self.denseblock3(x)
         x = self.transition3(x)
+        tuple_features.append(x)
         x = self.transition3_pool(x)
 
         x = self.denseblock4(x)
 
         x = self.norm5(x)
-        return x
+        tuple_features.append(x)
+
+        return x if not is_tuple else tuple_features
 
 
 class DilatedDensenetBackbone(nn.Module):
@@ -115,7 +121,8 @@ class DilatedDensenetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x):
+    def forward(self, x, is_tuple=False):
+        tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
         x = self.relu0(x)
@@ -123,22 +130,27 @@ class DilatedDensenetBackbone(nn.Module):
 
         x = self.denseblock1(x)
         x = self.transition1(x)
+        tuple_features.append(x)
         x = self.transition1_pool(x)
 
         x = self.denseblock2(x)
         x = self.transition2(x)
+        tuple_features.append(x)
         if self.dilate_scale > 8:
             x = self.transition2_pool(x)
 
         x = self.denseblock3(x)
         x = self.transition3(x)
+        tuple_features.append(x)
         if self.dilate_scale > 16:
             x = self.transition3_pool(x)
 
         x = self.denseblock4(x)
 
         x = self.norm5(x)
-        return x
+        tuple_features.append(x)
+
+        return x if not is_tuple else tuple_features
 
 
 class DenseNetBackbone(object):
