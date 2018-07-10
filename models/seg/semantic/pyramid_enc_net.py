@@ -13,9 +13,9 @@ from models.tools.module_helper import Mean
 from models.backbones.backbone_selector import BackboneSelector
 
 
-class EncNet(nn.Module):
+class PyramidEncNet(nn.Module):
     def __init__(self, configer):
-        super(EncNet, self).__init__()
+        super(PyramidEncNet, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
         self.head = PyramidEncHead(2048, self.configer.get('data', 'num_classes'),
