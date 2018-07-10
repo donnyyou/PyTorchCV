@@ -94,7 +94,7 @@ class DetParser(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes_file', default='../../hypes/det/fashion/ssd_fashion_det.json', type=str,
+    parser.add_argument('--hypes_file', default='../../hypes/det/fashion/ssd_vgg300_fashion_det.json', type=str,
                         dest='hypes_file', help='The file of the hyper parameters.')
     parser.add_argument('--image_file', default=None, type=str,
                         dest='image_file', help='The image file of Det Parser.')

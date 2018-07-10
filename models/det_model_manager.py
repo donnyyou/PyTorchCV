@@ -10,14 +10,14 @@ from __future__ import print_function
 
 from models.det.img.dense_aspp_ssd import DenseASPPSSD
 from models.det.img.vgg300_ssd import Vgg300SSD
-from models.det.img.vgg500_ssd import Vgg500SSD
+from models.det.img.vgg512_ssd import Vgg512SSD
 
 from utils.tools.logger import Logger as Log
 
 DET_MODEL_DICT = {
     'dense_aspp_ssd': DenseASPPSSD,
     'vgg300_ssd': Vgg300SSD,
-    'vgg500_ssd': Vgg500SSD
+    'vgg500_ssd': Vgg512SSD
 }
 
 

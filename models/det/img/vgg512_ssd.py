@@ -19,10 +19,10 @@ DETECTOR_CONFIG = {
 }
 
 
-class Vgg500SSD(nn.Module):
+class Vgg512SSD(nn.Module):
 
     def __init__(self, configer):
-        super(Vgg500SSD, self).__init__()
+        super(Vgg512SSD, self).__init__()
 
         self.configer = configer
         self.img_size = self.configer.get('data', 'input_size')

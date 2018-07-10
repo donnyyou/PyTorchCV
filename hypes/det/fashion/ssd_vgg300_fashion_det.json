@@ -5,7 +5,7 @@
     "data": {
       "train_batch_size": 6,
       "val_batch_size": 2,
-      "input_size": [256, 256],
+      "input_size": [300, 300],
       "num_classes": 4,
       "data_dir": "/home/donny/DataSet/Fashion",
       "workers": 8
@@ -73,10 +73,10 @@
     "details": {
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
-      "num_anchor_list": [6, 6, 6, 6, 6],
-      "num_feature_list": [256, 256, 256, 256, 256],
+      "num_anchor_list": [4, 6, 6, 6, 4, 4],
+      "num_feature_list": [512, 1024, 512, 256, 256, 256],
       "stride_list": [8, 16, 32, 64, 128],
-      "default_ratio_list": [0.066, 0.2, 0.37, 0.54, 0.71, 0.88],
+      "default_ratio_list": [0.066, 0.2, 0.37, 0.54, 0.71, 0.88, 1.05],
       "aspect_ratio_list": [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]],
 
       "color_list": [[255, 170, 30], [255, 0, 0], [0, 255, 0], [0, 0, 255]],
@@ -88,21 +88,21 @@
                    "leggings", "outerwear", "pants", "skirts", "tops"]
     },
     "checkpoints": {
-      "checkpoints_name": "ssd_fashion_det",
+      "checkpoints_name": "ssd_vgg300_fashion_det",
       "checkpoints_dir": "checkpoints/det/fashion",
       "save_iters": 3000
     },
 
     "network":{
-      "backbone": "resnet50_dilated8",
+      "backbone": "vgg19_bn",
       "width_mult": 1.0,
-      "model_name": "dense_aspp_ssd",
+      "model_name": "vgg300_ssd",
       "init": "kaiming_normal"
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/det/ssd_fashion_det.log",
+      "log_file": "./log/det/ssd_vgg300_fashion_det.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
