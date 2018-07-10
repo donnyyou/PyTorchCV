@@ -16,12 +16,12 @@ class VGGBackbone(object):
         self.configer = configer
         self.vgg_models = VGGModels(self.configer)
 
-    def __call__(self):
+    def __call__(self, vgg_cfg=None):
         arch = self.configer.get('network', 'backbone')
         if 'bn' in arch:
-            arch_net = self.vgg_models.vgg_bn()
+            arch_net = self.vgg_models.vgg_bn(vgg_cfg=None)
 
         else:
-            arch_net = self.vgg_models.vgg()
+            arch_net = self.vgg_models.vgg(vgg_cfg=None)
 
         return arch_net

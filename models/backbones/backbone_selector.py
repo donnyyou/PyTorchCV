@@ -20,24 +20,24 @@ class BackboneSelector(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def get_backbone(self):
+    def get_backbone(self, **params):
         backbone = self.configer.get('network', 'backbone')
 
         model = None
         if 'vgg' in backbone:
-            model = VGGBackbone(self.configer)()
+            model = VGGBackbone(self.configer)(**params)
 
         elif 'resnet' in backbone:
-            model = ResNetBackbone(self.configer)()
+            model = ResNetBackbone(self.configer)(**params)
 
         elif 'mobilenet' in backbone:
-            model = MobileNetBackbone(self.configer)()
+            model = MobileNetBackbone(self.configer)(*params)
 
         elif 'densenet' in backbone:
-            model = DenseNetBackbone(self.configer)()
+            model = DenseNetBackbone(self.configer)(**params)
 
         elif 'squeezenet' in backbone:
-            model = SqueezeNetBackbone(self.configer)
+            model = SqueezeNetBackbone(self.configer)(**params)
 
         else:
             Log.error('Backbone {} is invalid.'.format(backbone))

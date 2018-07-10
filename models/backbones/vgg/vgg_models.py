@@ -58,10 +58,11 @@ def make_layers(cfg, batch_norm=False):
 
 
 class VGG(nn.Module):
-    def __init__(self, cfg_name, bn=False):
+    def __init__(self, cfg_name, vgg_cfg=None, bn=False):
         super(VGG, self).__init__()
         self.num_features = 512
-        self.features = make_layers(CONFIG_DICT[cfg_name], bn)
+        vgg_cfg = vgg_cfg if vgg_cfg is not None else CONFIG_DICT[cfg_name]
+        self.features = make_layers(vgg_cfg, bn)
 
     def get_num_features(self):
         return self.num_features
@@ -76,13 +77,13 @@ class VGGModels(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def vgg(self):
+    def vgg(self, vgg_cfg=None):
         """Constructs a ResNet-18 model.
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         backbone = self.configer.get('network', 'backbone')
-        model = VGG(cfg_name=backbone, bn=False)
+        model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=False)
         if self.configer.get('network', 'pretrained'):
             pretrained_dict = self.load_url(model_urls[backbone.split('_')[0]])
             model_dict = model.state_dict()
@@ -92,9 +93,9 @@ class VGGModels(object):
 
         return model
 
-    def vgg_bn(self):
+    def vgg_bn(self, vgg_cfg=None):
         backbone = self.configer.get('network', 'backbone')
-        model = VGG(cfg_name=backbone, bn=True)
+        model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=True)
         if self.configer.get('network', 'pretrained'):
             pretrained_dict = self.load_url(model_urls['{}_bn'.format(backbone.split('_')[0])])
             model_dict = model.state_dict()
