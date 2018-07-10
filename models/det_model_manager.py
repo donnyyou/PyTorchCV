@@ -8,14 +8,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.det.dense_aspp_ssd import DenseASPPSSD
+from models.det.img.dense_aspp_ssd import DenseASPPSSD
+from models.det.img.vgg300_ssd import Vgg300SSD
+from models.det.img.vgg500_ssd import Vgg500SSD
 
-from models.det.img.ori_ssd import OriSSD
 from utils.tools.logger import Logger as Log
 
 DET_MODEL_DICT = {
     'dense_aspp_ssd': DenseASPPSSD,
-    'ori_ssd': OriSSD,
+    'vgg300_ssd': Vgg300SSD,
+    'vgg500_ssd': Vgg500SSD
 }
 
 

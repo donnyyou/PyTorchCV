@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# Author: YangMaoke, DuanZhixiang({maokeyang, zhixiangduan}@deepmotion.ai)
-# SSD model
+# Author: Donny You(youansheng@gmail.com)
+# VGG300 SSD model
 
 
 import torch
@@ -21,10 +21,10 @@ DETECTOR_CONFIG = {
 }
 
 
-class OriSSD(nn.Module):
+class Vgg300SSD(nn.Module):
 
     def __init__(self, configer):
-        super(OriSSD, self).__init__()
+        super(Vgg300SSD, self).__init__()
 
         self.configer = configer
         self.img_size = self.configer.get('data', 'input_size')
