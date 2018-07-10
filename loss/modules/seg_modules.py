@@ -94,16 +94,25 @@ class SegEncodeLoss(nn.Module):
 
         self.bce_loss = nn.BCELoss(weight, size_average, reduce=reduce)
 
-    def forward(self, preds, targets):
+    def forward(self, preds, targets, grid_scale=None):
         if len(targets.size()) == 2:
             return self.bce_loss(F.sigmoid(preds), targets)
 
-        se_target = self._get_batch_label_vector(targets, self.configer.get('data', 'num_classes')).type_as(preds)
+        se_target = self._get_batch_label_vector(targets,
+                                                 self.configer.get('data', 'num_classes'),
+                                                 grid_scale).type_as(preds)
         return self.bceloss(F.sigmoid(preds), se_target)
 
     @staticmethod
-    def _get_batch_label_vector(target, num_classes):
+    def _get_batch_label_vector(target_, num_classes, grid_scale=None):
         # target is a 3D Variable BxHxW, output is 2D BxnClass
+        b, h, w = target_.size()
+        target = target_.clone()
+        if grid_scale is not None:
+            target = target.contiguous().view(b, h // grid_scale, grid_scale, w // grid_scale, grid_scale)
+            target = target.permute(0, 2, 4, 1, 3).contiguous().view(b * grid_scale * grid_scale,
+                                                                        h // grid_scale, w // grid_scale)
+
         batch = target.size(0)
         tvect = torch.zeros(batch, num_classes)
         for i in range(batch):
