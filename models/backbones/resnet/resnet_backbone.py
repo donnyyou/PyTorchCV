@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 
 
@@ -32,19 +32,22 @@ class NormalResnetBackbone(nn.Module):
         return self.num_features
 
     def forward(self, x, is_tuple=False):
+        tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x1 = self.layer1(x)
-        x2 = self.layer2(x1)
-        x3 = self.layer3(x2)
-        x4 = self.layer4(x3)
-        if is_tuple:
-            return [x1, x2, x3, x4]
+        x = self.layer1(x)
+        tuple_features.append(x)
+        x = self.layer2(x)
+        tuple_features.append(x)
+        x = self.layer3(x)
+        tuple_features.append(x)
+        x = self.layer4(x)
+        tuple_features.append(x)
 
-        return x
+        return x if not is_tuple else tuple_features
 
 
 class DilatedResnetBackbone(nn.Module):
@@ -92,20 +95,22 @@ class DilatedResnetBackbone(nn.Module):
         return self.num_features
 
     def forward(self, x, is_tuple=False):
-
+        tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x1 = self.layer1(x)
-        x2 = self.layer2(x1)
-        x3 = self.layer3(x2)
-        x4 = self.layer4(x3)
-        if is_tuple:
-            return [x1, x2, x3, x4]
+        x = self.layer1(x)
+        tuple_features.append(x)
+        x = self.layer2(x)
+        tuple_features.append(x)
+        x = self.layer3(x)
+        tuple_features.append(x)
+        x = self.layer4(x)
+        tuple_features.append(x)
 
-        return x
+        return x if not is_tuple else tuple_features
 
 
 class ResNetBackbone(object):
