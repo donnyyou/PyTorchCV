@@ -90,11 +90,11 @@ class DarkNet(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
-        out3 = self.layer3(x)
-        out4 = self.layer4(out3)
-        out5 = self.layer5(out4)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.layer5(x)
 
-        return out5
+        return x
 
 
 class DenseNetModels(object):
