@@ -97,7 +97,7 @@ class DarkNet(nn.Module):
         return x
 
 
-class DenseNetModels(object):
+class DarkNetModels(object):
 
     def __init__(self, configer):
         self.configer = configer

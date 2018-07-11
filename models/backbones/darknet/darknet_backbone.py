@@ -9,8 +9,7 @@ from __future__ import print_function
 
 import torch.nn as nn
 
-from models.backbones.darknet.darknet_models import ResNetModels
-from models.backbones.darknet.syncbn_darknet_models import SyncBNResNetModels
+from models.backbones.darknet.darknet_models import DarkNetModels
 
 
 class NormalDarknetBackbone(nn.Module):
@@ -115,11 +114,10 @@ class DilatedDarknetBackbone(nn.Module):
         return x if not is_tuple else tuple_features
 
 
-class ResNetBackbone(object):
+class DarkNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
-        self.darknet_models = ResNetModels(self.configer)
-        self.syncbn_darknet_models = SyncBNResNetModels(self.configer)
+        self.darknet_models = DarkNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
