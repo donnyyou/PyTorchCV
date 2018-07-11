@@ -106,7 +106,7 @@ if __name__ == "__main__":
         os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(gpu_id) for gpu_id in configer.get('gpu'))
 
     project_dir = os.path.dirname(os.path.realpath(__file__))
-    configer.add_value(['project_dir'], project_dir)
+    configer.add_key_value(['project_dir'], project_dir)
 
     Log.init(logfile_level=configer.get('logging', 'logfile_level'),
              stdout_level=configer.get('logging', 'stdout_level'),

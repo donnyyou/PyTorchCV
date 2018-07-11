@@ -5,7 +5,8 @@
     "data": {
       "train_batch_size": 8,
       "val_batch_size": 8,
-      "input_size": [1024, 512],
+      "train_input_size": [2048, 1024],
+      "val_input_size": [2048, 1024],
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -55,16 +56,16 @@
         "swap_pair": []
       },
       "random_resize": {
-        "scale_min": 0.75,
-        "scale_max": 1.25
+        "scale_min": 0.5,
+        "scale_max": 2.0
       },
       "random_rotate": {
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [1024, 512],
+        "crop_size": [832, 832],
         "method": "grid",
-        "grid":[3, 2]
+        "grid":[4, 2]
       },
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
@@ -77,21 +78,20 @@
                      [0, 80, 100], [0, 0, 230], [119, 11, 32]]
     },
     "checkpoints": {
-      "checkpoints_name": "deeplabv3plus",
+      "checkpoints_name": "fs_pspnet_cityscape_seg",
       "checkpoints_dir": "./checkpoints/seg/cityscape",
       "save_iters": 2000
     },
     "network":{
-      "model_name": "deeplabv3_plus",
-      "stride": 1,
-      "out_channels": 20,
+      "model_name": "syncbn_pspnet",
+      "stride": 8,
       "pretrained": true,
       "init": "kaiming_normal"
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/seg/deeplabv3_plus.log",
+      "log_file": "./log/seg/fs_pspnet_cityscape_seg.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
@@ -121,14 +121,10 @@
       }
     },
     "cross_entropy_loss": {
-      "weight_enc": [2.3653597831726, 4.4237880706787, 2.9691488742828, 5.3442072868347, 5.2983593940735,
-                     5.2275490760803, 5.4394111633301, 5.3659925460815, 3.4170460700989, 5.2414722442627,
-                     4.7376127243042, 5.2286224365234, 5.455126285553, 4.3019247055054, 5.4264230728149,
-                     5.4331531524658, 5.433765411377, 5.4631009101868, 5.3947434425354, 0.0],
-      "weight_dec": [2.8149201869965, 6.9850029945374, 3.7890393733978, 9.9428062438965, 9.7702074050903,
-                     9.5110931396484, 10.311357498169, 10.026463508606, 4.6323022842407, 9.5608062744141,
-                     7.8698215484619, 9.5168733596802, 10.373730659485, 6.6616044044495, 10.260489463806,
-                     10.287888526917, 10.289801597595, 10.405355453491, 10.138095855713, 0.0],
+      "weight": [2.3653597831726, 4.4237880706787, 2.9691488742828, 5.3442072868347, 5.2983593940735,
+                 5.2275490760803, 5.4394111633301, 5.3659925460815, 3.4170460700989, 5.2414722442627,
+                 4.7376127243042, 5.2286224365234, 5.455126285553, 4.3019247055054, 5.4264230728149,
+                 5.4331531524658, 5.433765411377, 5.4631009101868, 5.3947434425354],
       "size_average": true,
       "reduce": true
     }

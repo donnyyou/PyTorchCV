@@ -616,6 +616,10 @@ class AugCompose(object):
     def __init__(self, configer, split='train'):
         self.configer = configer
         self.split = split
+        if self.configer.is_empty('data', 'train_input_size'):
+            self.configer.add_key_value(['data', 'train_input_size'], self.configer.get('data', 'input_size'))
+            self.configer.add_key_value(['data', 'val_input_size'], self.configer.get('data', 'input_size'))
+
         if split == 'train':
             self.transforms = {
                 'random_pad': RandomPad(
@@ -658,7 +662,7 @@ class AugCompose(object):
                     crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
                     task_type=self.configer.get('task')
                 ),
-                'resize': Resize(size=self.configer.get('data', 'input_size')),
+                'resize': Resize(size=self.configer.get('data', 'train_input_size')),
             }
         else:
             self.transforms = {
@@ -702,7 +706,7 @@ class AugCompose(object):
                     crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
                     task_type=self.configer.get('task')
                 ),
-                'resize': Resize(size=self.configer.get('data', 'input_size')),
+                'resize': Resize(size=self.configer.get('data', 'val_input_size')),
             }
 
     def __check_none(self, key_list, value_list):

@@ -45,7 +45,7 @@ class Configer(object):
 
             for key, value in self.args_dict.items():
                 if self.is_empty(*key.split(':')):
-                    self.add_value(key.split(':'), value)
+                    self.add_key_value(key.split(':'), value)
                 elif value is not None:
                     self.update_value(key.split(':'), value)
 
@@ -89,7 +89,7 @@ class Configer(object):
 
         return False
 
-    def add_value(self, key_tuple, value):
+    def add_key_value(self, key_tuple, value):
         if len(key_tuple) == 1 and key_tuple[0] not in self.params_root:
             self.params_root[key_tuple[0]] = value
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     configer = Configer(args_parser=args_parser)
 
-    configer.add_value(('project_dir', ), 'root')
+    configer.add_key_value(('project_dir',), 'root')
     configer.update_value(('project_dir', ), 'root1')
 
     print (configer.get('project_dir'))

@@ -35,14 +35,14 @@ class ModuleUtilizer(object):
                 exit(1)
 
     def _init(self):
-        self.configer.add_value(['iters'], 0)
-        self.configer.add_value(['last_iters'], 0)
-        self.configer.add_value(['epoch'], 0)
-        self.configer.add_value(['last_epoch'], 0)
-        self.configer.add_value(['max_performance'], 0.0)
-        self.configer.add_value(['performance'], 0.0)
-        self.configer.add_value(['min_val_loss'], 9999.0)
-        self.configer.add_value(['val_loss'], 9999.0)
+        self.configer.add_key_value(['iters'], 0)
+        self.configer.add_key_value(['last_iters'], 0)
+        self.configer.add_key_value(['epoch'], 0)
+        self.configer.add_key_value(['last_epoch'], 0)
+        self.configer.add_key_value(['max_performance'], 0.0)
+        self.configer.add_key_value(['performance'], 0.0)
+        self.configer.add_key_value(['min_val_loss'], 9999.0)
+        self.configer.add_key_value(['val_loss'], 9999.0)
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
