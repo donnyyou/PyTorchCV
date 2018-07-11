@@ -1,5 +1,13 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
+
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import torch
-import numpy as np
 import torch.nn as nn
 
 
@@ -75,10 +83,11 @@ def _make_layers(in_channels, net_cfg):
     return nn.Sequential(*layers), in_channels
 
 
-class Darknet19(nn.Module):
-    def __init__(self):
-        super(Darknet19, self).__init__()
+class DarkNetYolov2(nn.Module):
+    def __init__(self, configer):
+        super(DarkNetYolov2, self).__init__()
 
+        self.configer = configer
         net_cfgs = [
             # conv1s
             [(32, 3)],
@@ -107,13 +116,12 @@ class Darknet19(nn.Module):
         self.conv4, c4 = _make_layers((c1*(stride*stride) + c3), net_cfgs[7])
 
         # linear
-        out_channels = cfg.num_anchors * (cfg.num_classes + 5)
+        out_channels = self.configer.get('details', 'num_anchors') * (self.configer.get('data', 'num_classes') + 5)
         self.conv5 = Conv2d(c4, out_channels, 1, 1, relu=False)
 
 
-    def forward(self, im_data, gt_boxes=None, gt_classes=None, dontcare=None,
-                size_index=0):
-        conv1s = self.conv1s(im_data)
+    def forward(self, x):
+        conv1s = self.conv1s(x)
         conv2 = self.conv2(conv1s)
         conv3 = self.conv3(conv2)
         conv1s_reorg = self.reorg(conv1s)
@@ -125,7 +133,7 @@ class Darknet19(nn.Module):
 
 
 if __name__ == '__main__':
-    net = Darknet19()
+    net = DarkNetYolov2()
     # net.load_from_npz('models/yolo-voc.weights.npz')
     net.load_from_npz('models/darknet19.weights.npz', num_conv=18)
 
