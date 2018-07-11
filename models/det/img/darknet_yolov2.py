@@ -1,30 +1,41 @@
-"""
-Copyright (C) 2017, 申瑞珉 (Ruimin Shen)
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-
-import collections.abc
-
-import numpy as np
 import torch
+import numpy as np
 import torch.nn as nn
-import torch.autograd
-
-import model
 
 
-settings = {
-    'size': (416, 416),
-}
+class Conv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 relu=True, same_padding=False):
+        super(Conv2d, self).__init__()
+        padding = int((kernel_size - 1) / 2) if same_padding else 0
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+                              stride, padding=padding)
+        self.relu = nn.LeakyReLU(0.1, inplace=True) if relu else None
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
+
+
+class Conv2d_BatchNorm(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 relu=True, same_padding=False):
+        super(Conv2d_BatchNorm, self).__init__()
+        padding = int((kernel_size - 1) / 2) if same_padding else 0
+
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+                              stride, padding=padding, bias=False)
+        self.bn = nn.BatchNorm2d(out_channels, momentum=0.01)
+        self.relu = nn.LeakyReLU(0.1, inplace=True) if relu else None
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
 
 
 def reorg(x, stride_h=2, stride_w=2):
@@ -43,128 +54,78 @@ def reorg(x, stride_h=2, stride_w=2):
     return x
 
 
-class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding=0, stride=1, bn=True, act=True):
-        nn.Module.__init__(self)
-        if isinstance(padding, bool):
-            if isinstance(kernel_size, collections.abc.Iterable):
-                padding = tuple((kernel_size - 1) // 2 for kernel_size in kernel_size) if padding else 0
+def _make_layers(in_channels, net_cfg):
+    layers = []
+
+    if len(net_cfg) > 0 and isinstance(net_cfg[0], list):
+        for sub_cfg in net_cfg:
+            layer, in_channels = _make_layers(in_channels, sub_cfg)
+            layers.append(layer)
+    else:
+        for item in net_cfg:
+            if item == 'M':
+                layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
             else:
-                padding = (kernel_size - 1) // 2 if padding else 0
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=not bn)
-        self.bn = nn.BatchNorm2d(out_channels, momentum=0.01) if bn else lambda x: x
-        self.act = nn.LeakyReLU(0.1, inplace=True) if act else lambda x: x
+                out_channels, ksize = item
+                layers.append(Conv2d_BatchNorm(in_channels, out_channels, ksize, same_padding=True))
+                # layers.append(net_utils.Conv2d(in_channels, out_channels,
+                #     ksize, same_padding=True))
+                in_channels = out_channels
 
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.act(x)
-        return x
+    return nn.Sequential(*layers), in_channels
 
 
-class Darknet(nn.Module):
-    def __init__(self, config_channels, anchors, num_cls, stride=2, ratio=1):
-        nn.Module.__init__(self)
-        self.stride = stride
-        channels = int(32 * ratio)
-        layers = []
+class Darknet19(nn.Module):
+    def __init__(self):
+        super(Darknet19, self).__init__()
 
-        bn = config_channels.config.getboolean('batch_norm', 'enable')
-        # layers1
-        for _ in range(2):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers1.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(nn.MaxPool2d(kernel_size=2))
-            channels *= 2
-        # down 4
-        for _ in range(2):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers1.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(Conv2d(config_channels.channels, config_channels(channels // 2, 'layers1.%d.conv.weight' % len(layers)), 1, bn=bn))
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers1.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(nn.MaxPool2d(kernel_size=2))
-            channels *= 2
-        # down 16
-        for _ in range(2):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers1.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(Conv2d(config_channels.channels, config_channels(channels // 2, 'layers1.%d.conv.weight' % len(layers)), 1, bn=bn))
-        layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers1.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-        self.layers1 = nn.Sequential(*layers)
+        net_cfgs = [
+            # conv1s
+            [(32, 3)],
+            ['M', (64, 3)],
+            ['M', (128, 3), (64, 1), (128, 3)],
+            ['M', (256, 3), (128, 1), (256, 3)],
+            ['M', (512, 3), (256, 1), (512, 3), (256, 1), (512, 3)],
+            # conv2
+            ['M', (1024, 3), (512, 1), (1024, 3), (512, 1), (1024, 3)],
+            # ------------
+            # conv3
+            [(1024, 3), (1024, 3)],
+            # conv4
+            [(1024, 3)]
+        ]
 
-        # layers2
-        layers = []
-        layers.append(nn.MaxPool2d(kernel_size=2))
-        channels *= 2
-        # down 32
-        for _ in range(2):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers2.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(Conv2d(config_channels.channels, config_channels(channels // 2, 'layers2.%d.conv.weight' % len(layers)), 1, bn=bn))
-        for _ in range(3):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers2.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-        self.layers2 = nn.Sequential(*layers)
+        # darknet
+        self.conv1s, c1 = _make_layers(3, net_cfgs[0:5])
+        self.conv2, c2 = _make_layers(c1, net_cfgs[5])
+        # ---
+        self.conv3, c3 = _make_layers(c2, net_cfgs[6])
 
-        self.passthrough = Conv2d(self.layers1[-1].conv.weight.size(0), config_channels(int(64 * ratio), 'passthrough.conv.weight'), 1, bn=bn)
+        stride = 2
+        # stride*stride times the channels of conv1s
+        # cat [conv1s, conv3]
+        self.conv4, c4 = _make_layers((c1*(stride*stride) + c3), net_cfgs[7])
 
-        # layers3
-        layers = []
-        layers.append(Conv2d(self.passthrough.conv.weight.size(0) * self.stride * self.stride + self.layers2[-1].conv.weight.size(0), config_channels(int(1024 * ratio), 'layers3.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-        layers.append(Conv2d(config_channels.channels, model.output_channels(len(anchors), num_cls), 1, bn=False, act=False))
-        self.layers3 = nn.Sequential(*layers)
-
-        self.init()
-
-    def init(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                m.weight = nn.init.kaiming_normal(m.weight)
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-    def forward(self, x):
-        x = self.layers1(x)
-        _x = reorg(self.passthrough(x), self.stride)
-        x = self.layers2(x)
-        x = torch.cat([_x, x], 1)
-        return self.layers3(x)
-
-    def scope(self, name):
-        return '.'.join(name.split('.')[:-2])
-
-    def get_mapper(self, index):
-        if index == 94:
-            return lambda indices, channels: torch.cat([indices + i * channels for i in range(self.stride * self.stride)])
+        # linear
+        out_channels = cfg.num_anchors * (cfg.num_classes + 5)
+        self.conv5 = Conv2d(c4, out_channels, 1, 1, relu=False)
 
 
-class Tiny(nn.Module):
-    def __init__(self, config_channels, anchors, num_cls, channels=16):
-        nn.Module.__init__(self)
-        layers = []
+    def forward(self, im_data, gt_boxes=None, gt_classes=None, dontcare=None,
+                size_index=0):
+        conv1s = self.conv1s(im_data)
+        conv2 = self.conv2(conv1s)
+        conv3 = self.conv3(conv2)
+        conv1s_reorg = self.reorg(conv1s)
+        cat_1_3 = torch.cat([conv1s_reorg, conv3], 1)
+        conv4 = self.conv4(cat_1_3)
+        conv5 = self.conv5(conv4)   # batch_size, out_channels, h, w
 
-        bn = config_channels.config.getboolean('batch_norm', 'enable')
-        for _ in range(5):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-            layers.append(nn.MaxPool2d(kernel_size=2))
-            channels *= 2
-        layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-        layers.append(nn.ConstantPad2d((0, 1, 0, 1), float(np.finfo(np.float32).min)))
-        layers.append(nn.MaxPool2d(kernel_size=2, stride=1))
-        channels *= 2
-        for _ in range(2):
-            layers.append(Conv2d(config_channels.channels, config_channels(channels, 'layers.%d.conv.weight' % len(layers)), 3, bn=bn, padding=True))
-        layers.append(Conv2d(config_channels.channels, model.output_channels(len(anchors), num_cls), 1, bn=False, act=False))
-        self.layers = nn.Sequential(*layers)
+        return conv5
 
-        self.init()
 
-    def init(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                m.weight = nn.init.xavier_normal(m.weight)
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+if __name__ == '__main__':
+    net = Darknet19()
+    # net.load_from_npz('models/yolo-voc.weights.npz')
+    net.load_from_npz('models/darknet19.weights.npz', num_conv=18)
 
-    def forward(self, x):
-        return self.layers(x)
-
-    def scope(self, name):
-        return '.'.join(name.split('.')[:-2])
