@@ -141,3 +141,15 @@ class PyramidEncHead(nn.Module):
         out = self.conv6(torch.cat(feat_list, 1))
 
         return out, se_list
+
+
+if __name__ == "__main__":
+    from utils.tools.configer import Configer
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    configer = Configer(hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_pyramidencnet_cityscape_seg.json')
+    configer.add_key_value(['project_dir'], '/home/donny/Projects/PyTorchCV')
+    model = PyramidEncNet(configer).cuda()
+    image = torch.randn(1, 3, 576, 576).cuda()
+    out = model(image)
+    print(out[0].size())
