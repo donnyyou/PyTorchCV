@@ -45,7 +45,9 @@ class SingleShotDetector(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
 

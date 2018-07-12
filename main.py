@@ -130,8 +130,6 @@ if __name__ == "__main__":
         Log.error('Task: {} is not valid.'.format(configer.get('task')))
         exit(1)
 
-    model.init_model()
-
     if configer.get('phase') == 'train':
         model.train()
     elif configer.get('phase') == 'debug':

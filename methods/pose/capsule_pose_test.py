@@ -42,7 +42,9 @@ class CapsulePoseTest(object):
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
         self.pose_net.eval()

@@ -63,8 +63,9 @@ class TextClassifier(object):
         self.batch = 0
         self.max_batch = 500000
 
+        self._init_model()
 
-    def init_model(self):
+    def _init_model(self):
         self.cls_net = ClsModel()
 
         self.ce_loss = CrossEntropyLoss()

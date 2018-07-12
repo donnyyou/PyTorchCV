@@ -18,6 +18,7 @@ from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.seg_model_manager import SegModelManager
 from val.scripts.seg.seg_running_score import SegRunningScore
+from extensions.layers.encoding.parallel import DataParallelCriterion
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from vis.visualizer.seg_visualizer import SegVisualizer
@@ -47,7 +48,9 @@ class FCNSegmentor(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
         self.seg_net = self.module_utilizer.load_net(self.seg_net)
 
@@ -57,6 +60,10 @@ class FCNSegmentor(object):
         self.val_loader = self.seg_data_loader.get_valloader()
 
         self.pixel_loss = self.seg_loss_manager.get_seg_loss('cross_entropy_loss')
+
+        if not self.configer.is_empty('network', 'encoding_parallel') \
+                and self.configer.get('network', 'encoding_parallel'):
+            self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
 
     def _get_parameters(self):
 

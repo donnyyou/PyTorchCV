@@ -12,6 +12,7 @@ import os
 import torch
 import torch.nn as nn
 
+from extensions.layers.encoding.parallel import DataParallelModel
 from utils.tools.logger import Logger as Log
 
 
@@ -52,8 +53,16 @@ class ModuleUtilizer(object):
 
         return return_list
 
+    def _make_parallel(self, net):
+        if not self.configer.is_empty('network', 'encoding_parallel')\
+                and self.configer.get('network', 'encoding_parallel'):
+            return DataParallelModel(net)
+
+        else:
+            return nn.DataParallel(net)
+
     def load_net(self, net):
-        net = nn.DataParallel(net)
+        net = self._make_parallel(net)
         net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         if self.configer.get('network', 'resume') is not None:

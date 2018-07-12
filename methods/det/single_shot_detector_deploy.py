@@ -32,6 +32,8 @@ class SingleShotDetectorDeploy(object):
         self.default_boxes = SSDPriorBoxLayer(self.configer)()
         self.det_net = None
 
+        self._init_model(model_path=model_path, gpu_id=gpu_id)
+
     def _init_model(self, model_path, gpu_id):
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
         self.det_net = self.det_model_manager.object_detector()

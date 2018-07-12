@@ -18,12 +18,12 @@ class PyramidEncNet(nn.Module):
         super(PyramidEncNet, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
-        self.head = PyramidEncHead(2048, self.configer.get('data', 'num_classes'),
-                                   pyramid=self.configer.get('network', 'pyramid'),
-                                   se_loss=self.configer.get('network', 'se_loss'),
+        self.aux_loss = 'aux_loss' in self.configer.get('network', 'loss_weights')
+        self.se_loss = 'se_loss' in self.configer.get('network', 'loss_weights')
+        self.head = PyramidEncHead(self.backbone.num_features, self.configer.get('data', 'num_classes'),
+                                   pyramid=self.configer.get('network', 'pyramid'), se_loss=self.se_loss,
                                    lateral=self.configer.get('network', 'lateral'))
-        self.aux = self.configer.get('network', 'aux')
-        if self.aux:
+        if self.aux_loss:
             self.auxlayer = FCNHead(1024, self.configer.get('data', 'num_classes'))
 
     def forward(self, x):
@@ -32,7 +32,7 @@ class PyramidEncNet(nn.Module):
 
         x = list(self.head(*features))
         x[0] = F.upsample(x[0], imsize, **self._up_kwargs)
-        if self.aux:
+        if self.aux_loss:
             auxout = self.auxlayer(features[2])
             auxout = F.upsample(auxout, imsize, **self._up_kwargs)
             x.append(auxout)

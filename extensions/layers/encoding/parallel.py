@@ -120,8 +120,8 @@ class DataParallelCriterion(DataParallel):
 
     Example::
 
-        >>> net = encoding.nn.DataParallelModel(model, device_ids=[0, 1, 2])
-        >>> criterion = encoding.nn.DataParallelCriterion(criterion, device_ids=[0, 1, 2])
+        >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
+        >>> criterion = DataParallelCriterion(criterion, device_ids=[0, 1, 2])
         >>> y = net(x)
         >>> loss = criterion(y, target)
     """
@@ -133,10 +133,10 @@ class DataParallelCriterion(DataParallel):
         targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
         if len(self.device_ids) == 1:
             return self.module(inputs, *targets[0], **kwargs[0])
+
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
-        #return self.gather(outputs, self.output_device).mean()
 
 
 def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices=None):

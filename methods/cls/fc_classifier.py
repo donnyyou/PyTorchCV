@@ -47,7 +47,9 @@ class FCClassifier(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.cls_net = self.cls_model_manager.image_classifier()
         self.cls_net = self.module_utilizer.load_net(self.cls_net)
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())

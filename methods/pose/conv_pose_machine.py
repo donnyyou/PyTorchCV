@@ -45,7 +45,9 @@ class ConvPoseMachine(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.pose_net = self.pose_model_manager.single_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
 
