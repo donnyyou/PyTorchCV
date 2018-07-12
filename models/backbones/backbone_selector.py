@@ -28,7 +28,7 @@ class BackboneSelector(object):
         if 'vgg' in backbone:
             model = VGGBackbone(self.configer)(**params)
 
-        if 'darknet' in backbone:
+        elif 'darknet' in backbone:
             model = DarkNetBackbone(self.configer)(**params)
 
         elif 'resnet' in backbone:
