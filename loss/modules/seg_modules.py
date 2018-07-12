@@ -75,6 +75,14 @@ class FocalLoss(nn.Module):
         return loss
 
 
+class FCNSegLoss(nn.Module):
+    def __init__(self, configer):
+        super(FCNSegLoss, self).__init__()
+
+    def forward(self, outputs, targets):
+        return
+
+
 class SegEncodeLoss(nn.Module):
     def __init__(self, configer):
         super(SegEncodeLoss, self).__init__()
