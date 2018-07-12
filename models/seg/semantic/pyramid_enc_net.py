@@ -31,10 +31,10 @@ class PyramidEncNet(nn.Module):
         features = self.backbone(x, is_tuple=True)
 
         x = list(self.head(*features))
-        x[0] = F.upsample(x[0], imsize, **self._up_kwargs)
+        x[0] = F.upsample(x[0], imsize)
         if self.aux_loss:
             auxout = self.auxlayer(features[2])
-            auxout = F.upsample(auxout, imsize, **self._up_kwargs)
+            auxout = F.upsample(auxout, imsize)
             x.append(auxout)
 
         return tuple(x)
@@ -147,9 +147,11 @@ if __name__ == "__main__":
     from utils.tools.configer import Configer
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-    configer = Configer(hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_pyramidencnet_cityscape_seg.json')
+    configer = Configer(
+        hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_pyramidencnet_cityscape_seg.json')
     configer.add_key_value(['project_dir'], '/home/donny/Projects/PyTorchCV')
     model = PyramidEncNet(configer).cuda()
-    image = torch.randn(1, 3, 576, 576).cuda()
+    model.eval()
+    image = torch.randn(1, 3, 96, 96).cuda()
     out = model(image)
     print(out[0].size())

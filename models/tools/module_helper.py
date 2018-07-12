@@ -16,8 +16,6 @@ import torch.nn as nn
 from torch.nn import Module, Sequential, Conv2d, ReLU, AdaptiveAvgPool2d
 from torch.nn import functional as F
 
-from extensions.layers.dcn.deform_conv import DeformConv2d
-
 
 torch_ver = torch.__version__[:3]
 
@@ -149,6 +147,7 @@ class AdaptiveBottleneck(nn.Module):
         self.conv2_offset = nn.Conv2d(planes, max_dilation, kernel_size=3, stride=(stride, stride),
                                       padding=1, bias=False)
 
+        from extensions.layers.dcn.deform_conv import DeformConv2d
         self.adapt_conv = DeformConv2d(planes, planes, kernel_size=3, stride=stride, padding=1,
                                        num_deformable_groups=1)
 
