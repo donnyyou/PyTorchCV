@@ -75,14 +75,6 @@ class FocalLoss(nn.Module):
         return loss
 
 
-class FCNSegLoss(nn.Module):
-    def __init__(self, configer):
-        super(FCNSegLoss, self).__init__()
-
-    def forward(self, outputs, targets):
-        return
-
-
 class SegEncodeLoss(nn.Module):
     def __init__(self, configer):
         super(SegEncodeLoss, self).__init__()
@@ -130,6 +122,26 @@ class SegEncodeLoss(nn.Module):
             tvect[i] = vect
 
         return tvect
+
+
+class FCNSegLoss(nn.Module):
+    def __init__(self, configer):
+        super(FCNSegLoss, self).__init__()
+        self.configer = configer
+        self.ce_loss = CrossEntropyLoss(self.configer)
+        self.se_loss = SegEncodeLoss(self.configer)
+        self.focal_loss = FocalLoss(self.configer)
+
+    def forward(self, outputs, targets):
+        if self.configer.get('network', 'model_name') == 'pyramid_encnet':
+            seg_out, se_out_list, aux_out = outputs
+            seg_loss = self.ce_loss(seg_out, targets)
+            aux_loss = self.ce_loss(aux_out, targets)
+            # How to downsample.
+
+        return
+
+
 
 
 class Ege_loss(nn.Module):
