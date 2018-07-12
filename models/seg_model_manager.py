@@ -8,20 +8,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.seg.large_kernel import GCN
-from models.seg.large_kernel_exfuse import GCNFuse
-
-from models.seg.deeplab_v3_plus import DeepLabV3Plus
 from models.seg.semantic.deeplabv3 import DeepLabV3
 from models.seg.semantic.erf_net import ERFNet
 from utils.tools.logger import Logger as Log
 
+
 SEG_MODEL_DICT = {
     'erf_net': ERFNet,
     'deeplabv3': DeepLabV3,
-    'deeplabv3_plus': DeepLabV3Plus,
-    'large_kernel': GCN,
-    'large_kernel_fuse': GCNFuse
 }
 
 
