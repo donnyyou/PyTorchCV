@@ -8,177 +8,151 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
+import time
 import numpy as np
 
 
 class DetRunningScore(object):
     def __init__(self, configer):
         self.configer = configer
-        self.fg_bg_AP = 0  # fg-bg map
-        self.AP_array = np.zeros(self.configer.get('data', 'num_classes') - 1)
-        self.cls_img_count = np.zeros(self.configer.get('data', 'num_classes') - 1)  # img numbers of each class
-        self.img_count = 0
+        self.gt_list = list()
+        self.pred_list = list()
+        self.num_positive = list()
 
-    def compute_ap(self, gt_boxes, gt_class_ids, pred_boxes, pred_class_ids, pred_scores, iou_threshold=0.5):
-        """Compute Average Precision at a set IoU threshold (default 0.5).
+        for i in range(self.configer.get('data', 'num_classes')):
+            self.gt_list.append(dict())
+            self.pred_list.append(list())
+            self.num_positive.append(0)
 
-        Returns:
-        mAP: Mean Average Precision
-        precisions: List of precisions at different class score thresholds.
-        recalls: List of recall values at different class score thresholds.
-        overlaps: [pred_boxes, gt_boxes] IoU overlaps.
+    def _voc_ap(self, rec, prec, use_07_metric=False):
+        """ ap = voc_ap(rec, prec, [use_07_metric])
+            Compute VOC AP given precision and recall.
+            If use_07_metric is true, uses the
+            VOC 07 11 point method (default:True).
         """
-        # Trim zero padding and sort predictions by score from high to low
-        # TODO: cleaner to do zero unpadding upstream
+        if use_07_metric:
+            # 11 point metric
+            ap = 0.
+            for t in np.arange(0., 1.1, 0.1):
+                if np.sum(rec >= t) == 0:
+                    p = 0
+                else:
+                    p = np.max(prec[rec >= t])
+                ap = ap + p / 11.
+        else:
+            # correct AP calculation
+            # first append sentinel values at the end
+            mrec = np.concatenate(([0.], rec, [1.]))
+            mpre = np.concatenate(([0.], prec, [0.]))
 
-        gt_boxes = self.trim_zeros(gt_boxes)
-        pred_boxes = self._trim_zeros(pred_boxes)
-        pred_scores = pred_scores[:pred_boxes.shape[0]]
-        indices = np.argsort(pred_scores)[::-1]  # top2bottom
-        pred_boxes = pred_boxes[indices]
-        pred_class_ids = pred_class_ids[indices]
+            # compute the precision envelope
+            for i in range(mpre.size - 1, 0, -1):
+                mpre[i - 1] = np.maximum(mpre[i - 1], mpre[i])
 
-        # Compute IoU overlaps [pred_boxes, gt_boxes]
-        overlaps = self.compute_overlaps(pred_boxes, gt_boxes)
+            # to calculate area under PR curve, look for points
+            # where X axis (recall) changes value
+            i = np.where(mrec[1:] != mrec[:-1])[0]
 
-        # Loop through ground truth boxes and find matching predictions
-        match_count = 0
-        pred_match = np.zeros([pred_boxes.shape[0]])
-        gt_match = np.zeros([gt_boxes.shape[0]])  # tags:if a gt is matched,set its tag to 1;
-        for i in range(len(pred_boxes)):
-            # Find best matching ground truth box
-            sorted_ixs = np.argsort(overlaps[i])[::-1]  # top2bottom
-            for j in sorted_ixs:
-                # If ground truth box is already matched, go to next one
-                if gt_match[j] == 1:
-                    continue
-                # If we reach IoU smaller than the threshold, end the loop
-                iou = overlaps[i, j]
-                if iou < iou_threshold:
-                    break
-                # Do we have a match?
-                if pred_class_ids[i] == gt_class_ids[j]:
-                    match_count += 1
-                    gt_match[j] = 1
-                    pred_match[i] = 1
-                    break
+            # and sum (\Delta recall) * prec
+            ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
+        return ap
 
-        # Compute precision and recall at each prediction box step
-        precisions = np.cumsum(pred_match).astype(np.float32) / (np.arange(len(pred_match)) + 1)
-        recalls = np.cumsum(pred_match).astype(np.float32) / len(gt_match)
+    def _voc_eval(self):
 
-        # Pad with start and end values to simplify the math
-        precisions = np.concatenate([[0], precisions, [0]])
-        recalls = np.concatenate([[0], recalls, [1]])
+        ap_list = list()
+        rc_list = list()
+        pr_list = list()
+        for i in range(self.configer.get('data', 'num_classes')):
 
-        # Ensure precision values decrease but don't increase. This way, the
-        # precision value at each recall threshold is the maximum it can be
-        # for all following recall thresholds, as specified by the VOC paper.
-        for i in range(len(precisions) - 2, -1, -1):
-            precisions[i] = np.maximum(precisions[i], precisions[i + 1])
+            class_recs = self.gt_list[i]
+            pred_recs = self.pred_list[i]
+            for key in class_recs.keys():
+                class_recs[key]['det'] = [False] * len(pred_recs)
 
-        # Compute mean AP over recall range
-        indices = np.where(recalls[:-1] != recalls[1:])[0] + 1
-        mAP = np.sum((recalls[indices] - recalls[indices - 1]) * precisions[indices])
+            image_ids = [pred_rec[0] for pred_rec in pred_recs]
+            confidence = [pred_rec[1] for pred_rec in pred_recs]
+            BB = np.array([pred_rec[2] for pred_rec in pred_recs])
 
-        return mAP, precisions, recalls, overlaps
+            # sort by confidence
+            sorted_ind = np.argsort(-confidence)
+            sorted_scores = np.sort(-confidence)
+            BB = BB[sorted_ind, :]
+            image_ids = [image_ids[x] for x in sorted_ind]
 
-    def compute_overlaps(self, boxes1, boxes2):
-        """Computes IoU overlaps between two sets of boxes.
-        boxes1, boxes2: [N, (y1, x1, y2, x2)].
+            # go down dets and mark TPs and FPs
+            nd = len(image_ids)
+            tp = np.zeros(nd)
+            fp = np.zeros(nd)
+            for d in range(nd):
+                R = class_recs[image_ids[d]]
+                bb = BB[d, :].astype(float)
+                ovmax = -np.inf
+                BBGT = R['bbox'].astype(float)
+                if BBGT.size > 0:
+                    # compute overlaps
+                    # intersection
+                    ixmin = np.maximum(BBGT[:, 0], bb[0])
+                    iymin = np.maximum(BBGT[:, 1], bb[1])
+                    ixmax = np.minimum(BBGT[:, 2], bb[2])
+                    iymax = np.minimum(BBGT[:, 3], bb[3])
+                    iw = np.maximum(ixmax - ixmin, 0.)
+                    ih = np.maximum(iymax - iymin, 0.)
+                    inters = iw * ih
+                    uni = ((bb[2] - bb[0]) * (bb[3] - bb[1]) +
+                           (BBGT[:, 2] - BBGT[:, 0]) *
+                           (BBGT[:, 3] - BBGT[:, 1]) - inters)
+                    overlaps = inters / uni
+                    ovmax = np.max(overlaps)
+                    jmax = np.argmax(overlaps)
 
-        For better performance, pass the largest set first and the smaller second.
-        """
-        # Areas of anchors and GT boxes
-        area1 = (boxes1[:, 2] - boxes1[:, 0]) * (boxes1[:, 3] - boxes1[:, 1])
-        area2 = (boxes2[:, 2] - boxes2[:, 0]) * (boxes2[:, 3] - boxes2[:, 1])
+                if ovmax > self.configer.get('vis', 'iou_threshold'):
+                    if not R['det'][jmax]:
+                        tp[d] = 1.
+                        R['det'][jmax] = 1
+                    else:
+                        fp[d] = 1.
+                else:
+                    fp[d] = 1.
 
-        # Compute overlaps to generate matrix [boxes1 count, boxes2 count]
-        # Each cell contains the IoU value.
-        overlaps = np.zeros((boxes1.shape[0], boxes2.shape[0]))
-        for i in range(overlaps.shape[1]):
-            box2 = boxes2[i]
-            overlaps[:, i] = self._compute_iou(box2, boxes1, area2[i], area1)
+            # compute precision recall
+            fp = np.cumsum(fp)
+            tp = np.cumsum(tp)
+            rec = tp / float(self.num_positive[i])
+            # avoid divide by zero in case the first detection matches a difficult
+            # ground truth
+            prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+            ap = self._voc_ap(rec, prec, use_07_metric=False)
+            rc_list.append(rec)
+            ap_list.append(ap)
+            pr_list.append(prec)
 
-        return overlaps
-
-    def _compute_iou(self, box, boxes, box_area, boxes_area):
-        """Calculates IoU of the given box with the array of the given boxes.
-        box: 1D vector [y1, x1, y2, x2]
-        boxes: [boxes_count, (y1, x1, y2, x2)]
-        box_area: float. the area of 'box'
-        boxes_area: array of length boxes_count.
-
-        Note: the areas are passed in rather than calculated here for
-              efficency. Calculate once in the caller to avoid duplicate work.
-        """
-        # Calculate intersection areas
-        y1 = np.maximum(box[0], boxes[:, 0])
-        y2 = np.minimum(box[2], boxes[:, 2])
-        x1 = np.maximum(box[1], boxes[:, 1])
-        x2 = np.minimum(box[3], boxes[:, 3])
-        intersection = np.maximum(x2 - x1, 0) * np.maximum(y2 - y1, 0)
-        union = box_area + boxes_area[:] - intersection[:]
-        iou = intersection / union
-        return iou
-
-    def trim_zeros(self, x):
-        """It's common to have tensors larger than the available data and
-        pad with zeros. This function removes rows that are all zeros.
-
-        x: [rows, columns].
-        """
-        # pdb.set_trace()
-        assert len(x.shape) == 2
-        return x[~np.all(x == 0, axis=1)]
+        return rc_list, pr_list, ap_list
 
     def update(self, batch_pred_bboxes, batch_gt_bboxes):
-        """Evaluate predicted_file and return mAP."""
-        # Construct set to speed up id searching.
-        # for every annotation in our test/validation set
-        for i in range(len(batch_pred_bboxes)):
-            gt_boxes = np.array(batch_gt_bboxes[i][0:4])
-            gt_class_ids = np.array(batch_gt_bboxes[i][4])
-            pred_boxes = np.array(batch_pred_bboxes[i][0:4])
-            pred_class_ids = np.array(batch_pred_bboxes[i][4])
-            pred_scores = np.array(batch_pred_bboxes[i][5])
-            img_mAP, _, _, _ = self.compute_ap(gt_boxes, gt_class_ids, pred_boxes, pred_class_ids, pred_scores)
-            self.fg_bg_AP = self.fg_bg_AP + img_mAP
-            #
-            # pdb.set_trace()
-            cls_num = 0
-            for cls in range(self.configer.get('data', 'num_classes') - 1):
-                if cls in gt_class_ids:
-                    cls_num = cls_num + 1
-                    # pdb.set_trace()
-                    idx = np.where(gt_class_ids == cls)[0]
-                    pt_idx = np.where(pred_class_ids == cls)[0]
+        image_name_prefix = str(int(time.time()))
+        for i in range(len(batch_gt_bboxes)):
+            image_name = '{}_{}'.format(image_name_prefix, i)
+            for cls in range(self.configer.get('data', 'num_classes')):
+                self.gt_list[cls][image_name] = {
+                    'bbox': np.array([gt_bbox[:4] for gt_bbox in batch_gt_bboxes[i] if gt_bbox[4] == cls])
+                }
 
-                    gt_b = gt_boxes[idx]
-                    gt_c_ids = gt_class_ids[idx]
-                    pt_b = pred_boxes[pt_idx]
-                    pt_c_ids = pred_class_ids[pt_idx]
-                    pt_s = pred_scores[pt_idx]
+                self.num_positive[cls] += (self.gt_list[cls][image_name]['bbox']).shape[0]
 
-                    cls_AP, _, _, _ = self.compute_ap(gt_b, gt_c_ids, pt_b, pt_c_ids, pt_s)
-                    # pdb.set_trace()
-                    self.AP_array[cls] = self.AP_array[cls] + cls_AP
-                    self.cls_img_count[cls] = self.cls_img_count[cls] + 1
-
-            self.img_count += 1
+            for pred_box in batch_pred_bboxes[i]:
+                self.pred_list[pred_box[5]].append([image_name, pred_box[4], pred_box[:4]])
 
     def get_mAP(self):
         # compute mAP by APs under different oks thresholds
-        self.AP_array = self.AP_array[self.cls_img_count != 0] / self.cls_img_count[self.cls_img_count != 0]
-        mAP = sum(self.AP_array) / len(self.AP_array)
-        return mAP
-
-    def get_fg_bg_AP(self):
-        fg_bg_AP = self.fg_bg_AP / self.img_count
-        return fg_bg_AP
+        return None
 
     def reset(self):
-        self.fg_bg_AP = 0  # fg-bg map
-        self.AP_array = np.zeros(self.configer.get('data', 'num_classes') - 1)
-        self.cls_img_count = np.zeros(self.configer.get('data', 'num_classes') - 1)  # img numbers of each class
-        self.img_count = 0
+        self.gt_list = list()
+        self.pred_list = list()
+        self.num_positive = list()
+
+        for i in range(self.configer.get('data', 'num_classes')):
+            self.gt_list.append(dict())
+            self.pred_list.append(list())
+            self.num_positive.append(0)
