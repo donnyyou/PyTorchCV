@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -136,12 +137,24 @@ class FCNSegLoss(nn.Module):
         if self.configer.get('network', 'model_name') == 'pyramid_encnet':
             seg_out, se_out_list, aux_out = outputs
             seg_loss = self.ce_loss(seg_out, targets)
-            aux_loss = self.ce_loss(aux_out, targets)
-            # How to downsample.
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
+            aux_loss = self.ce_loss(aux_out, aux_targets)
+            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
+            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+            se_weight = self.configer.get('network', 'loss_weights')['se_loss']
+            for i, scale in enumerate(self.configer.get('network', 'pyramid')):
+                loss = loss + se_weight * self.se_loss(se_out_list[i], aux_targets, scale)
 
-        return
+            return loss
 
+        return self.ce_loss(outputs, targets)
 
+    @staticmethod
+    def _scale_target(targets_, scaled_size):
+        targets = targets_.clone().transpose(1, 2, 0).cpu().numpy()
+        targets = cv2.resize(targets, scaled_size)
+        targets = torch.from_numpy(targets.transpose(2, 0, 1))
+        return targets
 
 
 class Ege_loss(nn.Module):
