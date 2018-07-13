@@ -111,7 +111,7 @@ class SegEncodeLoss(nn.Module):
         pad_h = 0 if (h % 6 == 0) else 6 - (h % 6)
         pad_w = 0 if (w % 6 == 0) else 6 - (w % 6)
         target = target_.clone()
-        target = F.upsample_nearest(target, (h + pad_h, w + pad_w))
+        target = F.pad(target, (0, pad_w, 0, pad_h), "constant", num_classes)
 
         if grid_scale is not None:
             target = target.contiguous().view(b, h // grid_scale, grid_scale, w // grid_scale, grid_scale)
