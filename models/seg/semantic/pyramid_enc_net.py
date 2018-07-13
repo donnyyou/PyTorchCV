@@ -126,7 +126,10 @@ class PyramidEncHead(nn.Module):
             feat = self.fusion(torch.cat([feat, c2, c3], 1))
 
         b, c, h, w = feat.size()
-        assert h % 6 == 0 and w % 6 == 0
+        pad_h =  0 if (h % 6 == 0) else 6 - (h % 6)
+        pad_w =  0 if (w % 6 == 0) else 6 - (w % 6)
+        feat = F.upsample_nearest(feat, (h+pad_h, w+pad_w))
+        b, c, h, w = feat.size()
         feat_list = list()
         se_list = list()
         for i, scale in enumerate(self.pyramid):
@@ -135,7 +138,7 @@ class PyramidEncHead(nn.Module):
             outs = list(self.encmodule_list[i](feat_temp))
             feat_temp = outs[0].contiguous().view(b, scale, scale, c, h // scale, w // scale)
             feat_temp = feat_temp.permute(0, 3, 4, 1, 5, 2).contiguous().view(b, c, h, w)
-            feat_list.append(feat_temp)
+            feat_list.append(F.adaptive_avg_pool2d(feat_temp, (h-pad_h, w-pad_w)))
             se_list.append(outs[1])
 
         out = self.conv6(torch.cat(feat_list, 1))

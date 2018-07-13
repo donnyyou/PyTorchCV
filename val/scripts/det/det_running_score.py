@@ -129,19 +129,21 @@ class DetRunningScore(object):
 
         return rc_list, pr_list, ap_list
 
-    def update(self, batch_pred_bboxes, batch_gt_bboxes):
+    def update(self, batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels):
         image_name_prefix = str(int(time.time()))
         for i in range(len(batch_gt_bboxes)):
             image_name = '{}_{}'.format(image_name_prefix, i)
             for cls in range(self.configer.get('data', 'num_classes')):
                 self.gt_list[cls][image_name] = {
-                    'bbox': np.array([gt_bbox[:4] for gt_bbox in batch_gt_bboxes[i] if gt_bbox[4] == cls])
+                    'bbox': np.array([batch_gt_bboxes[i][j]
+                                      for j in range(batch_gt_bboxes[i].shape[0])
+                                      if batch_gt_labels[i][j] == cls])
                 }
 
                 self.num_positive[cls] += (self.gt_list[cls][image_name]['bbox']).shape[0]
 
             for pred_box in batch_pred_bboxes[i]:
-                self.pred_list[pred_box[5]].append([image_name, pred_box[4], pred_box[:4]])
+                self.pred_list[pred_box[4]].append([image_name, pred_box[5], pred_box[:4]])
 
     def get_mAP(self):
         # compute mAP by APs under different oks thresholds

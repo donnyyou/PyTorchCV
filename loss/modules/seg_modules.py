@@ -108,7 +108,11 @@ class SegEncodeLoss(nn.Module):
     def _get_batch_label_vector(target_, num_classes, grid_scale=None):
         # target is a 3D Variable BxHxW, output is 2D BxnClass
         b, h, w = target_.size()
+        pad_h = 0 if (h % 6 == 0) else 6 - (h % 6)
+        pad_w = 0 if (w % 6 == 0) else 6 - (w % 6)
         target = target_.clone()
+        target = F.upsample_nearest(target, (h + pad_h, w + pad_w))
+
         if grid_scale is not None:
             target = target.contiguous().view(b, h // grid_scale, grid_scale, w // grid_scale, grid_scale)
             target = target.permute(0, 2, 4, 1, 3).contiguous().view(b * grid_scale * grid_scale,
