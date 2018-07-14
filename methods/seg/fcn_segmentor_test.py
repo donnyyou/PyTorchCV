@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
 import cv2
 import numpy as np
 import torch
@@ -49,23 +48,55 @@ class FCNSegmentorTest(object):
     def __test_img(self, image_path, save_path):
         image = ImageHelper.pil_open_rgb(image_path)
         ori_width, ori_height = image.size
-        image = Scale(size=self.configer.get('data', 'input_size'))(image)
+        if self.configer.is_empty('test', 'test_input_size'):
+            in_width, in_height = image.size
+        else:
+            in_width, in_height = self.configer.get('test', 'test_input_size')
+
+        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
+        for scale in self.configer.get('test', 'scale_search'):
+            image = Scale(size=(int(in_width * scale), int(in_height * scale)))(image)
+
+            if self.configer.get('test', 'crop_test'):
+                results = self._crop_predict(image)
+            else:
+                results = self._predict(image)
+
+            results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
+            total_logits += results
+
+        if self.configer.get('test', 'mirror'):
+            image = Scale(size=(in_width, in_height))(image)
+            image = image.transpose(Image.FLIP_LEFT_RIGHT)
+            if self.configer.get('test', 'crop_test'):
+                results = self._crop_predict(image)
+            else:
+                results = self._predict(image)
+
+            results = cv2.resize(results[:,::-1],(ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
+            total_logits += results
+
+        label_map = np.argmax(total_logits, axis=-1)
+        label_img = np.array(label_map, dtype=np.uint8)
+        if not self.configer.is_empty('details', 'label_list'):
+            label_img = self.__relabel(label_img)
+
+        label_img = Image.fromarray(label_img, 'P')
+        label_img.save(save_path)
+
+    def _crop_predict(self, image):
+        pass
+
+    def _predict(self, image):
         image = ToTensor()(image)
         image = Normalize(mean=self.configer.get('trans_params', 'mean'),
                           std=self.configer.get('trans_params', 'std'))(image)
         with torch.no_grad():
             inputs = image.unsqueeze(0).to(self.device)
             results = self.seg_net.forward(inputs)
+            results = results.squeeze().permute(1, 2, 0).cpu().numpy()
 
-            label_map = results.data.cpu().numpy().argmax(axis=1)[0].squeeze()
-
-            label_img = np.array(label_map, dtype=np.uint8)
-            if not self.configer.is_empty('details', 'label_list'):
-                label_img = self.__relabel(label_img)
-
-            label_img = Image.fromarray(label_img, 'P')
-            label_img = label_img.resize((ori_width, ori_height), Image.NEAREST)
-            label_img.save(save_path)
+        return results
 
     def __relabel(self, label_map):
         height, width = label_map.shape
