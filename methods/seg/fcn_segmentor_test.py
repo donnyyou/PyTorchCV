@@ -58,7 +58,11 @@ class FCNSegmentorTest(object):
             image = Scale(size=(int(in_width * scale), int(in_height * scale)))(image)
 
             if self.configer.get('test', 'crop_test'):
-                results = self._crop_predict(image)
+                crop_size = self.configer.get('test', 'crop_size')
+                if in_width > crop_size[0] and in_height > crop_size[1]:
+                    results = self._crop_predict(image, crop_size)
+                else:
+                    results = self._predict(image)
             else:
                 results = self._predict(image)
 
@@ -69,7 +73,11 @@ class FCNSegmentorTest(object):
             image = Scale(size=(in_width, in_height))(image)
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
             if self.configer.get('test', 'crop_test'):
-                results = self._crop_predict(image)
+                crop_size = self.configer.get('test', 'crop_size')
+                if in_width > crop_size[0] and in_height > crop_size[1]:
+                    results = self._crop_predict(image, crop_size)
+                else:
+                    results = self._predict(image)
             else:
                 results = self._predict(image)
 
@@ -84,8 +92,47 @@ class FCNSegmentorTest(object):
         label_img = Image.fromarray(label_img, 'P')
         label_img.save(save_path)
 
-    def _crop_predict(self, image):
-        pass
+    def _crop_predict(self, image, crop_size):
+        width, height = image.size
+        image = ToTensor()(image)
+        image = Normalize(mean=self.configer.get('trans_params', 'mean'),
+                          std=self.configer.get('trans_params', 'std'))(image)
+        np_image = image.permute(1, 2, 0).cpu().numpy()
+        height_starts = self._decide_intersection(height, crop_size[1])
+        width_starts = self._decide_intersection(width, crop_size[0])
+        split_crops = []
+        for height in height_starts:
+            for width in width_starts:
+                image_crop = np_image[height:height + crop_size[1], width:width + crop_size[0]]
+                split_crops.append(image_crop[np.newaxis, :])
+
+        split_crops = np.concatenate(split_crops, axis=0)  # (n, crop_image_size, crop_image_size, 3)
+        inputs = torch.from_numpy(split_crops).permute(0, 3, 1, 2)
+        with torch.no_grad():
+            inputs = inputs.to(self.device)
+            results = self.seg_net.forward(inputs)
+            results = results.permute(0, 2, 3, 1).cpu().numpy()
+
+        reassemble = np.zeros((np_image.shape[0], np_image.shape[1], results.shape[-1]), np.float32)
+        index = 0
+        for height in height_starts:
+            for width in width_starts:
+                reassemble[height:height+crop_size[1], width:width+crop_size[0]] += results[index]
+                index += 1
+
+        return reassemble
+
+    def _decide_intersection(self, total_length, crop_length):
+        stride = int(crop_length * self.configer.get('test', 'crop_stride_ratio'))            # set the stride as the paper do
+        times = (total_length - crop_length) // stride + 1
+        cropped_starting = []
+        for i in range(times):
+            cropped_starting.append(stride*i)
+
+        if total_length - cropped_starting[-1] > crop_length:
+            cropped_starting.append(total_length - crop_length)  # must cover the total image
+
+        return cropped_starting
 
     def _predict(self, image):
         image = ToTensor()(image)
