@@ -19,12 +19,13 @@ class ImageHelper(object):
 
     @staticmethod
     def cv2_open_bgr(image_path):
-        img_rgb = np.array(Image.open(image_path).convert('RGB'))
-        return ImageHelper.rgb2bgr(img_rgb)
+        img_bgr = cv2.imread(image_path)
+        return img_bgr
 
     @staticmethod
-    def cv2_open_p(image_path):
-        return np.array(Image.open(image_path).convert('P'))
+    def cv2_open_rgb(image_path):
+        img_bgr = cv2.imread(image_path)
+        return ImageHelper.bgr2rgb(img_bgr)
 
     @staticmethod
     def pil_open_rgb(image_path):
