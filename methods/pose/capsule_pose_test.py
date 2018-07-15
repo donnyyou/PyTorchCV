@@ -111,7 +111,7 @@ class CapsulePoseTest(object):
 
     def __get_paf_and_heatmap(self, img_raw):
         multiplier = [scale * self.configer.get('data', 'input_size')[0] / img_raw.shape[1]
-                      for scale in self.configer.get('data', 'scale_search')]
+                      for scale in self.configer.get('test', 'scale_search')]
 
         heatmap_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('data', 'num_keypoints')))
         paf_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'paf_out')))

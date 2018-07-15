@@ -10,6 +10,13 @@
       "data_dir": "/data/DataSet/MNIST",
       "workers": 8
     },
+    "test": {
+      "scale_search": [0.5, 1.0, 1.5, 2.0],
+      "mirror": true,
+      "crop_test": false,
+      "crop_size": [864, 864],
+      "crop_stride_ratio": 0.667
+    },
     "train_trans": {
       "pad_ratio": 0.0,
       "brightness_ratio": 0.0,
