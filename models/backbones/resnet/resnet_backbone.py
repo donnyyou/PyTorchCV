@@ -168,6 +168,26 @@ class ResNetBackbone(object):
             orig_resnet = self.syncbn_resnet_models.resnet101()
             arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
 
+        elif arch == 'caffe_resnet101':
+            orig_resnet = self.resnet_models.caffe_resnet101()
+            arch_net = NormalResnetBackbone(orig_resnet)
+
+        elif arch == 'caffe_resnet101_dilated8':
+            orig_resnet = self.resnet_models.caffe_resnet101()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8)
+
+        elif arch == 'caffe_resnet101_dilated16':
+            orig_resnet = self.resnet_models.caffe_resnet101()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
+
+        elif arch == 'syncbn_caffe_resnet101_dilated8':
+            orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8)
+
+        elif arch == 'syncbn_caffe_resnet101_dilated16':
+            orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
+
         else:
             raise Exception('Architecture undefined!')
 
