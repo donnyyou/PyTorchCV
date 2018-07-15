@@ -17,7 +17,7 @@ SEG_DIR = 'vis/results/seg'
 
 class SegVisualizer(object):
 
-    def __init__(self, configer):
+    def __init__(self, configer=None):
         self.configer = configer
 
     def vis_fn(self, preds, targets, ori_img_in=None, name='default', sub_dir='fn'):
@@ -183,3 +183,12 @@ class SegVisualizer(object):
                 image_result = cv2.addWeighted(ori_img[i], 0.6, image_result, 0.4, 0)
 
             cv2.imwrite(os.path.join(base_dir, '{}_{}.jpg'.format(name, img_id)), image_result)
+
+    def error_map(self, im, pred, gt):
+        canvas = im.copy()
+        canvas[np.where((gt - pred != [0, 0, 0]).all(axis=2))] = [0, 0, 0]
+        pred[np.where((gt - pred == [0, 0, 0]).all(axis=2))] = [0, 0, 0]
+        canvas = cv2.addWeighted(canvas, 1.0, pred, 1.0, 0)
+        # canvas = cv2.addWeighted(im, 0.3, canvas, 0.7, 0)
+        canvas[np.where((gt == [0, 0, 0]).all(axis=2))] = [0, 0, 0]
+        return canvas
