@@ -241,15 +241,15 @@ class YoloV3Loss(nn.Module):
         scaled_anchors = [(a_w / stride_w, a_h / stride_h) for a_w, a_h in anchors]
 
         prediction = outputs.view(bs, num_anchors,
-                                  self.bbox_attrs, in_h, in_w).permute(0, 1, 3, 4, 2).contiguous()
+                                  4+1+self.num_classes, in_h, in_w).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = torch.sigmoid(prediction[..., 0])          # Center x
-        y = torch.sigmoid(prediction[..., 1])          # Center y
+        x = F.sigmoid(prediction[..., 0])          # Center x
+        y = F.sigmoid(prediction[..., 1])          # Center y
         w = prediction[..., 2]                         # Width
         h = prediction[..., 3]                         # Height
-        conf = torch.sigmoid(prediction[..., 4])       # Conf
-        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
+        conf = F.sigmoid(prediction[..., 4])       # Conf
+        pred_cls = F.sigmoid(prediction[..., 5:])  # Cls pred.
 
         #  build target
         mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self._get_target(gt_bboxes, gt_labels,
