@@ -15,6 +15,7 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.det.det_data_utilizer import DetDataUtilizer
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -39,6 +40,7 @@ class SingleShotDetector(object):
         self.det_loss_manager = DetLossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
+        self.det_data_utilizer = DetDataUtilizer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -80,7 +82,8 @@ class SingleShotDetector(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
-        for i, (inputs, bboxes, labels) in enumerate(self.train_loader):
+        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
+            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes, batch_gt_labels)
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
@@ -130,7 +133,8 @@ class SingleShotDetector(object):
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Change the data type.
-                inputs, bboxes, labels = self.module_utilizer.to_device(inputs, batch_gt_bboxes, batch_gt_labels)
+                bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes, batch_gt_labels)
+                inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
 
                 # Forward pass.
                 loc, cls = self.det_net(inputs)
