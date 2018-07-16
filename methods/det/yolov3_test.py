@@ -12,7 +12,6 @@ import os
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
@@ -24,7 +23,7 @@ from utils.helpers.det_helper import DetHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
-from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -40,7 +39,7 @@ class YOLOv3Test(object):
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.default_boxes = SSDPriorBoxLayer(configer)()
+        self.yolo_detection_layer = YOLODetectionLayer(configer)()
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -94,51 +93,7 @@ class YOLOv3Test(object):
 
         pred_list = list()
         for outputs, anchors in zip(output_list, anchors_list):
-            bs, _, in_h, in_w = outputs.size()
-            num_anchors = len(anchors)
-            prediction = outputs.view(bs, num_anchors,
-                                      4 + 1 + self.configer.get('data', 'num_classes'),
-                                      in_h, in_w).permute(0, 1, 3, 4, 2).contiguous()
-            # Get outputs
-            x = F.sigmoid(prediction[..., 0])  # Center x
-            y = F.sigmoid(prediction[..., 1])  # Center y
-            w = prediction[..., 2]  # Width
-            h = prediction[..., 3]  # Height
-            conf = F.sigmoid(prediction[..., 4])  # Conf
-            pred_cls = F.sigmoid(prediction[..., 5:])  # Cls pred.
-
-            FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-            LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-
-            # Calculate offsets for each grid
-            grid_x = torch.linspace(0, in_w - 1, in_w).repeat(in_h, 1).repeat(
-                                    bs * num_anchors, 1, 1).view(x.shape).type(FloatTensor)
-            grid_y = torch.linspace(0, in_h - 1, in_h).repeat(in_h, 1).t().repeat(
-                                    bs * num_anchors, 1, 1).view(y.shape).type(FloatTensor)
-
-            stride_h = self.configer.get('data', 'train_input_size')[1] / in_h
-            stride_w = self.configer.get('data', 'train_input_size')[0] / in_w
-
-            scaled_anchors = [(a_w / stride_w, a_h / stride_h) for a_w, a_h in anchors]
-            # Calculate anchor w, h
-            anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-            anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-            anchor_w = anchor_w.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(w.shape)
-            anchor_h = anchor_h.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(h.shape)
-
-            # Add offset and scale with anchors
-            pred_boxes = FloatTensor(prediction[..., :4].shape)
-            pred_boxes[..., 0] = x.data + grid_x
-            pred_boxes[..., 1] = y.data + grid_y
-            pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
-            pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
-
-            # Results
-            _scale = torch.Tensor([stride_w, stride_h] * 2).type(FloatTensor)
-
-            pred = torch.cat((pred_boxes.view(bs, -1, 4) * _scale, conf.view(bs, -1, 1),
-                              pred_cls.view(bs, -1, self.configer.get('data', 'num_classes'))), -1)
-            pred_list.append(pred)
+            pred_list.append(self.yolo_detection_layer(outputs, anchors))
 
         pred_bboxes = torch.cat(pred_list, 1)
         batch_detections = self.__nms(pred_bboxes)
