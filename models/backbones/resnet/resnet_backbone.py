@@ -31,7 +31,7 @@ class NormalResnetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
@@ -47,7 +47,7 @@ class NormalResnetBackbone(nn.Module):
         x = self.layer4(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class DilatedResnetBackbone(nn.Module):
@@ -94,7 +94,7 @@ class DilatedResnetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
@@ -110,7 +110,7 @@ class DilatedResnetBackbone(nn.Module):
         x = self.layer4(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class ResNetBackbone(object):

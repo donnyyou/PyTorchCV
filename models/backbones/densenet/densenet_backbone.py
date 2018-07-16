@@ -43,7 +43,7 @@ class NormalDensenetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
@@ -70,7 +70,7 @@ class NormalDensenetBackbone(nn.Module):
         x = self.norm5(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class DilatedDensenetBackbone(nn.Module):
@@ -121,7 +121,7 @@ class DilatedDensenetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
@@ -150,7 +150,7 @@ class DilatedDensenetBackbone(nn.Module):
         x = self.norm5(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class DenseNetBackbone(object):
