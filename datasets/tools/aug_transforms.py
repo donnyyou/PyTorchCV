@@ -616,9 +616,6 @@ class AugCompose(object):
     def __init__(self, configer, split='train'):
         self.configer = configer
         self.split = split
-        if self.configer.is_empty('data', 'train_input_size'):
-            self.configer.add_key_value(['data', 'train_input_size'], self.configer.get('data', 'input_size'))
-            self.configer.add_key_value(['data', 'val_input_size'], self.configer.get('data', 'input_size'))
 
         if split == 'train':
             self.transforms = {

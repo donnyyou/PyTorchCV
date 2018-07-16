@@ -45,6 +45,10 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
 
+        if self.configer.is_empty('data', 'train_input_size'):
+            self.configer.add_key_value(['data', 'train_input_size'], self.configer.get('data', 'input_size'))
+            self.configer.add_key_value(['data', 'val_input_size'], self.configer.get('data', 'input_size'))
+
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         return_list = list()
