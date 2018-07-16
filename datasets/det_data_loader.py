@@ -15,6 +15,7 @@ import datasets.tools.aug_transforms as aug_trans
 import datasets.tools.transforms as trans
 from datasets.det.ssd_data_loader import SSDDataLoader
 from datasets.det.fr_data_loader import FRDataLoader
+from datasets.det.yolo_data_loader import YOLODataLoader
 from utils.tools.logger import Logger as Log
 
 
@@ -55,6 +56,17 @@ class DetDataLoader(object):
 
             return trainloader
 
+        elif self.configer.get('method') == 'yolov3':
+            trainloader = data.DataLoader(
+                YOLODataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
+                               aug_transform=self.aug_train_transform,
+                               img_transform=self.img_transform,
+                               configer=self.configer),
+                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+
+            return trainloader
+
         else:
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
@@ -77,6 +89,17 @@ class DetDataLoader(object):
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform,
                              configer=self.configer),
+                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+
+            return valloader
+
+        elif self.configer.get('method') == 'yolov3':
+            valloader = data.DataLoader(
+                YOLODataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
+                               aug_transform=self.aug_val_transform,
+                               img_transform=self.img_transform,
+                               configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
 
