@@ -26,7 +26,7 @@ from val.scripts.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
 
 
-class SingleShotDetector(object):
+class YOLOv3(object):
     """
       The class for Single Shot Detector. Include train, val, test & predict.
     """
@@ -222,7 +222,7 @@ class SingleShotDetector(object):
 
         pred_bboxes = torch.cat(pred_list, 1)
         batch_detections = self.__nms(pred_bboxes)
-
+        return self.__get_object_list(batch_detections)
 
     def __nms(self, prediction):
         """
