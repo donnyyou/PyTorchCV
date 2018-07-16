@@ -16,7 +16,7 @@ class NormalDarknetBackbone(nn.Module):
     def __init__(self, orig_darknet):
         super(NormalDarknetBackbone, self).__init__()
 
-        self.num_features = 1024
+        self.num_features = [64, 128, 256, 512, 1024]
         # take pretrained darknet, except AvgPool and FC
         self.conv1 = orig_darknet.conv1
         self.bn1 = orig_darknet.bn1
@@ -30,7 +30,7 @@ class NormalDarknetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
@@ -47,14 +47,14 @@ class NormalDarknetBackbone(nn.Module):
         x = self.layer5(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class DilatedDarknetBackbone(nn.Module):
     def __init__(self, orig_darknet, dilate_scale=8):
         super(DilatedDarknetBackbone, self).__init__()
 
-        self.num_features = 1024
+        self.num_features = [64, 128, 256, 512, 1024]
         from functools import partial
 
         if dilate_scale == 8:
@@ -94,7 +94,7 @@ class DilatedDarknetBackbone(nn.Module):
     def get_num_features(self):
         return self.num_features
 
-    def forward(self, x, is_tuple=False):
+    def forward(self, x):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
@@ -111,7 +111,7 @@ class DilatedDarknetBackbone(nn.Module):
         x = self.layer5(x)
         tuple_features.append(x)
 
-        return x if not is_tuple else tuple_features
+        return tuple_features
 
 
 class DarkNetBackbone(object):
