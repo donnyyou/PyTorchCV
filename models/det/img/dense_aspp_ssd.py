@@ -9,7 +9,7 @@ import torch.nn.init as init
 from torch import nn
 
 from models.backbones.backbone_selector import BackboneSelector
-from utils.layers.det.multibox_layer import ShareMultiBoxLayer
+from utils.layers.det.ssd_multibox_layer import SSDShareMultiBoxLayer
 
 
 class _DetFeatureBlock(nn.Sequential):
@@ -116,7 +116,7 @@ class DenseASPPSSD(nn.Module):
         self.det_feature4 = _RevertedResDetBlock(det_features[2], det_features[3], stride=2, expand_ratio=3)
         self.det_feature5 = _RevertedResDetBlock(det_features[3], det_features[4], stride=2, expand_ratio=3)
 
-        self.multibox_layer = ShareMultiBoxLayer(configer)
+        self.multibox_layer = SSDShareMultiBoxLayer(configer)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 init.kaiming_uniform_(m.weight.data)

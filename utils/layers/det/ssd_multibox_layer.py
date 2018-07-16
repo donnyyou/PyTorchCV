@@ -13,10 +13,10 @@ import torch
 import torch.nn as nn
 
 
-class MultiBoxLayer(nn.Module):
+class SSDMultiBoxLayer(nn.Module):
 
     def __init__(self, configer):
-        super(MultiBoxLayer, self).__init__()
+        super(SSDMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
         self.num_anchors = configer.get('details', 'num_anchor_list')
@@ -54,10 +54,10 @@ class MultiBoxLayer(nn.Module):
         return loc_preds, conf_preds
 
 
-class ShareMultiBoxLayer(nn.Module):
+class SSDShareMultiBoxLayer(nn.Module):
 
     def __init__(self, configer):
-        super(ShareMultiBoxLayer, self).__init__()
+        super(SSDShareMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
         self.num_anchors = configer.get('details', 'num_anchor_list')
@@ -100,10 +100,10 @@ class ShareMultiBoxLayer(nn.Module):
         return loc_preds, conf_preds
 
 
-class UnifiedMultiBoxLayer(nn.Module):
+class SSDUnifiedMultiBoxLayer(nn.Module):
 
     def __init__(self, configer):
-        super(UnifiedMultiBoxLayer, self).__init__()
+        super(SSDUnifiedMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
         self.num_anchors = configer.get('details', 'num_anchor_list')

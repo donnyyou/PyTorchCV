@@ -18,7 +18,7 @@ from torch.autograd import Variable
 
 from datasets.tools.transforms import Normalize, ToTensor
 from models.det_model_manager import DetModelManager
-from utils.layers.det.priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.tools.configer import Configer
 from utils.tools.logger import Logger as Log
 from vis.visualizer.det_visualizer import DetVisualizer

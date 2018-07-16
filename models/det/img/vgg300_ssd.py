@@ -7,7 +7,7 @@
 import torch.nn.functional as F
 from torch import nn
 
-from utils.layers.det.multibox_layer import MultiBoxLayer
+from utils.layers.det.ssd_multibox_layer import SSDMultiBoxLayer
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -63,7 +63,7 @@ class Vgg300SSD(nn.Module):
                                            num_c=self.num_centrals[3], stride=self.num_strides[3],
                                            pad=self.num_paddings[3])
 
-        self.multibox_layer = MultiBoxLayer(configer)
+        self.multibox_layer = SSDMultiBoxLayer(configer)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

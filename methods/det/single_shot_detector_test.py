@@ -23,7 +23,7 @@ from models.det_model_manager import DetModelManager
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
-from utils.layers.det.priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
