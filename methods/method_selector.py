@@ -11,6 +11,8 @@ from methods.cls.fc_classifier import FCClassifier
 from methods.cls.fc_classifier_test import FCClassifierTest
 from methods.det.single_shot_detector import SingleShotDetector
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
+from methods.det.yolov3 import YOLOv3
+from methods.det.yolov3_test import YOLOv3Test
 from methods.pose.associative_embedding import AssociativeEmbedding
 from methods.pose.associative_embedding_test import AssociativeEmbeddingTest
 from methods.pose.conv_pose_machine import ConvPoseMachine
@@ -50,9 +52,11 @@ SEG_TEST_DICT = {
 
 DET_METHOD_DICT = {
     'single_shot_detector': SingleShotDetector,
+    'yolov3': YOLOv3,
 }
 DET_TEST_DICT = {
     'single_shot_detector': SingleShotDetectorTest,
+    'yolov3': YOLOv3Test,
 }
 
 CLS_METHOD_DICT = {

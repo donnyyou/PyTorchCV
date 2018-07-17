@@ -24,6 +24,12 @@ class DetHelper(object):
           iou(tensor): sized [N,M].
 
         """
+        if len(box1.size()) == 1:
+            box1 = box1.unsqueeze(0)
+
+        if len(box2.size()) == 1:
+            box2 = box2.unsqueeze(0)
+
         N = box1.size(0)
         M = box2.size(0)
 
@@ -35,8 +41,8 @@ class DetHelper(object):
 
         # min(xmax, ymax)
         rb = torch.min(
-            box1[:, 2:].unsqueeze(1).expand(N, M, 2),  # [N,2] -> [N,1,2] -> [N,M,2]
-            box2[:, 2:].unsqueeze(0).expand(N, M, 2)   # [M,2] -> [1,M,2] -> [N,M,2]
+            box1[:, 2:4].unsqueeze(1).expand(N, M, 2),  # [N,2] -> [N,1,2] -> [N,M,2]
+            box2[:, 2:4].unsqueeze(0).expand(N, M, 2)   # [M,2] -> [1,M,2] -> [N,M,2]
         )
 
         wh = rb - lt  # [N,M,2]

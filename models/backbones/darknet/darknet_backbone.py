@@ -20,7 +20,7 @@ class NormalDarknetBackbone(nn.Module):
         # take pretrained darknet, except AvgPool and FC
         self.conv1 = orig_darknet.conv1
         self.bn1 = orig_darknet.bn1
-        self.relu = orig_darknet.relu
+        self.relu1 = orig_darknet.relu1
         self.layer1 = orig_darknet.layer1
         self.layer2 = orig_darknet.layer2
         self.layer3 = orig_darknet.layer3
@@ -34,7 +34,7 @@ class NormalDarknetBackbone(nn.Module):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.relu(x)
+        x = self.relu1(x)
 
         x = self.layer1(x)
         tuple_features.append(x)
@@ -69,7 +69,7 @@ class DilatedDarknetBackbone(nn.Module):
         # Take pretrained darknet, except AvgPool and FC
         self.conv1 = orig_darknet.conv1
         self.bn1 = orig_darknet.bn1
-        self.relu = orig_darknet.relu
+        self.relu1 = orig_darknet.relu1
         self.layer1 = orig_darknet.layer1
         self.layer2 = orig_darknet.layer2
         self.layer3 = orig_darknet.layer3
@@ -98,7 +98,7 @@ class DilatedDarknetBackbone(nn.Module):
         tuple_features = list()
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.relu(x)
+        x = self.relu1(x)
 
         x = self.layer1(x)
         tuple_features.append(x)

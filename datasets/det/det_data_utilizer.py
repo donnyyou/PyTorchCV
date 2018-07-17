@@ -8,50 +8,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+import numpy as np
 import torch
+
+from utils.helpers.det_helper import DetHelper
 
 
 class DetDataUtilizer(object):
 
     def __init__(self, configer):
         self.configer = configer
-
-    def _iou(self, box1, box2):
-        """Compute the intersection over union of two set of boxes, each box is [x1,y1,x2,y2].
-
-        Args:
-          box1(tensor): bounding boxes, sized [N,4]; [[xmin, ymin, xmax, ymax], ...]
-          box2(tensor): bounding boxes, sized [M,4].
-        Return:
-          iou(tensor): sized [N,M].
-
-        """
-        N = box1.size(0)
-        M = box2.size(0)
-
-        # max(xmin, ymin).
-        lt = torch.max(
-            box1[:, :2].unsqueeze(1).expand(N, M, 2),  # [N,2] -> [N,1,2] -> [N,M,2]
-            box2[:, :2].unsqueeze(0).expand(N, M, 2)   # [M,2] -> [1,M,2] -> [N,M,2]
-        )
-
-        # min(xmax, ymax)
-        rb = torch.min(
-            box1[:, 2:].unsqueeze(1).expand(N, M, 2),  # [N,2] -> [N,1,2] -> [N,M,2]
-            box2[:, 2:].unsqueeze(0).expand(N, M, 2)   # [M,2] -> [1,M,2] -> [N,M,2]
-        )
-
-        wh = rb - lt  # [N,M,2]
-        wh[wh < 0] = 0  # clip at 0
-        inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
-
-        area1 = (box1[:, 2]-box1[:, 0]) * (box1[:, 3]-box1[:, 1])  # [N,]
-        area2 = (box2[:, 2]-box2[:, 0]) * (box2[:, 3]-box2[:, 1])  # [M,]
-        area1 = area1.unsqueeze(1).expand_as(inter)  # [N,] -> [N,1] -> [N,M]
-        area2 = area2.unsqueeze(0).expand_as(inter)  # [M,] -> [1,M] -> [N,M]
-
-        iou = inter / (area1 + area2 - inter)
-        return iou
 
     def rpn_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
         pass
@@ -123,4 +90,82 @@ class DetDataUtilizer(object):
         conf[conf_class_idx] = gt_labels + 1
 
         return loc, conf
+
+    def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels):
+        anchors_list = self.configer.get('gt', 'anchors')
+        feature_maps_size = self.configer.get('gt', 'feature_maps_size')
+        ignore_threshold = self.configer.get('gt', 'iou_threshold')
+        img_size = self.configer.get('data', 'train_input_size')
+        assert len(anchors_list) == len(feature_maps_size)
+        batch_target_list = list()
+        batch_objmask_list = list()
+        batch_noobjmask_list = list()
+        for fm_size, ori_anchors in zip(feature_maps_size, anchors_list):
+            in_w, in_h = fm_size
+            stride_h = img_size[1] / in_h
+            stride_w = img_size[0] / in_w
+            anchors = [(a_w / stride_w, a_h / stride_h) for a_w, a_h in ori_anchors]
+            batch_size = len(batch_gt_bboxes)
+            num_anchors = len(anchors)
+            obj_mask = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            noobj_mask = torch.ones(batch_size, num_anchors, in_h, in_w)
+            tx = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            ty = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            tw = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            th = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            tconf = torch.zeros(batch_size, num_anchors, in_h, in_w)
+            tcls = torch.zeros(batch_size, num_anchors, in_h, in_w, self.configer.get('data', 'num_classes'))
+
+            for b in range(batch_size):
+                for t in range(batch_gt_bboxes[b].shape[0]):
+                    if batch_gt_bboxes[b][t].sum() == 0:
+                        continue
+
+                    # Convert to position relative to box
+                    gx = batch_gt_bboxes[b][t, 0] * in_w
+                    gy = batch_gt_bboxes[b][t, 1] * in_h
+                    gw = batch_gt_bboxes[b][t, 2] * in_w
+                    gh = batch_gt_bboxes[b][t, 3] * in_h
+                    # Get grid box indices
+                    gi = int(gx)
+                    gj = int(gy)
+                    # Get shape of gt box
+                    gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
+                    # Get shape of anchor box
+                    anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((num_anchors, 2)),
+                                                                      np.array(anchors)), 1))
+                    # Calculate iou between gt and anchor shapes
+                    anch_ious = DetHelper.bbox_iou(gt_box, anchor_shapes)
+                    # Where the overlap is larger than threshold set mask to zero (ignore)
+                    noobj_mask[b, anch_ious[0] > ignore_threshold] = 0
+                    # Find the best matching anchor box
+                    best_n = np.argmax(anch_ious, axis=1)
+
+                    # Masks
+                    obj_mask[b, best_n, gj, gi] = 1
+                    # Coordinates
+                    tx[b, best_n, gj, gi] = gx - gi
+                    ty[b, best_n, gj, gi] = gy - gj
+                    # Width and height
+                    tw[b, best_n, gj, gi] = math.log(gw / anchors[best_n][0] + 1e-16)
+                    th[b, best_n, gj, gi] = math.log(gh / anchors[best_n][1] + 1e-16)
+                    # object
+                    tconf[b, best_n, gj, gi] = 1
+                    # One-hot encoding of label
+                    tcls[b, best_n, gj, gi, int(batch_gt_labels[b][t])] = 1
+
+            obj_mask = obj_mask.view(batch_size, -1).unsqueeze(2)
+            noobj_mask = noobj_mask.view(batch_size, -1).unsqueeze(2)
+            tx = tx.view(batch_size, -1).unsqueeze(2)
+            ty = ty.view(batch_size, -1).unsqueeze(2)
+            tw = tw.view(batch_size, -1).unsqueeze(2)
+            th = th.view(batch_size, -1).unsqueeze(2)
+            tconf = tconf.view(batch_size, -1).unsqueeze(2)
+            tcls = tcls.view(batch_size, -1, self.configer.get('data', 'num_classes'))
+            target = torch.cat((tx, ty, tw, th, tconf, tcls), -1)
+            batch_target_list.append(target)
+            batch_objmask_list.append(obj_mask)
+            batch_noobjmask_list.append(noobj_mask)
+
+        return torch.cat(batch_target_list, 1), torch.cat(batch_objmask_list, 1), torch.cat(batch_noobjmask_list, 1)
 

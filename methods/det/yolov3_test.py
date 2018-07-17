@@ -39,7 +39,7 @@ class YOLOv3Test(object):
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.yolo_detection_layer = YOLODetectionLayer(configer)()
+        self.yolo_detection_layer = YOLODetectionLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -76,7 +76,7 @@ class YOLOv3Test(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __decode(self, output_list):
+    def __decode(self, output_list, image_raw):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -97,7 +97,7 @@ class YOLOv3Test(object):
 
         pred_bboxes = torch.cat(pred_list, 1)
         batch_detections = self.__nms(pred_bboxes)
-        return self.__get_info_tree(batch_detections)
+        return self.__get_info_tree(batch_detections, image_raw)
 
     def __nms(self, prediction):
         """
@@ -118,7 +118,7 @@ class YOLOv3Test(object):
         output = [None for _ in range(len(prediction))]
         for image_i, image_pred in enumerate(prediction):
             # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] >= self.configer.get('vis', 'obj_threshold')).squeeze()
+            conf_mask = (image_pred[:, 4] > self.configer.get('vis', 'obj_threshold')).squeeze()
             image_pred = image_pred[conf_mask]
             # If none are remaining => process next image
             if not image_pred.size(0):
@@ -148,7 +148,8 @@ class YOLOv3Test(object):
                     if len(detections_class) == 1:
                         break
                     # Get the IOUs for all boxes with lower confidence
-                    ious = DetHelper.bbox_iou(max_detections[-1:], detections_class[1:])
+                    ious = DetHelper.bbox_iou(torch.from_numpy(np.array(max_detections[-1])),
+                                              torch.from_numpy(np.array(detections_class[1:])))
                     # Remove detections with IoU >= NMS threshold
                     detections_class = detections_class[1:][ious[0] < self.configer.get('nms', 'overlap_threshold')]
 
@@ -159,23 +160,6 @@ class YOLOv3Test(object):
 
         return output
 
-    def __get_object_list(self, batch_detections):
-        batch_pred_bboxes = list()
-        for idx, detections in enumerate(batch_detections):
-            object_list = list()
-            if detections is not None:
-                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                    xmin = x1 / self.configer.get('data', 'val_input_size')[0]
-                    ymin = y1 / self.configer.get('data', 'val_input_size')[1]
-                    xmax = x2 / self.configer.get('data', 'val_input_size')[0]
-                    ymax = y2 / self.configer.get('data', 'val_input_size')[1]
-                    cf = cls_conf * conf
-                    object_list.append([xmin, ymin, xmax, ymax, cls_pred, float('%.2f' % cf)])
-
-            batch_pred_bboxes.append(object_list)
-
-        return batch_pred_bboxes
-
     def __get_info_tree(self, batch_detections, image_raw):
         height, width, _ = image_raw.shape
         batch_list = list()
@@ -185,15 +169,18 @@ class YOLOv3Test(object):
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     object_dict = dict()
-                    xmin = x1 / self.configer.get('data', 'val_input_size')[0] * width
-                    ymin = y1 / self.configer.get('data', 'val_input_size')[1] * height
-                    xmax = x2 / self.configer.get('data', 'val_input_size')[0] * width
-                    ymax = y2 / self.configer.get('data', 'val_input_size')[1] * height
-                    object_dict['bbox'] = [xmin, ymin, xmax, ymax]
-                    object_dict['label'] = cls_pred
-                    object_dict['score'] = float('%.2f' % conf * cls_conf)
+                    try:
+                        xmin = x1.cpu().item() / self.configer.get('data', 'val_input_size')[0] * width
+                        ymin = y1.cpu().item() / self.configer.get('data', 'val_input_size')[1] * height
+                        xmax = x2.cpu().item() / self.configer.get('data', 'val_input_size')[0] * width
+                        ymax = y2.cpu().item() / self.configer.get('data', 'val_input_size')[1] * height
+                        object_dict['bbox'] = [xmin, ymin, xmax, ymax]
+                        object_dict['label'] = cls_pred.cpu().item()
+                        object_dict['score'] = float('%.2f' % conf.cpu().item())
 
-                    object_list.append(object_dict)
+                        object_list.append(object_dict)
+                    except:
+                        continue
 
             json_dict['objects'] = object_list
             batch_list.append(json_dict)
@@ -263,7 +250,20 @@ class YOLOv3Test(object):
 
         count = 0
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels)
+            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)
+            targets = targets.to(self.device)
+            anchors_list = self.configer.get('gt', 'anchors')
+            output_list = list()
+            be_c = 0
+            for i, anchors in enumerate(anchors_list):
+                fm_size = self.configer.get('gt', 'feature_maps_size')[i]
+                num_c = len(anchors) * fm_size[0] * fm_size[1]
+                output_list.append(targets[:, be_c:be_c+num_c].contiguous()
+                                   .view(targets.size(0), len(anchors), fm_size[1], fm_size[0], -1)
+                                   .permute(0, 1, 4, 2, 3).contiguous()
+                                   .view(targets.size(0), -1, fm_size[1], fm_size[0]))
+
+                be_c += num_c
 
             for j in range(inputs.size(0)):
                 count = count + 1
@@ -274,15 +274,13 @@ class YOLOv3Test(object):
                                           std=self.configer.get('trans_params', 'std'))(inputs[j])
                 ori_img_rgb = ori_img_rgb.numpy().transpose(1, 2, 0).astype(np.uint8)
                 ori_img_bgr = cv2.cvtColor(ori_img_rgb, cv2.COLOR_RGB2BGR)
-                eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-                labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
-                                                                 self.configer.get('data', 'num_classes'))
-                boxes, lbls, scores = self.__decode(bboxes[j], labels_target[j])
-                self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.default_boxes, labels[j])
-                json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+
+                prediction = self.__decode(output_list, ori_img_rgb)
+                json_dict = self.__get_info_tree(prediction[0:1], ori_img_rgb)[0]
+
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
-                                                           conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                           conf_threshold=self.configer.get('vis', 'obj_threshold'))
 
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)

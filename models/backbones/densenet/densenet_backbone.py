@@ -10,7 +10,6 @@ from __future__ import print_function
 import torch.nn as nn
 
 from models.backbones.densenet.densenet_models import DenseNetModels
-from models.backbones.densenet.syncbn_densenet_models import SyncBNDenseNetModels
 
 
 class NormalDensenetBackbone(nn.Module):
@@ -157,6 +156,7 @@ class DenseNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.densenet_models = DenseNetModels(self.configer)
+        from models.backbones.densenet.syncbn_densenet_models import SyncBNDenseNetModels
         self.syncbn_densenet_models = SyncBNDenseNetModels(self.configer)
 
     def __call__(self):

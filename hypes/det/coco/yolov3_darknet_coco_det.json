@@ -1,11 +1,12 @@
 {
     "dataset": "coco",
     "task": "det",
-    "method": "yolo",
+    "method": "yolov3",
     "data": {
       "train_batch_size": 16,
       "val_batch_size": 2,
-      "input_size": [416, 416],
+      "train_input_size": [416, 416],
+      "val_input_size": [416, 416],
       "num_classes": 80,
       "data_dir": "/home/donny/DataSet/COCO_DET",
       "workers": 8
@@ -84,6 +85,7 @@
         [[30, 61], [62, 45], [59, 119]],
         [[10, 13], [16, 30], [33, 23]]
       ],
+      "feature_maps_size": [[13, 13], [26, 26], [52, 52]],
       "iou_threshold": 0.5
     },
     "details": {
@@ -170,6 +172,6 @@
       "overlap_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.0
+      "obj_threshold": 0.0
     }
 }

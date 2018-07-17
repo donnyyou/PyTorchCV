@@ -10,7 +10,6 @@ from __future__ import print_function
 import torch.nn as nn
 
 from models.backbones.resnet.resnet_models import ResNetModels
-from models.backbones.resnet.syncbn_resnet_models import SyncBNResNetModels
 
 
 class NormalResnetBackbone(nn.Module):
@@ -117,6 +116,7 @@ class ResNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.resnet_models = ResNetModels(self.configer)
+        from models.backbones.resnet.syncbn_resnet_models import SyncBNResNetModels
         self.syncbn_resnet_models = SyncBNResNetModels(self.configer)
 
     def __call__(self):

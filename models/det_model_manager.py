@@ -11,13 +11,17 @@ from __future__ import print_function
 from models.det.img.dense_aspp_ssd import DenseASPPSSD
 from models.det.img.vgg300_ssd import Vgg300SSD
 from models.det.img.vgg512_ssd import Vgg512SSD
+from models.det.img.darknet_yolov2 import DarkNetYolov2
+from models.det.img.darknet_yolov3 import DarkNetYolov3
 
 from utils.tools.logger import Logger as Log
 
 DET_MODEL_DICT = {
     'dense_aspp_ssd': DenseASPPSSD,
     'vgg300_ssd': Vgg300SSD,
-    'vgg500_ssd': Vgg512SSD
+    'vgg500_ssd': Vgg512SSD,
+    'darknet_yolov2': DarkNetYolov2,
+    'darknet_yolov3': DarkNetYolov3,
 }
 
 

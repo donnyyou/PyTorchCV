@@ -9,12 +9,14 @@ from __future__ import division
 from __future__ import print_function
 
 from loss.modules.det_modules import SSDFocalLoss, SSDMultiBoxLoss
+from loss.modules.det_modules import YOLOv3Loss
 from utils.tools.logger import Logger as Log
 
 
 DET_LOSS_DICT = {
     'focal_loss': SSDFocalLoss,
     'multibox_loss': SSDMultiBoxLoss,
+    'yolov3_loss': YOLOv3Loss,
 }
 
 

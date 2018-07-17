@@ -644,7 +644,7 @@ class AugCompose(object):
                 'random_resize': RandomResize(
                     scale_min=self.configer.get('trans_params', 'random_resize')['scale_min'],
                     scale_max=self.configer.get('trans_params', 'random_resize')['scale_max'],
-                    size=self.configer.get('data', 'input_size'),
+                    size=self.configer.get('data', 'train_input_size'),
                     resize_ratio=self.configer.get('train_trans', 'resize_ratio')
                 ),
                 'random_rotate': RandomRotate(
@@ -688,7 +688,7 @@ class AugCompose(object):
                 'random_resize': RandomResize(
                     scale_min=self.configer.get('trans_params', 'random_resize')['scale_min'],
                     scale_max=self.configer.get('trans_params', 'random_resize')['scale_max'],
-                    size=self.configer.get('data', 'input_size'),
+                    size=self.configer.get('data', 'val_input_size'),
                     resize_ratio=self.configer.get('val_trans', 'resize_ratio')
                 ),
                 'random_rotate': RandomRotate(

@@ -21,9 +21,13 @@ class YOLODetectionLayer(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, layer_out, anchors):
+    def __call__(self, layer_out, anchors, is_training=False):
         num_classes = self.configer.get('data', 'num_classes')
-        inp_dim = self.configer.get('data', 'input_size')
+        if is_training:
+            inp_dim = self.configer.get('data', 'train_input_size')
+        else:
+            inp_dim = self.configer.get('data', 'train_input_size')
+
         batch_size, _, grid_size_h, grid_size_w = layer_out.size()
         stride = inp_dim[0] / grid_size_w
         bbox_attrs = 4 + 1 + num_classes
