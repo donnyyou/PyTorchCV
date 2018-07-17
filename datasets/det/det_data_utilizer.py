@@ -122,10 +122,10 @@ class DetDataUtilizer(object):
                         continue
 
                     # Convert to position relative to box
-                    gx = batch_gt_bboxes[b][t, 0] * in_w
-                    gy = batch_gt_bboxes[b][t, 1] * in_h
-                    gw = batch_gt_bboxes[b][t, 2] * in_w
-                    gh = batch_gt_bboxes[b][t, 3] * in_h
+                    gx = (batch_gt_bboxes[b][t, 0] + batch_gt_bboxes[b][t, 2]) / 2.0 * in_w
+                    gy = (batch_gt_bboxes[b][t, 1] + batch_gt_bboxes[b][t, 3]) / 2.0 * in_h
+                    gw = (batch_gt_bboxes[b][t, 2] - batch_gt_bboxes[b][t, 0]) * in_w
+                    gh = (batch_gt_bboxes[b][t, 3] - batch_gt_bboxes[b][t, 1]) * in_h
                     # Get grid box indices
                     gi = int(gx)
                     gj = int(gy)

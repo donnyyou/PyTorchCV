@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
@@ -210,6 +211,7 @@ class YOLOv3Loss(nn.Module):
         super(YOLOv3Loss, self).__init__()
 
         self.configer = configer
+        self.yolo_detection_layer = YOLODetectionLayer(self.configer)
         self.num_classes = self.configer.get('data', 'num_classes')
         self.img_size = self.configer.get('data', 'train_input_size')
         self.lambda_xy = self.configer.get('network', 'loss_weights')['coord_loss']  # 2.5
@@ -223,13 +225,9 @@ class YOLOv3Loss(nn.Module):
     def forward(self, outputs_list, targets, objmask, noobjmask):
         prediction_list = list()
         for i, outputs in enumerate(outputs_list):
-            batch_size, _, in_h, in_w = outputs.size()
-            prediction = outputs.view(batch_size, -1,
-                                      4 + 1 + self.num_classes, in_h, in_w).permute(0, 1, 3, 4, 2).contiguous()
-            prediction = prediction.view(batch_size, -1, 4 + 1 + self.num_classes)
-
-            prediction_list.append(prediction)
-
+            prediction_list.append(self.yolo_detection_layer(outputs,
+                                                             self.configer.get('gt', 'anchors')[i],
+                                                             is_training=False))
         prediction = torch.cat(prediction_list, 1)
 
         # Get outputs
