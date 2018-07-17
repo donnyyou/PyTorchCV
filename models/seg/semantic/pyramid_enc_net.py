@@ -40,6 +40,34 @@ class PyramidEncNet(nn.Module):
         return tuple(x)
 
 
+# PSP decoder Part
+# pyramid pooling, bilinear upsample
+class PPMBilinearDeepsup(nn.Module):
+    def __init__(self, pool_scales=(1, 2, 3, 6), fc_dim=1024):
+        super(PPMBilinearDeepsup, self).__init__()
+        self.ppm = []
+        for scale in pool_scales:
+            self.ppm.append(nn.Sequential(
+                nn.AdaptiveAvgPool2d(scale),
+                nn.Conv2d(fc_dim, 256, kernel_size=1, bias=False),
+                BatchNorm2d(256),
+                nn.ReLU(inplace=True)
+            ))
+        self.ppm = nn.ModuleList(self.ppm)
+
+    def forward(self, conv5):
+        input_size = conv5.size()
+        ppm_out = []
+
+        for pool_scale in self.ppm:
+            ppm_out.append(nn.functional.upsample(
+                pool_scale(conv5),
+                (input_size[2], input_size[3]),
+                mode='bilinear', align_corners=True))
+
+        ppm_out = torch.cat(ppm_out, 1)
+        return ppm_out
+
 class FCNHead(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(FCNHead, self).__init__()
@@ -79,7 +107,7 @@ class EncModule(nn.Module):
         b, c, _, _ = x.size()
         gamma = self.fc(en)
         y = gamma.view(b, c, 1, 1)
-        outputs = [F.relu_(x + x * y)]
+        outputs = [F.relu(x + x * y)]
         if self.se_loss:
             outputs.append(self.selayer(en))
 
@@ -87,7 +115,8 @@ class EncModule(nn.Module):
 
 
 class PyramidEncHead(nn.Module):
-    def __init__(self, in_channels, out_channels, pyramid=[1, 2, 3, 6], se_loss=True, lateral=True):
+    def __init__(self, in_channels, out_channels,
+                 pyramid=(1, 2, 3), pool_scales=(1, 2, 3, 6), se_loss=True, lateral=True):
         super(PyramidEncHead, self).__init__()
         self.pyramid = pyramid
         self.se_loss = se_loss
@@ -111,12 +140,14 @@ class PyramidEncHead(nn.Module):
                     nn.Conv2d(3*512, 512, kernel_size=3, padding=1, bias=False),
                     BatchNorm2d(512),
                     nn.ReLU(inplace=True))
-        self.encmodule_list = nn.ModuleList()
-        for i in self.pyramid:
-            self.encmodule_list.append(EncModule(512, out_channels, ncodes=48 // i, se_loss=se_loss))
 
+        self.encmodule_list = nn.ModuleList()
+        for _ in self.pyramid:
+            self.encmodule_list.append(EncModule(512, out_channels, ncodes=48, se_loss=se_loss))
+
+        self.psp_module = PPMBilinearDeepsup(fc_dim=1024)
         self.conv6 = nn.Sequential(nn.Dropout2d(0.1, False),
-                                   nn.Conv2d(512*4, out_channels, 1))
+                                   nn.Conv2d(512 + 256 * len(pool_scales), out_channels, 1))
 
     def forward(self, *inputs):
         feat = self.conv5(inputs[-1])
@@ -141,7 +172,10 @@ class PyramidEncHead(nn.Module):
             feat_list.append(feat_temp[:, :, :-pad_h, :-pad_w].contiguous())
             se_list.append(outs[1])
 
-        out = self.conv6(torch.cat(feat_list, 1))
+        enc_features = torch.stack(feat_list, 0).sum(dim=0, keepdim=False)
+        psp_out = self.psp_module(inputs[-1])
+
+        out = self.conv6(torch.cat((enc_features, psp_out), 1))
 
         return out, se_list
 
