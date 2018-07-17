@@ -172,7 +172,7 @@ class PyramidEncHead(nn.Module):
             feat_list.append(feat_temp[:, :, :-pad_h, :-pad_w].contiguous())
             se_list.append(outs[1])
 
-        enc_features = torch.stack(feat_list, 0).sum(dim=0, keepdim=False)
+        enc_features = torch.stack(feat_list, 0).sum(dim=0, keepdim=False).div(len(self.pyramid))
         psp_out = self.psp_module(inputs[-1])
 
         out = self.conv6(torch.cat((enc_features, psp_out), 1))
