@@ -97,7 +97,6 @@ class YOLOv3Test(object):
 
         batch_pred_bboxes = torch.cat(pred_list, 1)
 
-        print (batch_pred_bboxes.size())
         batch_detections = self.__nms(batch_pred_bboxes)
         return batch_detections
 

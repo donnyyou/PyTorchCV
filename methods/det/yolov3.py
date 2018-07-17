@@ -11,7 +11,6 @@ from __future__ import print_function
 import time
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
@@ -19,6 +18,7 @@ from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
+from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.helpers.det_helper import DetHelper
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
@@ -28,7 +28,7 @@ from vis.visualizer.det_visualizer import DetVisualizer
 
 class YOLOv3(object):
     """
-      The class for Single Shot Detector. Include train, val, test & predict.
+      The class for YOLO v3. Include train, val, test & predict.
     """
     def __init__(self, configer):
         self.configer = configer
@@ -40,6 +40,7 @@ class YOLOv3(object):
         self.det_loss_manager = DetLossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
+        self.yolo_detection_layer = YOLODetectionLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -137,7 +138,8 @@ class YOLOv3(object):
                 loss = self.det_loss(output_list, batch_gt_bboxes, batch_gt_labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
-                batch_pred_bboxes = self.__decode(output_list)
+                batch_detections = self.__decode(output_list)
+                batch_pred_bboxes = self.__get_object_list(batch_detections)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
@@ -174,55 +176,12 @@ class YOLOv3(object):
 
         pred_list = list()
         for outputs, anchors in zip(output_list, anchors_list):
-            bs, _, in_h, in_w = outputs.size()
-            num_anchors = len(anchors)
-            prediction = outputs.view(bs, num_anchors,
-                                      4 + 1 + self.configer.get('data', 'num_classes'),
-                                      in_h, in_w).permute(0, 1, 3, 4, 2).contiguous()
-            # Get outputs
-            x = F.sigmoid(prediction[..., 0])  # Center x
-            y = F.sigmoid(prediction[..., 1])  # Center y
-            w = prediction[..., 2]  # Width
-            h = prediction[..., 3]  # Height
-            conf = F.sigmoid(prediction[..., 4])  # Conf
-            pred_cls = F.sigmoid(prediction[..., 5:])  # Cls pred.
+            pred_list.append(self.yolo_detection_layer(outputs, anchors, is_training=False))
 
-            FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-            LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+        batch_pred_bboxes = torch.cat(pred_list, 1)
 
-            # Calculate offsets for each grid
-            grid_x = torch.linspace(0, in_w - 1, in_w).repeat(in_h, 1).repeat(
-                                    bs * num_anchors, 1, 1).view(x.shape).type(FloatTensor)
-            grid_y = torch.linspace(0, in_h - 1, in_h).repeat(in_h, 1).t().repeat(
-                                    bs * num_anchors, 1, 1).view(y.shape).type(FloatTensor)
-
-            stride_h = self.configer.get('data', 'train_input_size')[1] / in_h
-            stride_w = self.configer.get('data', 'train_input_size')[0] / in_w
-
-            scaled_anchors = [(a_w / stride_w, a_h / stride_h) for a_w, a_h in anchors]
-            # Calculate anchor w, h
-            anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-            anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-            anchor_w = anchor_w.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(w.shape)
-            anchor_h = anchor_h.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(h.shape)
-
-            # Add offset and scale with anchors
-            pred_boxes = FloatTensor(prediction[..., :4].shape)
-            pred_boxes[..., 0] = x.data + grid_x
-            pred_boxes[..., 1] = y.data + grid_y
-            pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
-            pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
-
-            # Results
-            _scale = torch.Tensor([stride_w, stride_h] * 2).type(FloatTensor)
-
-            pred = torch.cat((pred_boxes.view(bs, -1, 4) * _scale, conf.view(bs, -1, 1),
-                              pred_cls.view(bs, -1, self.configer.get('data', 'num_classes'))), -1)
-            pred_list.append(pred)
-
-        pred_bboxes = torch.cat(pred_list, 1)
-        batch_detections = self.__nms(pred_bboxes)
-        return self.__get_object_list(batch_detections)
+        batch_detections = self.__nms(batch_pred_bboxes)
+        return batch_detections
 
     def __nms(self, prediction):
         """
@@ -243,7 +202,7 @@ class YOLOv3(object):
         output = [None for _ in range(len(prediction))]
         for image_i, image_pred in enumerate(prediction):
             # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] >= self.configer.get('vis', 'obj_threshold')).squeeze()
+            conf_mask = (image_pred[:, 4] > self.configer.get('vis', 'obj_threshold')).squeeze()
             image_pred = image_pred[conf_mask]
             # If none are remaining => process next image
             if not image_pred.size(0):
@@ -273,7 +232,8 @@ class YOLOv3(object):
                     if len(detections_class) == 1:
                         break
                     # Get the IOUs for all boxes with lower confidence
-                    ious = DetHelper.bbox_iou(max_detections[-1:], detections_class[1:])
+                    ious = DetHelper.bbox_iou(torch.from_numpy(np.array(max_detections[-1])),
+                                              torch.from_numpy(np.array(detections_class[1:])))
                     # Remove detections with IoU >= NMS threshold
                     detections_class = detections_class[1:][ious[0] < self.configer.get('nms', 'overlap_threshold')]
 
@@ -290,12 +250,13 @@ class YOLOv3(object):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                    xmin = x1 / self.configer.get('data', 'val_input_size')[0]
-                    ymin = y1 / self.configer.get('data', 'val_input_size')[1]
-                    xmax = x2 / self.configer.get('data', 'val_input_size')[0]
-                    ymax = y2 / self.configer.get('data', 'val_input_size')[1]
-                    cf = cls_conf * conf
-                    object_list.append([xmin, ymin, xmax, ymax, cls_pred, float('%.2f' % cf)])
+                    xmin = x1.cpu().item()
+                    ymin = y1.cpu().item()
+                    xmax = x2.cpu().item()
+                    ymax = y2.cpu().item()
+                    cf = conf.cpu().item()
+                    cls_pred = cls_pred.cpu().item()
+                    object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
 
             batch_pred_bboxes.append(object_list)
 

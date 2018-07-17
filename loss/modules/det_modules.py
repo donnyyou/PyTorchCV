@@ -227,16 +227,16 @@ class YOLOv3Loss(nn.Module):
         for i, outputs in enumerate(outputs_list):
             prediction_list.append(self.yolo_detection_layer(outputs,
                                                              self.configer.get('gt', 'anchors')[i],
-                                                             is_training=False))
+                                                             is_training=True))
         prediction = torch.cat(prediction_list, 1)
 
         # Get outputs
-        x = F.sigmoid(prediction[..., 0])  # Center x
-        y = F.sigmoid(prediction[..., 1])  # Center y
+        x = prediction[..., 0]  # Center x
+        y = prediction[..., 1]  # Center y
         w = prediction[..., 2]  # Width
         h = prediction[..., 3]  # Height
-        conf = F.sigmoid(prediction[..., 4])  # Conf
-        pred_cls = F.sigmoid(prediction[..., 5:])  # Cls pred.
+        conf = prediction[..., 4]  # Conf
+        pred_cls = prediction[..., 5:]  # Cls pred.
 
         # Get targets
         tx = targets[..., 0]  # Center x
