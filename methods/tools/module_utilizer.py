@@ -12,7 +12,6 @@ import os
 import torch
 import torch.nn as nn
 
-from extensions.layers.encoding.parallel import DataParallelModel
 from utils.tools.logger import Logger as Log
 
 
@@ -60,6 +59,7 @@ class ModuleUtilizer(object):
     def _make_parallel(self, net):
         if not self.configer.is_empty('network', 'encoding_parallel')\
                 and self.configer.get('network', 'encoding_parallel'):
+            from extensions.layers.encoding.parallel import DataParallelModel
             return DataParallelModel(net)
 
         else:
@@ -149,9 +149,15 @@ class ModuleUtilizer(object):
             Log.error('Metric: {} is invalid.'.format(metric))
             exit(1)
 
-    def freeze_bn(self, net):
+    def freeze_bn(self, net, syncbn=False):
         for m in net.modules():
-            if isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
                 m.eval()
+
+            if syncbn:
+                from extensions.layers.encoding.syncbn import BatchNorm2d, BatchNorm1d
+                if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
+                    m.eval()
+
 
 
