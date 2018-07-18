@@ -30,16 +30,6 @@ class DetDataUtilizer(object):
         pass
 
     def ssd_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
-        target_bboxes = list()
-        target_labels = list()
-        for i in range(len(gt_bboxes)):
-            loc, conf = self.ssd_item_encode(gt_bboxes[i], gt_labels[i], default_boxes)
-            target_bboxes.append(loc)
-            target_labels.append(conf)
-
-        return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
-
-    def ssd_item_encode(self, gt_bboxes, gt_labels, default_boxes):
         """Transform target bounding boxes and class labels to SSD boxes and classes.
 
         Match each object box to all the default boxes, pick the ones with the Jaccard-Index > threshold:
@@ -52,48 +42,54 @@ class DetDataUtilizer(object):
         Returns:
           boxes(tensor): bounding boxes, sized [#obj, 8732, 4].
           classes(tensor): class labels, sized [8732,]
-
         """
-        if gt_bboxes is None or len(gt_bboxes) == 0:
-            loc = torch.zeros_like(default_boxes.size)
-            conf = torch.zeros((default_boxes.size(0), )).long()
+        target_bboxes = list()
+        target_labels = list()
+        for i in range(len(gt_bboxes)):
+            if gt_bboxes[i] is None or len(gt_bboxes[i]) == 0:
+                loc = torch.zeros_like(default_boxes.size)
+                conf = torch.zeros((default_boxes.size(0),)).long()
 
-            return loc, conf
+                return loc, conf
 
-        iou = self._iou(gt_bboxes, torch.cat([default_boxes[:, :2] - default_boxes[:, 2:]/2,
-                                              default_boxes[:, :2] + default_boxes[:, 2:]/2], 1))  # [#obj,8732]
+            iou = DetHelper.bbox_iou(gt_bboxes[i],
+                                     torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
+                                                default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1))  # [#obj,8732]
 
-        prior_box_iou, max_idx = iou.max(0)  # [1,8732]
-        max_idx.squeeze_(0)  # [8732,]
-        prior_box_iou.squeeze_(0)  # [8732,]
+            prior_box_iou, max_idx = iou.max(0)  # [1,8732]
+            max_idx.squeeze_(0)  # [8732,]
+            prior_box_iou.squeeze_(0)  # [8732,]
 
-        boxes = gt_bboxes[max_idx]  # [8732,4]
-        variances = [0.1, 0.2]
-        cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
-        cxcy /= variances[0] * default_boxes[:, 2:]
-        wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]  # [8732,2]
-        wh = torch.log(wh) / variances[1]
-        loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+            boxes = gt_bboxes[i][max_idx]  # [8732,4]
+            variances = [0.1, 0.2]
+            cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
+            cxcy /= variances[0] * default_boxes[:, 2:]
+            wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]  # [8732,2]
+            wh = torch.log(wh) / variances[1]
+            loc = torch.cat([cxcy, wh], 1)  # [8732,4]
 
-        conf = 1 + gt_labels[max_idx]  # [8732,], background class = 0
+            conf = 1 + gt_labels[i][max_idx]  # [8732,], background class = 0
 
-        if self.configer.get('gt', 'anchor_method') == 'retina':
-            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = -1
-            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold') - 0.1] = 0
-        else:
-            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = 0  # background
+            if self.configer.get('gt', 'anchor_method') == 'retina':
+                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = -1
+                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold') - 0.1] = 0
+            else:
+                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = 0  # background
 
-        # According to IOU, it give every prior box a class label.
-        # Then if the IOU is lower than the threshold, the class label is 0(background).
-        class_iou, prior_box_idx = iou.max(1, keepdim=False)
-        conf_class_idx = prior_box_idx.cpu().numpy()
-        conf[conf_class_idx] = gt_labels + 1
+            # According to IOU, it give every prior box a class label.
+            # Then if the IOU is lower than the threshold, the class label is 0(background).
+            class_iou, prior_box_idx = iou.max(1, keepdim=False)
+            conf_class_idx = prior_box_idx.cpu().numpy()
+            conf[conf_class_idx] = gt_labels[i] + 1
 
-        return loc, conf
+            target_bboxes.append(loc)
+            target_labels.append(conf)
+
+        return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
 
     def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels, is_training=True):
         anchors_list = self.configer.get('gt', 'anchors')
-        feature_maps_size = self.configer.get('gt', 'feature_maps_size')
+        feature_maps_size = self.configer.get('gt', 'feature_maps_wh')
         ignore_threshold = self.configer.get('gt', 'iou_threshold')
         if not is_training:
             img_size = self.configer.get('data', 'val_input_size')

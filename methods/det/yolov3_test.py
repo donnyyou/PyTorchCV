@@ -251,7 +251,7 @@ class YOLOv3Test(object):
             output_list = list()
             be_c = 0
             for f_index, anchors in enumerate(anchors_list):
-                fm_size = self.configer.get('gt', 'feature_maps_size')[f_index]
+                fm_size = self.configer.get('gt', 'feature_maps_wh')[f_index]
                 num_c = len(anchors) * fm_size[0] * fm_size[1]
                 output_list.append(targets[:, be_c:be_c+num_c].contiguous()
                                    .view(targets.size(0), len(anchors), fm_size[1], fm_size[0], -1)
