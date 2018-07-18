@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from utils.helpers.det_helper import DetHelper
+from utils.tools.logger import Logger as Log
 
 
 class DetDataUtilizer(object):
@@ -21,9 +22,6 @@ class DetDataUtilizer(object):
         self.configer = configer
 
     def rpn_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
-        pass
-
-    def rpn_item_encode(self, gt_bboxes, gt_labels, default_boxes):
         pass
 
     def roi_batch_encode(self, gt_bboxes, gt_labels, rois):

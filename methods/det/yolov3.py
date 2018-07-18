@@ -65,8 +65,19 @@ class YOLOv3(object):
         self.det_loss = self.det_loss_manager.get_det_loss('yolov3_loss')
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_10 = []
+        params_dict = dict(self.det_net.module.named_parameters())
+        for key, value in params_dict.items():
+            if 'backbone.' not in key:
+                lr_10.append(value)
+            else:
+                lr_1.append(value)
 
-        return self.det_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 10.}]
+
+        return params
 
     def __train(self):
         """
