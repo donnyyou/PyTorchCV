@@ -179,7 +179,6 @@ class YOLOv3Test(object):
                 object_list.append(object_dict)
 
         json_dict['objects'] = object_list
-        print(json_dict)
 
         return json_dict
 
@@ -246,7 +245,7 @@ class YOLOv3Test(object):
 
         count = 0
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)
+            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels, is_training=False)
             targets = targets.to(self.device)
             anchors_list = self.configer.get('gt', 'anchors')
             output_list = list()

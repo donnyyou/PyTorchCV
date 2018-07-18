@@ -3,11 +3,11 @@
     "task": "det",
     "method": "single_shot_detector",
     "data": {
-      "train_batch_size": 60,
-      "val_batch_size": 60,
+      "train_batch_size": 6,
+      "val_batch_size": 2,
       "input_size": [300, 300],
-      "num_classes": 4,
-      "data_dir": "/data/DataSet/VOC",
+      "num_classes": 21,
+      "data_dir": "/home/donny/DataSet/VOC",
       "workers": 8
     },
     "test": {
@@ -22,7 +22,7 @@
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
-      "flip_ratio": 0.5,
+      "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
@@ -35,7 +35,7 @@
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
-      "flip_ratio": 0.5,
+      "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
@@ -77,15 +77,17 @@
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
     },
-    "details": {
+    "gt": {
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
-      "num_anchor_list": [4, 6, 6, 6, 4, 4, 4],
+      "num_anchor_list": [4, 6, 6, 6, 4, 4],
+      "num_feature_list": [512, 1024, 512, 256, 256, 256],
       "stride_list": [8, 16, 32, 64, 100, 300],
-      "num_feature_list":[512, 1024, 512, 256, 256, 256],
-      "default_ratio_list": [0.066, 0.2, 0.37, 0.54, 0.71, 0.88, 1.05],
-      "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2], [2], [2]],
-
+      "feature_maps_wh": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
+      "default_ratio_list": [0.1 , 0.2 , 0.37, 0.54, 0.71, 0.88, 1.05],
+      "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+    },
+    "details": {
       "color_list": [[255, 170, 30], [0, 0, 70], [244, 35, 232]],
       "name_id_dict": {
         "car":1, "cyclist":2, "pedestrian":3
@@ -93,36 +95,35 @@
       "name_seq": ["car", "cyclist", "pedestrian"]
     },
     "checkpoints": {
-      "checkpoints_name": "ssd_voc_det",
+      "checkpoints_name": "ssd_vgg300_voc_det",
       "checkpoints_dir": "checkpoints/det/voc",
-      "save_iters": 10000
+      "save_iters": 3000
     },
-
     "network":{
-      "backbone": "vgg11",
-      "model_name": "ssd",
+      "backbone": "vgg19_bn",
+      "width_mult": 1.0,
+      "model_name": "vgg300_ssd",
       "init": "kaiming_normal"
-
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/det/ssd_voc_det.log",
+      "log_file": "./log/det/ssd_vgg300_voc_det.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.00005,
+      "base_lr": 0.0005,
       "lr_policy": "step",
       "step": {
-        "gamma": 0.1,
-        "step_size": 400
+        "gamma": 0.3,
+        "step_size": 20
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 1000,
-      "max_epoch": 1000
+      "max_epoch": 100
     },
     "optim": {
       "optim_method": "adam",
@@ -141,6 +142,7 @@
       "overlap_threshold": 0.45
     },
     "vis": {
-      "conf_threshod": 0.0
+      "conf_threshold": 0.0
     }
 }
+

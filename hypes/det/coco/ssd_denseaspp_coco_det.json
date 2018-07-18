@@ -77,16 +77,17 @@
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
     },
-    "details": {
+    "gt": {
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
       "num_anchor_list": [6, 6, 6, 6, 6],
       "num_feature_list": [256, 256, 256, 256, 256, 256],
       "stride_list": [8, 16, 32, 64, 128, 256],
-      "feature_maps_hw": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
+      "feature_maps_wh": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
       "default_ratio_list": [0.066, 0.2, 0.37, 0.54, 0.71, 0.88],
-      "aspect_ratio_list": [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]],
-
+      "aspect_ratio_list": [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+    },
+    "details": {
       "color_list": [[255, 170, 30], [255, 0, 0], [0, 255, 0], [0, 0, 255]],
       "name_id_dict": {
         "person": 1, "bicycle":2, "car": 3, "motorcycle": 4, "airplane": 5, "bus": 6, "train": 7,
@@ -120,7 +121,6 @@
       "checkpoints_dir": "checkpoints/det/coco",
       "save_iters": 10000
     },
-
     "network":{
       "backbone": "resnet50_dilated8",
       "width_mult": 1.0,

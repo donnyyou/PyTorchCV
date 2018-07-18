@@ -85,7 +85,7 @@
         [[30, 61], [62, 45], [59, 119]],
         [[10, 13], [16, 30], [33, 23]]
       ],
-      "feature_maps_size": [[13, 13], [26, 26], [52, 52]],
+      "feature_maps_wh": [[13, 13], [26, 26], [52, 52]],
       "iou_threshold": 0.5
     },
     "details": {
@@ -122,7 +122,6 @@
       "checkpoints_dir": "checkpoints/det/coco",
       "save_iters": 3000
     },
-
     "network":{
       "backbone": "darknet53",
       "width_mult": 1.0,

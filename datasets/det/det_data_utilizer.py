@@ -77,11 +77,11 @@ class DetDataUtilizer(object):
 
         conf = 1 + gt_labels[max_idx]  # [8732,], background class = 0
 
-        if self.configer.get('details', 'anchor_method') == 'retina':
-            conf[prior_box_iou < self.configer.get('details', 'iou_threshold')] = -1
-            conf[prior_box_iou < self.configer.get('details', 'iou_threshold') - 0.1] = 0
+        if self.configer.get('gt', 'anchor_method') == 'retina':
+            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = -1
+            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold') - 0.1] = 0
         else:
-            conf[prior_box_iou < self.configer.get('details', 'iou_threshold')] = 0  # background
+            conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = 0  # background
 
         # According to IOU, it give every prior box a class label.
         # Then if the IOU is lower than the threshold, the class label is 0(background).
@@ -91,11 +91,15 @@ class DetDataUtilizer(object):
 
         return loc, conf
 
-    def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels):
+    def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels, is_training=True):
         anchors_list = self.configer.get('gt', 'anchors')
         feature_maps_size = self.configer.get('gt', 'feature_maps_size')
         ignore_threshold = self.configer.get('gt', 'iou_threshold')
-        img_size = self.configer.get('data', 'train_input_size')
+        if not is_training:
+            img_size = self.configer.get('data', 'val_input_size')
+        else:
+            img_size = self.configer.get('data', 'train_input_size')
+
         assert len(anchors_list) == len(feature_maps_size)
         batch_target_list = list()
         batch_objmask_list = list()

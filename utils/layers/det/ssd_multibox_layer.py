@@ -19,8 +19,8 @@ class SSDMultiBoxLayer(nn.Module):
         super(SSDMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
-        self.num_anchors = configer.get('details', 'num_anchor_list')
-        self.num_features = configer.get('details', 'num_feature_list')
+        self.num_anchors = configer.get('gt', 'num_anchor_list')
+        self.num_features = configer.get('gt', 'num_feature_list')
 
         self.loc_layers = nn.ModuleList()
         self.conf_layers = nn.ModuleList()
@@ -60,8 +60,8 @@ class SSDShareMultiBoxLayer(nn.Module):
         super(SSDShareMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
-        self.num_anchors = configer.get('details', 'num_anchor_list')
-        self.num_features = configer.get('details', 'num_feature_list')
+        self.num_anchors = configer.get('gt', 'num_anchor_list')
+        self.num_features = configer.get('gt', 'num_feature_list')
 
         self.loc_layers = nn.ModuleList()
         self.conf_layers = nn.ModuleList()
@@ -106,8 +106,8 @@ class SSDUnifiedMultiBoxLayer(nn.Module):
         super(SSDUnifiedMultiBoxLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
-        self.num_anchors = configer.get('details', 'num_anchor_list')
-        self.num_features = configer.get('details', 'num_feature_list')
+        self.num_anchors = configer.get('gt', 'num_anchor_list')
+        self.num_features = configer.get('gt', 'num_feature_list')
 
         self.loc_layer = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1),
