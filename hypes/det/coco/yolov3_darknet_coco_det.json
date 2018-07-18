@@ -124,7 +124,6 @@
     },
     "network":{
       "backbone": "darknet53",
-      "width_mult": 1.0,
       "model_name": "darknet_yolov3",
       "init": "kaiming_normal",
       "loss_weights": {
@@ -141,8 +140,7 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.01,
-      "backbone_lr": 0.001,
+      "base_lr": 0.001,
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,

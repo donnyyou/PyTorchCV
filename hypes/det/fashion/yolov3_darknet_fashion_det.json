@@ -1,7 +1,7 @@
 {
     "dataset": "fashion",
     "task": "det",
-    "method": "yolo",
+    "method": "yolov3",
     "data": {
       "train_batch_size": 16,
       "val_batch_size": 2,
@@ -90,11 +90,9 @@
     "details": {
       "color_list": [[255, 170, 30], [255, 0, 0], [0, 255, 0], [0, 0, 255]],
       "name_id_dict": {
-        "bags": 0, "belts": 1, "dresses": 2, "eyewear": 3, "footwear": 4, "hats": 5,
-        "leggings": 6, "outerwear": 7, "pants": 8, "skirts": 9, "tops": 10
+        "upper": 0, "lower": 1, "full": 2
       },
-      "name_seq": ["upper", "lower", "full", "eyewear", "footwear", "hats",
-                   "leggings", "outerwear", "pants", "skirts", "tops"]
+      "name_seq": ["upper", "lower", "full"]
     },
     "checkpoints": {
       "checkpoints_name": "yolov3_darknet_fashion_det",
@@ -103,7 +101,6 @@
     },
     "network":{
       "backbone": "darknet53",
-      "width_mult": 1.0,
       "model_name": "darknet_yolov3",
       "init": "kaiming_normal",
       "loss_weights": {
@@ -120,8 +117,7 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.01,
-      "backbone_lr": 0.001,
+      "base_lr": 0.001,
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
