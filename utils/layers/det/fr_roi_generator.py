@@ -115,10 +115,10 @@ class FRRoiGenerator(object):
         w = np.exp(dw) * src_width[:, np.newaxis]
 
         dst_bbox = np.zeros(loc.shape, dtype=loc.dtype)
-        dst_bbox[:, 0::4] = ctr_y - 0.5 * h
-        dst_bbox[:, 1::4] = ctr_x - 0.5 * w
-        dst_bbox[:, 2::4] = ctr_y + 0.5 * h
-        dst_bbox[:, 3::4] = ctr_x + 0.5 * w
+        dst_bbox[:, 0::4] = ctr_x - 0.5 * w
+        dst_bbox[:, 1::4] = ctr_y - 0.5 * h
+        dst_bbox[:, 2::4] = ctr_x + 0.5 * w
+        dst_bbox[:, 3::4] = ctr_y + 0.5 * h
 
         # Clip predicted boxes to image.
         dst_bbox[:, slice(0, 4, 2)] = np.clip(dst_bbox[:, slice(0, 4, 2)], 0, img_size[0])

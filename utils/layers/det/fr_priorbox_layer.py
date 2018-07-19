@@ -37,10 +37,10 @@ class FRPriorBoxLayer(object):
                     w = anchor_size[j] * np.sqrt(1. / aspect_ratio[i])
 
                     index = i * len(anchor_size) + j
-                    anchor_bases[index, 0] = stride // 2 - h / 2.
-                    anchor_bases[index, 1] = stride // 2 - w / 2.
-                    anchor_bases[index, 2] = stride // 2 + h / 2.
-                    anchor_bases[index, 3] = stride // 2 + w / 2.
+                    anchor_bases[index, 0] = stride // 2 - w / 2.
+                    anchor_bases[index, 1] = stride // 2 - h / 2.
+                    anchor_bases[index, 2] = stride // 2 + w / 2.
+                    anchor_bases[index, 3] = stride // 2 + h / 2.
 
             shift_y = np.arange(0, fm_h * stride, stride)
             shift_x = np.arange(0, fm_w * stride, stride)
