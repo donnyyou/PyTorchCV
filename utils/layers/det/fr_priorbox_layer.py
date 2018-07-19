@@ -22,12 +22,12 @@ class FRPriorBoxLayer(object):
         self.clip = clip
 
     def __call__(self):
-        num_layers = len(self.configer.get('gt', 'feature_maps_hw'))
+        num_layers = len(self.configer.get('gt', 'stride_list'))
+        input_size = self.configer.get('data', 'input_size')
         prior_box_list = list()
         for layer_num in range(num_layers):
-            fm_w = self.configer.get('gt', 'feature_maps_wh')[layer_num][0]
-            fm_h = self.configer.get('gt', 'feature_maps_wh')[layer_num][1]
             stride = self.configer.get('gt', 'stride_list')[layer_num]
+            fm_w, fm_h = input_size[0] // stride, input_size[1] // stride
             anchor_size = self.configer.get('gt', 'anchor_size_list')[layer_num]
             aspect_ratio = self.configer.get('gt', 'aspect_ratio_list')[layer_num]
             anchor_bases = np.zeros((len(anchor_size) * len(aspect_ratio), 4), dtype=np.float32)
