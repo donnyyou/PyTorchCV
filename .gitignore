@@ -2,6 +2,7 @@
 *.pyc
 *.pth
 *.so
+*.o
 /log
 /checkpoints
 /test/results
