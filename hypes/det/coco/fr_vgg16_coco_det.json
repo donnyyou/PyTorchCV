@@ -79,11 +79,11 @@
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
     },
-    "fr": {
+    "rpn": {
       "anchors": [
         [[128, 128], [256, 256], [512, 512]]
       ],
-      "feature_maps_wh": [[13, 13], [26, 26], [52, 52]],
+      "stride_list": [8, 16, 32],
       "iou_threshold": 0.5,
       "nms_threshold": 0.4
     },
@@ -126,9 +126,8 @@
       "model_name": "faster_rcnn",
       "init": "kaiming_normal",
       "loss_weights": {
-        "coord_loss": 2.5,
-        "obj_loss": 1.0,
-        "cls_loss": 1.0
+        "rpn_loss": 3.0,
+        "roi_loss": 1.0
       }
     },
     "logging": {
@@ -159,7 +158,7 @@
         "weight_decay": 0.0001
       },
       "sgd":{
-        "weight_decay": 0.00004,
+        "weight_decay": 0.0005,
         "momentum": 0.9
       }
     },

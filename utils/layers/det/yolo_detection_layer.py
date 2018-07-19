@@ -21,19 +21,14 @@ class YOLODetectionLayer(object):
         self.configer = configer
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
 
-    def __call__(self, layer_out, in_anchors, is_training=False):
+    def __call__(self, layer_out, in_anchors, feat_stride, is_training=False):
         num_classes = self.configer.get('data', 'num_classes')
-        if is_training:
-            inp_dim = self.configer.get('data', 'train_input_size')
-        else:
-            inp_dim = self.configer.get('data', 'val_input_size')
 
         batch_size, _, grid_size_h, grid_size_w = layer_out.size()
-        stride = inp_dim[0] / grid_size_w
         bbox_attrs = 4 + 1 + num_classes
         num_anchors = len(in_anchors)
 
-        anchors = [(a[0] / stride, a[1] / stride) for a in in_anchors]
+        anchors = [(a[0] / feat_stride, a[1] / feat_stride) for a in in_anchors]
 
         layer_out = layer_out.view(batch_size, num_anchors * bbox_attrs, grid_size_h * grid_size_w)
         layer_out = layer_out.contiguous().view(batch_size, num_anchors, bbox_attrs, grid_size_h * grid_size_w)
@@ -70,7 +65,8 @@ class YOLODetectionLayer(object):
 
             anchors = anchors.to(self.device)
 
-            anchors = anchors.contiguous().view(3, 1, 2).repeat(1, grid_size_h * grid_size_w, 1).contiguous().view(-1, 2).unsqueeze(0)
+            anchors = anchors.contiguous().view(3, 1, 2)\
+                .repeat(1, grid_size_h * grid_size_w, 1).contiguous().view(-1, 2).unsqueeze(0)
             layer_out[:, :, 2:4] = torch.exp(layer_out[:, :, 2:4]) * anchors
 
             layer_out[:, :, 0] /= grid_size_w

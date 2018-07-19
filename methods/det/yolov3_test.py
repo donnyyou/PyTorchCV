@@ -48,7 +48,7 @@ class YOLOv3Test(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-        self.det_net.eval()
+        self.module_utilizer.set_status(self.det_net, status='test')
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -89,11 +89,12 @@ class YOLOv3Test(object):
 
         """
         anchors_list = self.configer.get('gt', 'anchors')
+        stride_list = self.configer.get('gt', 'stride_list')
         assert len(anchors_list) == len(output_list)
 
         pred_list = list()
-        for outputs, anchors in zip(output_list, anchors_list):
-            pred_list.append(self.yolo_detection_layer(outputs, anchors, is_training=False))
+        for outputs, anchors, stride in zip(output_list, anchors_list, stride_list):
+            pred_list.append(self.yolo_detection_layer(outputs, anchors, stride, is_training=False))
 
         batch_pred_bboxes = torch.cat(pred_list, 1)
 
@@ -244,14 +245,17 @@ class YOLOv3Test(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
+        self.module_utilizer.set_status(self.det_net, status='val')
+        input_size = self.configer.get('data', 'input_size')
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels, is_training=False)
+            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)
             targets = targets.to(self.device)
             anchors_list = self.configer.get('gt', 'anchors')
             output_list = list()
             be_c = 0
             for f_index, anchors in enumerate(anchors_list):
-                fm_size = self.configer.get('gt', 'feature_maps_wh')[f_index]
+                feat_stride = self.configer.get('gt', 'stride_list')[f_index]
+                fm_size = [int(round(border / feat_stride)) for border in input_size]
                 num_c = len(anchors) * fm_size[0] * fm_size[1]
                 output_list.append(targets[:, be_c:be_c+num_c].contiguous()
                                    .view(targets.size(0), len(anchors), fm_size[1], fm_size[0], -1)

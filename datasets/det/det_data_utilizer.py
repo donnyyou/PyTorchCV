@@ -87,7 +87,7 @@ class DetDataUtilizer(object):
         ret_loc[index_inside, :] = loc
         return torch.from_numpy(loc), torch.from_numpy(label)
 
-    def roi_batch_encode(self, gt_bboxes, gt_labels, rois):
+    def roi_batch_encode(self, gt_bboxes, gt_labels, rois, roi_indices):
         n_sample = self.configer.get('roi', 'n_sample')
         pos_iou_thresh = self.configer.get('roi', 'pos_iou_thresh')
         neg_iou_thresh_hi = self.configer.get('roi', 'neg_iou_thresh_hi')
@@ -193,24 +193,19 @@ class DetDataUtilizer(object):
 
         return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
 
-    def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels, is_training=True):
+    def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels):
         anchors_list = self.configer.get('gt', 'anchors')
-        feature_maps_size = self.configer.get('gt', 'feature_maps_wh')
+        stride_list = self.configer.get('gt', 'stride_list')
         ignore_threshold = self.configer.get('gt', 'iou_threshold')
-        if not is_training:
-            img_size = self.configer.get('data', 'val_input_size')
-        else:
-            img_size = self.configer.get('data', 'train_input_size')
+        img_size = self.configer.get('data', 'input_size')
 
-        assert len(anchors_list) == len(feature_maps_size)
+        assert len(anchors_list) == len(stride_list)
         batch_target_list = list()
         batch_objmask_list = list()
         batch_noobjmask_list = list()
-        for fm_size, ori_anchors in zip(feature_maps_size, anchors_list):
-            in_w, in_h = fm_size
-            stride_h = img_size[1] / in_h
-            stride_w = img_size[0] / in_w
-            anchors = [(a_w / stride_w, a_h / stride_h) for a_w, a_h in ori_anchors]
+        for fm_stride, ori_anchors in zip(stride_list, anchors_list):
+            in_w, in_h = img_size[0] // fm_stride, img_size[1] // fm_stride
+            anchors = [(a_w / fm_stride, a_h / fm_stride) for a_w, a_h in ori_anchors]
             batch_size = len(batch_gt_bboxes)
             num_anchors = len(anchors)
             obj_mask = torch.zeros(batch_size, num_anchors, in_h, in_w)

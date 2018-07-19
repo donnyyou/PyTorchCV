@@ -39,7 +39,7 @@ class SingleShotDetectorTest(object):
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.default_boxes = SSDPriorBoxLayer(configer)()
+        self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -48,7 +48,7 @@ class SingleShotDetectorTest(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-        self.det_net.eval()
+        self.module_utilizer.set_status(self.det_net, status='test')
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -146,9 +146,10 @@ class SingleShotDetectorTest(object):
           labels: (tensor) class labels, sized [#obj,1].
 
         """
+        default_boxes = self.ssd_priorbox_layer()
         variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
+        wh = torch.exp(loc[:, 2:] * variances[1]) * default_boxes[:, 2:]
+        cxcy = loc[:, :2] * variances[0] * default_boxes[:, 2:] + default_boxes[:, :2]
         boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
 
         max_conf, labels = conf.max(1)  # [8732,1]
@@ -259,7 +260,7 @@ class SingleShotDetectorTest(object):
 
         count = 0
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels)
+            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels, self.ssd_priorbox_layer())
 
             for j in range(inputs.size(0)):
                 count = count + 1
@@ -274,7 +275,7 @@ class SingleShotDetectorTest(object):
                 labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
                                                                  self.configer.get('data', 'num_classes'))
                 boxes, lbls, scores = self.__decode(bboxes[j], labels_target[j])
-                self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.default_boxes, labels[j])
+                self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.ssd_priorbox_layer(), labels[j])
                 json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,

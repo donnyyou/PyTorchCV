@@ -27,19 +27,20 @@ class SSDPriorBoxLayer(object):
     def __call__(self):
         self.aspect_ratios = 0
 
-        # scale_w = self.configer.get('data', 'input_size')[0]
-        # scale_h = self.configer.get('data', 'input_size')[1]
-        # steps_w = [s / scale_w for s in self.configer.get('gt', 'stride_list')] # modify
-        # steps_h = [s / scale_h for s in self.configer.get('gt', 'stride_list')]
-        steps_w = [1.0 / f_wh[0] for f_wh in self.configer.get('gt', 'feature_maps_wh')] # modify
-        steps_h = [1.0 / f_wh[1] for f_wh in self.configer.get('gt', 'feature_maps_wh')] # modify
+        scale_w = self.configer.get('data', 'input_size')[0]
+        scale_h = self.configer.get('data', 'input_size')[1]
+        steps_w = [s / scale_w for s in self.configer.get('gt', 'stride_list')] # modify
+        steps_h = [s / scale_h for s in self.configer.get('gt', 'stride_list')]
 
-        num_layers = len(self.configer.get('gt', 'feature_maps_hw'))
+        feature_map_w = [int(round(scale_w / s)) for s in self.configer.get('gt', 'stride_list')]
+        feature_map_h = [int(round(scale_h / s)) for s in self.configer.get('gt', 'stride_list')]
+
+        num_layers = len(self.configer.get('gt', 'stride_list'))
 
         boxes = []
         for i in range(num_layers):
-            fm_w = self.configer.get('gt', 'feature_maps_wh')[i][0]
-            fm_h = self.configer.get('gt', 'feature_maps_wh')[i][1]
+            fm_w = feature_map_w[i]
+            fm_h = feature_map_h[i]
             for h, w in itertools.product(range(fm_h), range(fm_w)):
                 cx = (w + 0.5) * steps_w[i]
                 cy = (h + 0.5) * steps_h[i]

@@ -263,3 +263,18 @@ class YOLOv3Loss(nn.Module):
                loss_conf * self.lambda_conf + loss_cls * self.lambda_cls
 
         return loss
+
+
+class FRLoss(nn.Module):
+
+    def __init__(self, configer):
+        super(FRLoss, self).__init__()
+        self.configer = configer
+
+        self.lambda_xy = self.configer.get('network', 'loss_weights')['coord_loss']  # 2.5
+        self.lambda_wh = self.configer.get('network', 'loss_weights')['coord_loss']
+        self.lambda_conf = self.configer.get('network', 'loss_weights')['obj_loss']  # 1.0
+        self.lambda_cls = self.configer.get('network', 'loss_weights')['cls_loss']  # 1.0
+
+    def forward(self, output_list, target_list):
+        return None

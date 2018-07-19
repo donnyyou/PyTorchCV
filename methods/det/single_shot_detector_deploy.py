@@ -29,7 +29,7 @@ class SingleShotDetectorDeploy(object):
         self.model_path = model_path
         self.det_visualizer = DetVisualizer(self.configer)
         self.det_model_manager = DetModelManager(self.configer)
-        self.default_boxes = SSDPriorBoxLayer(self.configer)()
+        self.ssd_priorbox_layer = SSDPriorBoxLayer(self.configer)
         self.det_net = None
 
         self._init_model(model_path=model_path, gpu_id=gpu_id)
@@ -169,10 +169,11 @@ class SingleShotDetectorDeploy(object):
           labels: (tensor) class labels, sized [#obj,1].
 
         """
+        default_boxes = self.ssd_priorbox_layer()
         has_obj = False
         variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
+        wh = torch.exp(loc[:, 2:] * variances[1]) * default_boxes[:, 2:]
+        cxcy = loc[:, :2] * variances[0] * default_boxes[:, 2:] + default_boxes[:, :2]
         boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
 
         max_conf, labels = conf.max(1)  # [8732,1]

@@ -20,6 +20,7 @@ from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
+from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -41,6 +42,7 @@ class SingleShotDetector(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
+        self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -62,7 +64,7 @@ class SingleShotDetector(object):
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
 
-        self.det_loss = self.det_loss_manager.get_det_loss('multibox_loss')
+        self.det_loss = self.det_loss_manager.get_det_loss('ssd_multibox_loss')
 
     def _get_parameters(self):
 
@@ -75,7 +77,7 @@ class SingleShotDetector(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.det_net.train()
+        self.module_utilizer.set_status(self.det_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -83,7 +85,9 @@ class SingleShotDetector(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
-            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes, batch_gt_labels)
+            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes,
+                                                                     batch_gt_labels,
+                                                                     self.ssd_priorbox_layer())
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
@@ -128,12 +132,14 @@ class SingleShotDetector(object):
         """
           Validation function during the train phase.
         """
-        self.det_net.eval()
+        self.module_utilizer.set_status(self.det_net, status='val')
         start_time = time.time()
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Change the data type.
-                bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes, batch_gt_labels)
+                bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes,
+                                                                         batch_gt_labels,
+                                                                         self.ssd_priorbox_layer())
                 inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
 
                 # Forward pass.
@@ -166,7 +172,7 @@ class SingleShotDetector(object):
             self.det_running_score.reset()
             self.batch_time.reset()
             self.val_losses.reset()
-            self.det_net.train()
+            self.module_utilizer.set_status(self.det_net, status='train')
 
     def __nms(self, bboxes, scores, mode='union'):
         """Non maximum suppression.
