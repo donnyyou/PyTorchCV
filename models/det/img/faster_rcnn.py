@@ -15,7 +15,7 @@ from torch import nn
 
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-
+from utils.layers.det.roi_pooling_layer import ROIPoolingLayer
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -63,9 +63,9 @@ class FasterRCNN(nn.Module):
         """
         img_size = x.shape[2:]
         h = self.extractor(x)
-        rpn_locs, rpn_scores, rois, roi_indices, anchor = self.rpn(h, img_size, scale)
+        rpn_locs, rpn_scores, rois, roi_indices = self.rpn(h, img_size, scale)
         roi_cls_locs, roi_scores = self.head(h, rois, roi_indices)
-        return roi_cls_locs, roi_scores, rois, roi_indices
+        return rpn_locs, rpn_scores, roi_cls_locs, roi_scores, rois, roi_indices
 
 
 class RPNModule(nn.Module):
@@ -107,7 +107,7 @@ class RPNModule(nn.Module):
         self.loc = nn.Conv2d(512, self.n_anchors[0] * 4, 1, 1, 0)
         self.fr_roi_genrator = FRRoiGenerator(configer)
 
-    def forward(self, feature_list, img_size, scale=1.):
+    def forward(self, feature_list, img_size):
         """Forward Region Proposal Network.
         Here are notations.
         * :math:`N` is batch size.
@@ -183,19 +183,19 @@ class RoIHead(nn.Module):
         classifier (nn.Module): Two layer Linear ported from vgg16
     """
 
-    def __init__(self, n_class, roi_size, spatial_scale,
-                 classifier):
+    def __init__(self, configer):
         # n_class includes the background
         super(RoIHead, self).__init__()
-
-        self.classifier = classifier
-        self.cls_loc = nn.Linear(4096, n_class * 4)
-        self.score = nn.Linear(4096, n_class)
-
-        self.n_class = n_class
-        self.roi_size = roi_size
-        self.spatial_scale = spatial_scale
-        self.roi = RoIPooling2D(self.roi_size, self.roi_size, self.spatial_scale)
+        self.configer = configer
+        self.classifier = self.classifier = nn.Sequential(
+            nn.Linear(512 * 7 * 7, 4096),
+            nn.ReLU(True),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True)
+        )
+        self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
+        self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
+        self.roi_layer = ROIPoolingLayer(self.configer)
 
     def forward(self, x, rois, roi_indices):
         """Forward the chain.
@@ -215,9 +215,8 @@ class RoIHead(nn.Module):
         roi_indices = torch.from_numpy(roi_indices).float()
         rois = torch.from_numpy(rois).float()
         indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1)
-        # NOTE: important: yx->xy
-        xy_indices_and_rois = indices_and_rois[:, [0, 2, 1, 4, 3]]
-        indices_and_rois = xy_indices_and_rois.contiguous()
+        # NOTE: important: yxhw->xywh
+        indices_and_rois = indices_and_rois.contiguous()
 
         pool = self.roi(x, indices_and_rois)
         pool = pool.view(pool.size(0), -1)
