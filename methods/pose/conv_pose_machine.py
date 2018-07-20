@@ -66,7 +66,7 @@ class ConvPoseMachine(object):
         """
           Train function of every epoch during train phase.
         """
-        self.pose_net.train()
+        self.module_utilizer.set_status(self.pose_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -118,7 +118,7 @@ class ConvPoseMachine(object):
         """
           Validation function during the train phase.
         """
-        self.pose_net.eval()
+        self.module_utilizer.set_status(self.pose_net, status='val')
         start_time = time.time()
 
         with torch.no_grad():
@@ -146,7 +146,7 @@ class ConvPoseMachine(object):
                     batch_time=self.batch_time, loss=self.val_losses))
             self.batch_time.reset()
             self.val_losses.reset()
-            self.pose_net.train()
+            self.module_utilizer.set_status(self.pose_net, status='train')
 
     def train(self):
         cudnn.benchmark = True

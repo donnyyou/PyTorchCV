@@ -46,7 +46,7 @@ class SingleShotDetectorTest(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-        self.det_net.eval()
+        self.module_utilizer.set_status(self.det_net, status='test')
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -253,8 +253,8 @@ class SingleShotDetectorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
+        self.module_utilizer.set_status(self.det_net, status='debug')
         val_data_loader = self.det_data_loader.get_valloader()
-
         count = 0
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
             for j in range(inputs.size(0)):

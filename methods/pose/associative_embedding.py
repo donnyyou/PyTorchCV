@@ -68,7 +68,7 @@ class AssociativeEmbedding(object):
         """
           Train function of every epoch during train phase.
         """
-        self.pose_net.train()
+        self.module_utilizer.set_status(self.pose_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -122,7 +122,7 @@ class AssociativeEmbedding(object):
         """
           Validation function during the train phase.
         """
-        self.pose_net.eval()
+        self.module_utilizer.set_status(self.pose_net, status='val')
         start_time = time.time()
 
         with torch.no_grad():
@@ -158,7 +158,7 @@ class AssociativeEmbedding(object):
             self.batch_time.reset()
             self.val_losses.reset()
             self.val_loss_heatmap.reset()
-            self.pose_net.train()
+            self.module_utilizer.set_status(self.pose_net, status='train')
 
     def train(self):
         cudnn.benchmark = True

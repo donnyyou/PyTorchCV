@@ -94,7 +94,7 @@ class OpenPose(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.pose_net.train()
+        self.module_utilizer.set_status(self.pose_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -154,7 +154,7 @@ class OpenPose(object):
         """
           Validation function during the train phase.
         """
-        self.pose_net.eval()
+        self.module_utilizer.set_status(self.pose_net, status='val')
         start_time = time.time()
 
         with torch.no_grad():
@@ -188,7 +188,7 @@ class OpenPose(object):
             self.val_losses.reset()
             self.val_loss_heatmap.reset()
             self.val_loss_associate.reset()
-            self.pose_net.train()
+            self.module_utilizer.set_status(self.pose_net, status='train')
 
     def train(self):
         cudnn.benchmark = True

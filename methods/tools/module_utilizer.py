@@ -61,7 +61,10 @@ class ModuleUtilizer(object):
         if status == 'train':
             net.train()
             self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'train_input_size'))
-        elif status == 'val' or status == 'debug':
+        elif status == 'val':
+            net.eval()
+            self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'val_input_size'))
+        elif status == 'debug':
             net.eval()
             self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'val_input_size'))
         elif status == 'test':

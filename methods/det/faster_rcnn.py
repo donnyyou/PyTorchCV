@@ -75,7 +75,7 @@ class FasterRCNN(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.det_net.train()
+        self.module_utilizer.set_status(self.det_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -133,7 +133,7 @@ class FasterRCNN(object):
         """
           Validation function during the train phase.
         """
-        self.det_net.eval()
+        self.module_utilizer.set_status(self.det_net, status='val')
         start_time = time.time()
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
@@ -179,7 +179,7 @@ class FasterRCNN(object):
             self.det_running_score.reset()
             self.batch_time.reset()
             self.val_losses.reset()
-            self.det_net.train()
+            self.module_utilizer.set_status(self.det_net, status='train')
 
     def __nms(self, bboxes, scores, mode='union'):
         """Non maximum suppression.

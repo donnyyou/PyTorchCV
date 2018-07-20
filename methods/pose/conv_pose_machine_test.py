@@ -41,7 +41,7 @@ class ConvPoseMachineTest(object):
     def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
-        self.pose_net.eval()
+        self.module_utilizer.set_status(self.pose_net, status='test')
 
     def __test_img(self, image_path, save_path):
         image_raw = ImageHelper.cv2_open_bgr(image_path)
@@ -125,6 +125,7 @@ class ConvPoseMachineTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
+        self.module_utilizer.set_status(self.pose_net, status='debug')
         val_data_loader = self.pose_data_loader.get_valloader()
 
         for i, (inputs, heatmap) in enumerate(val_data_loader):

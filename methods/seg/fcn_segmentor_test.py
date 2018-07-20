@@ -43,7 +43,7 @@ class FCNSegmentorTest(object):
     def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
         self.seg_net = self.module_utilizer.load_net(self.seg_net)
-        self.seg_net.eval()
+        self.module_utilizer.set_status(self.seg_net, status='test')
 
     def __test_img(self, image_path, save_path):
         image = ImageHelper.pil_open_rgb(image_path)
@@ -198,6 +198,7 @@ class FCNSegmentorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
+        self.module_utilizer.set_status(self.seg_net, status='debug')
         val_data_loader = self.seg_data_loader.get_valloader()
 
         count = 0
