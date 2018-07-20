@@ -64,7 +64,7 @@ class SingleShotDetectorTest(object):
             inputs = inputs.unsqueeze(0).to(self.device)
             bbox, cls = self.det_net(inputs)
 
-        boxes, lbls, scores = self.__decode(bbox, cls)
+        boxes, lbls, scores = self.decode(bbox, cls, self.ssd_priorbox_layer(), self.configer)
         json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
@@ -77,7 +77,8 @@ class SingleShotDetectorTest(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __decode(self, bbox, cls):
+    @staticmethod
+    def decode(bbox, cls, default_boxes, configer):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -92,7 +93,7 @@ class SingleShotDetectorTest(object):
         loc = bbox.cpu()
         conf = F.softmax(cls.cpu(), dim=-1)
 
-        default_boxes = self.ssd_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
+        default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
 
         variances = [0.1, 0.2]
         wh = torch.exp(loc[:, :, 2:] * variances[1]) * default_boxes[:, :, 2:]
@@ -111,8 +112,8 @@ class SingleShotDetectorTest(object):
             keep = DetHelper.cls_nms(valid_preds[:, :4],
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
-                                     nms_threshold=self.configer.get('nms', 'overlap_threshold'),
-                                     mode=self.configer.get('nms', 'mode'))
+                                     nms_threshold=configer.get('nms', 'overlap_threshold'),
+                                     mode=configer.get('nms', 'mode'))
 
             output[image_i] = valid_preds[keep]
 
@@ -207,7 +208,7 @@ class SingleShotDetectorTest(object):
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
                                                              self.configer.get('data', 'num_classes'))
-            batch_detections = self.__decode(bboxes, labels_target)
+            batch_detections = self.decode(bboxes, labels_target, self.ssd_priorbox_layer(), self.configer)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
