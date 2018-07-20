@@ -22,29 +22,35 @@ class YOLODetectionLayer(object):
         self.configer = configer
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
 
-    def __call__(self, layer_out, in_anchors, feat_stride, is_training=False):
+    def __call__(self, layer_out_list):
         num_classes = self.configer.get('data', 'num_classes')
+        detect_list = list()
+        prediction_list = list()
+        for i in range(len(layer_out_list)):
+            batch_size, _, grid_size_h, grid_size_w = layer_out_list[i].size()
+            feat_stride = self.configer.get('network', 'stride_list')[i]
+            in_anchors = self.configer.get('gt', 'anchors_list')[i]
+            bbox_attrs = 4 + 1 + num_classes
+            num_anchors = len(in_anchors)
 
-        batch_size, _, grid_size_h, grid_size_w = layer_out.size()
-        bbox_attrs = 4 + 1 + num_classes
-        num_anchors = len(in_anchors)
+            anchors = [(a[0] / feat_stride, a[1] / feat_stride) for a in in_anchors]
 
-        anchors = [(a[0] / feat_stride, a[1] / feat_stride) for a in in_anchors]
+            layer_out = layer_out_list[i].view(batch_size, num_anchors * bbox_attrs, grid_size_h * grid_size_w)
+            layer_out = layer_out.contiguous().view(batch_size, num_anchors, bbox_attrs, grid_size_h * grid_size_w)
+            layer_out = layer_out.permute(0, 1, 3, 2).contiguous().view(batch_size, -1, bbox_attrs)
 
-        layer_out = layer_out.view(batch_size, num_anchors * bbox_attrs, grid_size_h * grid_size_w)
-        layer_out = layer_out.contiguous().view(batch_size, num_anchors, bbox_attrs, grid_size_h * grid_size_w)
-        layer_out = layer_out.permute(0, 1, 3, 2).contiguous().view(batch_size, -1, bbox_attrs)
+            if self.configer.get('phase') != 'debug':
+                # Sigmoid the  centre_X, centre_Y. and object confidencce
+                layer_out[:, :, 0] = torch.sigmoid(layer_out[:, :, 0])
+                layer_out[:, :, 1] = torch.sigmoid(layer_out[:, :, 1])
+                layer_out[:, :, 4] = torch.sigmoid(layer_out[:, :, 4])
 
-        if self.configer.get('phase') != 'debug':
-            # Sigmoid the  centre_X, centre_Y. and object confidencce
-            layer_out[:, :, 0] = torch.sigmoid(layer_out[:, :, 0])
-            layer_out[:, :, 1] = torch.sigmoid(layer_out[:, :, 1])
-            layer_out[:, :, 4] = torch.sigmoid(layer_out[:, :, 4])
+                # Softmax the class scores
+                layer_out[:, :, 5: 5 + num_classes] = torch.sigmoid((layer_out[:, :, 5: 5 + num_classes]))
 
-            # Softmax the class scores
-            layer_out[:, :, 5: 5 + num_classes] = torch.sigmoid((layer_out[:, :, 5: 5 + num_classes]))
+            prediction_list.append(layer_out)
 
-        if not is_training:
+            detect_out = layer_out.clone()
             # Add the center offsets
             grid_len_h = np.arange(grid_size_h)
             grid_len_w = np.arange(grid_size_w)
@@ -68,11 +74,13 @@ class YOLODetectionLayer(object):
 
             anchors = anchors.contiguous().view(3, 1, 2)\
                 .repeat(1, grid_size_h * grid_size_w, 1).contiguous().view(-1, 2).unsqueeze(0)
-            layer_out[:, :, 2:4] = torch.exp(layer_out[:, :, 2:4]) * anchors
+            detect_out[:, :, 2:4] = torch.exp(detect_out[:, :, 2:4]) * anchors
 
-            layer_out[:, :, 0] /= grid_size_w
-            layer_out[:, :, 1] /= grid_size_h
-            layer_out[:, :, 2] /= grid_size_w
-            layer_out[:, :, 3] /= grid_size_h
+            detect_out[:, :, 0] /= grid_size_w
+            detect_out[:, :, 1] /= grid_size_h
+            detect_out[:, :, 2] /= grid_size_w
+            detect_out[:, :, 3] /= grid_size_h
 
-        return layer_out
+            detect_list.append(detect_out)
+
+        return torch.cat(prediction_list, 1), torch.cat(detect_list, 1)

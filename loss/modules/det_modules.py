@@ -150,7 +150,6 @@ class SSDMultiBoxLoss(nn.Module):
         num_pos = pos.long().sum(1)  # [N,1]
         num_neg = torch.clamp(3 * num_pos, min=1, max=num_boxes-1)  # [N,1]
         neg = rank < num_neg.unsqueeze(1).expand_as(rank)  # [N,8732]
-
         return neg
 
     def forward(self, loc_preds, loc_targets, conf_preds, conf_targets):
@@ -222,14 +221,7 @@ class YOLOv3Loss(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
 
-    def forward(self, outputs_list, targets, objmask, noobjmask):
-        prediction_list = list()
-        for i, outputs in enumerate(outputs_list):
-            prediction_list.append(self.yolo_detection_layer(outputs,
-                                                             self.configer.get('gt', 'anchors')[i],
-                                                             is_training=True))
-        prediction = torch.cat(prediction_list, 1)
-
+    def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
         x = prediction[..., 0]  # Center x
         y = prediction[..., 1]  # Center y

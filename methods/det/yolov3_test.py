@@ -61,9 +61,9 @@ class YOLOv3Test(object):
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
-            output_list = self.det_net(inputs)
+            _, detections = self.det_net(inputs)
 
-        prediction = self.__decode(output_list)
+        prediction = self.decode(detections, self.configer)
         json_dict = self.__get_info_tree(prediction, ori_img_rgb)[0]
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
@@ -76,7 +76,8 @@ class YOLOv3Test(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __decode(self, output_list):
+    @staticmethod
+    def decode(batch_pred_bboxes, configer):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -88,39 +89,17 @@ class YOLOv3Test(object):
           labels: (tensor) class labels, sized [#obj,1].
 
         """
-        anchors_list = self.configer.get('gt', 'anchors')
-        stride_list = self.configer.get('gt', 'stride_list')
-        assert len(anchors_list) == len(output_list)
+        box_corner = batch_pred_bboxes.new(batch_pred_bboxes.shape)
+        box_corner[:, :, 0] = batch_pred_bboxes[:, :, 0] - batch_pred_bboxes[:, :, 2] / 2
+        box_corner[:, :, 1] = batch_pred_bboxes[:, :, 1] - batch_pred_bboxes[:, :, 3] / 2
+        box_corner[:, :, 2] = batch_pred_bboxes[:, :, 0] + batch_pred_bboxes[:, :, 2] / 2
+        box_corner[:, :, 3] = batch_pred_bboxes[:, :, 1] + batch_pred_bboxes[:, :, 3] / 2
+        batch_pred_bboxes[:, :, :4] = box_corner[:, :, :4]
 
-        pred_list = list()
-        for outputs, anchors, stride in zip(output_list, anchors_list, stride_list):
-            pred_list.append(self.yolo_detection_layer(outputs, anchors, stride, is_training=False))
-
-        batch_pred_bboxes = torch.cat(pred_list, 1)
-
-        batch_detections = self.__nms(batch_pred_bboxes)
-        return batch_detections
-
-    def __nms(self, prediction):
-        """
-        Removes detections with lower object confidence score than 'conf_thres' and performs
-        Non-Maximum Suppression to further filter detections.
-        Returns detections with shape:
-            (x1, y1, x2, y2, object_conf, class_score, class_pred)
-        """
-
-        # From (center x, center y, width, height) to (x1, y1, x2, y2)
-        box_corner = prediction.new(prediction.shape)
-        box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
-        box_corner[:, :, 1] = prediction[:, :, 1] - prediction[:, :, 3] / 2
-        box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2
-        box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
-        prediction[:, :, :4] = box_corner[:, :, :4]
-
-        output = [None for _ in range(len(prediction))]
-        for image_i, image_pred in enumerate(prediction):
+        output = [None for _ in range(len(batch_pred_bboxes))]
+        for image_i, image_pred in enumerate(batch_pred_bboxes):
             # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] > self.configer.get('vis', 'obj_threshold')).squeeze()
+            conf_mask = (image_pred[:, 4] > configer.get('vis', 'obj_threshold')).squeeze()
             image_pred = image_pred[conf_mask]
             # If none are remaining => process next image
             if not image_pred.size(0):
@@ -128,14 +107,14 @@ class YOLOv3Test(object):
 
             # Get score and class with highest confidence
             class_conf, class_pred = torch.max(
-                image_pred[:, 5:5 + self.configer.get('data', 'num_classes')], 1, keepdim=True)
+                image_pred[:, 5:5 + configer.get('data', 'num_classes')], 1, keepdim=True)
             # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
             detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
             keep_index = DetHelper.cls_nms(image_pred[:, :4],
                                            scores=image_pred[:, 4],
                                            labels=class_pred.squeeze(1),
-                                           nms_threshold=self.configer.get('nms', 'overlap_threshold'),
-                                           mode=self.configer.get('nms', 'mode'))
+                                           nms_threshold=configer.get('nms', 'overlap_threshold'),
+                                           mode=configer.get('nms', 'mode'))
 
             output[image_i] = detections[keep_index]
 

@@ -99,10 +99,10 @@ class YOLOv3(object):
             inputs = self.module_utilizer.to_device(inputs)
 
             # Forward pass.
-            output_list = self.det_net(inputs)
+            predictions, _ = self.det_net(inputs)
 
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss(output_list, bboxes, labels)
+            loss = self.det_loss(predictions, bboxes, labels)
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
@@ -143,13 +143,13 @@ class YOLOv3(object):
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Forward pass.
-                output_list = self.det_net(inputs)
+                predictions, detections = self.det_net(inputs)
 
                 # Compute the loss of the val batch.
-                loss = self.det_loss(output_list, batch_gt_bboxes, batch_gt_labels)
+                loss = self.det_loss(predictions, batch_gt_bboxes, batch_gt_labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
-                batch_detections = self.__decode(output_list)
+                batch_detections = self.__decode(detections)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)

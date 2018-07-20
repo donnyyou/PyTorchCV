@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 from models.backbones.backbone_selector import BackboneSelector
+from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 
 
 class DarkNetYolov3(nn.Module):
@@ -64,6 +65,7 @@ class DarkNetYolov3(nn.Module):
                 ("conv_out", nn.Conv2d(256, final_out_filter2, kernel_size=1, stride=1, padding=0, bias=True))
             ])
         )
+        self.yolo_detection_layer = YOLODetectionLayer(self.configer)
 
     def _make_cbl(self, _in, _out, ks):
         ''' cbl = conv + batch_norm + leaky_relu
@@ -84,7 +86,7 @@ class DarkNetYolov3(nn.Module):
             self._make_cbl(filters_list[1], filters_list[0], 1)])
         return m
 
-    def forward(self, x):
+    def forward(self, x, is_training=True):
         #  backbone
         tuple_features = self.backbone(x)
         #  yolo branch 0
@@ -102,4 +104,5 @@ class DarkNetYolov3(nn.Module):
         x2_in = torch.cat([F.upsample_nearest(x2_in, scale_factor=2), tuple_features[-3]], 1)
         x2_in = self.embedding2(x2_in)
         out2 = self.conv_out3(x2_in)
-        return out0, out1, out2
+        output = self.yolo_detection_layer([out0, out1, out2])
+        return output
