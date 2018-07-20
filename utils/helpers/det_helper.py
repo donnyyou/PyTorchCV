@@ -29,8 +29,9 @@ class DetHelper(object):
         Ref:
           https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/nms/py_cpu_nms.py
         """
-        if len(bboxes.size()) == 1:
-            return torch.LongTensor([0])
+        bboxes = bboxes.contiguous().view(-1, 4)
+        if scores is not None:
+            scores = scores.contiguous().view(-1,)
 
         x1 = bboxes[:, 0]
         y1 = bboxes[:, 1]
@@ -78,6 +79,13 @@ class DetHelper(object):
     @staticmethod
     def cls_nms(bboxes, scores=None, labels=None, nms_threshold=0.0, mode='union'):
         unique_labels = labels.cpu().unique()
+        bboxes = bboxes.contiguous().view(-1, 4)
+        if scores is not None:
+            scores = scores.contiguous().view(-1,)
+
+        if labels is not None:
+            labels = labels.contiguous().view(-1,)
+
         if bboxes.is_cuda:
             unique_labels = unique_labels.cuda()
 

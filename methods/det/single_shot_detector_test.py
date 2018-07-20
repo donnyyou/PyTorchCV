@@ -64,8 +64,6 @@ class SingleShotDetectorTest(object):
             inputs = inputs.unsqueeze(0).to(self.device)
             bbox, cls = self.det_net(inputs)
 
-        bbox = bbox.cpu().data.squeeze(0)
-        cls = F.softmax(cls.cpu().squeeze(0), dim=-1).data
         boxes, lbls, scores = self.__decode(bbox, cls)
         json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
 
@@ -79,7 +77,7 @@ class SingleShotDetectorTest(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __decode(self, loc, conf):
+    def __decode(self, bbox, cls):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -91,59 +89,54 @@ class SingleShotDetectorTest(object):
           labels: (tensor) class labels, sized [#obj,1].
 
         """
-        default_boxes = self.ssd_priorbox_layer()
+        loc = bbox.cpu()
+        conf = F.softmax(cls.cpu(), dim=-1)
+
+        default_boxes = self.ssd_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
+
         variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * default_boxes[:, 2:] + default_boxes[:, :2]
-        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
+        wh = torch.exp(loc[:, :, 2:] * variances[1]) * default_boxes[:, :, 2:]
+        cxcy = loc[:, :, :2] * variances[0] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
+        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        max_conf, labels = conf.max(1)  # [8732,1]
-        ids = labels.nonzero()
-        tmp = ids.cpu().numpy()
+        max_conf, labels = conf.max(2, keepdim=True)  # [b, 8732,1]
+        predictions = torch.cat((boxes, max_conf.float(), labels.float()), 2)
+        output = [None for _ in range(len(predictions))]
+        for image_i, image_pred in enumerate(predictions):
+            ids = labels[image_i].squeeze(1).nonzero().contiguous().view(-1,)
+            if ids.numel() == 0:
+                continue
 
-        if tmp.__len__() > 0:
-            # print('detected %d objs' % tmp.__len__())
-            ids = ids.squeeze(1)  # [#boxes,]
-            keep = DetHelper.cls_nms(boxes[ids],
-                                     scores=max_conf[ids],
-                                     labels=labels[ids],
+            valid_preds = image_pred[ids]
+            keep = DetHelper.cls_nms(valid_preds[:, :4],
+                                     scores=valid_preds[:, 4],
+                                     labels=valid_preds[:, 5],
                                      nms_threshold=self.configer.get('nms', 'overlap_threshold'),
                                      mode=self.configer.get('nms', 'mode'))
 
-            pred_bboxes = boxes[ids][keep].cpu().numpy()
-            pred_bboxes = np.clip(pred_bboxes, 0, 1)
-            pred_labels = labels[ids][keep].cpu().numpy()
-            pred_confs = max_conf[ids][keep].cpu().numpy()
+            output[image_i] = valid_preds[keep]
 
-            return pred_bboxes, pred_labels, pred_confs
+        return output
 
-        else:
-            Log.info('None object detected!')
-            pred_bboxes = list()
-            pred_labels = list()
-            pred_confs = list()
-            return pred_bboxes, pred_labels, pred_confs
-
-    def __get_info_tree(self, box_list, label_list, conf, image_raw):
+    def __get_info_tree(self, detections, image_raw):
         height, width, _ = image_raw.shape
         json_dict = dict()
         object_list = list()
-        for bbox, label, cf in zip(box_list, label_list, conf):
-            if cf < self.configer.get('vis', 'conf_threshold'):
-                continue
+        if detections is not None:
+            for x1, y1, x2, y2, conf, cls_pred in detections:
+                object_dict = dict()
+                xmin = x1.cpu().item() * width
+                ymin = y1.cpu().item() * height
+                xmax = x2.cpu().item() * width
+                ymax = y2.cpu().item() * height
+                object_dict['bbox'] = [xmin, ymin, xmax, ymax]
+                object_dict['label'] = int(cls_pred.cpu().item()) - 1
+                object_dict['score'] = float('%.2f' % conf.cpu().item())
 
-            object_dict = dict()
-            xmin = bbox[0] * width
-            xmax = bbox[2] * width
-            ymin = bbox[1] * height
-            ymax = bbox[3] * height
-            object_dict['bbox'] = [xmin, ymin, xmax, ymax]
-            object_dict['label'] = label - 1
-            object_dict['score'] = float('%.2f' % cf)
-
-            object_list.append(object_dict)
+                object_list.append(object_dict)
 
         json_dict['objects'] = object_list
+
         return json_dict
 
     def test(self):
@@ -211,7 +204,10 @@ class SingleShotDetectorTest(object):
         self.module_utilizer.set_status(self.det_net, status='debug')
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
             bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels, self.ssd_priorbox_layer())
-
+            eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
+            labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
+                                                             self.configer.get('data', 'num_classes'))
+            batch_detections = self.__decode(bboxes, labels_target)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
@@ -221,12 +217,9 @@ class SingleShotDetectorTest(object):
                                           std=self.configer.get('trans_params', 'std'))(inputs[j])
                 ori_img_rgb = ori_img_rgb.numpy().transpose(1, 2, 0).astype(np.uint8)
                 ori_img_bgr = cv2.cvtColor(ori_img_rgb, cv2.COLOR_RGB2BGR)
-                eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-                labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
-                                                                 self.configer.get('data', 'num_classes'))
-                boxes, lbls, scores = self.__decode(bboxes[j], labels_target[j])
+
                 self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.ssd_priorbox_layer(), labels[j])
-                json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_rgb)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
                                                            conf_threshold=self.configer.get('vis', 'conf_threshold'))
