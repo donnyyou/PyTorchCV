@@ -131,34 +131,13 @@ class YOLOv3Test(object):
                 image_pred[:, 5:5 + self.configer.get('data', 'num_classes')], 1, keepdim=True)
             # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
             detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
-            # Iterate through all predicted classes
-            unique_labels = detections[:, -1].cpu().unique()
-            if prediction.is_cuda:
-                unique_labels = unique_labels.cuda()
-            for c in unique_labels:
-                # Get the detections with the particular class
-                detections_class = detections[detections[:, -1] == c]
-                # Sort the detections by maximum objectness confidence
-                _, conf_sort_index = torch.sort(detections_class[:, 4], descending=True)
-                detections_class = detections_class[conf_sort_index]
-                # Perform non-maximum suppression
-                max_detections = []
-                while detections_class.size(0):
-                    # Get detection with highest confidence and save as max detection
-                    max_detections.append(detections_class[0].unsqueeze(0))
-                    # Stop if we're at the last detection
-                    if len(detections_class) == 1:
-                        break
-                    # Get the IOUs for all boxes with lower confidence
-                    ious = DetHelper.bbox_iou(torch.from_numpy(np.array(max_detections[-1])),
-                                              torch.from_numpy(np.array(detections_class[1:])))
-                    # Remove detections with IoU >= NMS threshold
-                    detections_class = detections_class[1:][ious[0] < self.configer.get('nms', 'overlap_threshold')]
+            keep_index = DetHelper.cls_nms(image_pred[:, :4],
+                                           scores=image_pred[:, 4],
+                                           labels=class_pred.squeeze(1),
+                                           nms_threshold=self.configer.get('nms', 'overlap_threshold'),
+                                           mode=self.configer.get('nms', 'mode'))
 
-                max_detections = torch.cat(max_detections).data
-                # Add max detections to outputs
-                output[image_i] = max_detections if output[image_i] is None else torch.cat(
-                    (output[image_i], max_detections))
+            output[image_i] = detections[keep_index]
 
         return output
 
