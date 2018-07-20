@@ -245,7 +245,7 @@ class YOLOv3Test(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
-        self.module_utilizer.set_status(self.det_net, status='val')
+        self.module_utilizer.set_status(self.det_net, status='debug')
         input_size = self.configer.get('data', 'input_size')
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
             targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)

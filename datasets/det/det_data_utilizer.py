@@ -162,9 +162,7 @@ class DetDataUtilizer(object):
                                      torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
                                                 default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1))  # [#obj,8732]
 
-            prior_box_iou, max_idx = iou.max(0)  # [1,8732]
-            max_idx.squeeze_(0)  # [8732,]
-            prior_box_iou.squeeze_(0)  # [8732,]
+            prior_box_iou, max_idx = iou.max(0, keepdim=False)  # [1,8732]
 
             boxes = gt_bboxes[i][max_idx]  # [8732,4]
             variances = [0.1, 0.2]

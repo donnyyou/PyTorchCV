@@ -259,6 +259,7 @@ class SingleShotDetectorTest(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
+        self.module_utilizer.set_status(self.det_net, status='debug')
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
             bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels, self.ssd_priorbox_layer())
 

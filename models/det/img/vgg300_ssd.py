@@ -26,7 +26,7 @@ class Vgg300SSD(nn.Module):
 
         self.configer = configer
         self.img_size = self.configer.get('data', 'input_size')
-        self.num_features = self.configer.get('details', 'num_feature_list')
+        self.num_features = self.configer.get('network', 'num_feature_list')
         self.num_centrals = DETECTOR_CONFIG['num_centrals']
         self.num_paddings = DETECTOR_CONFIG['num_padding']
         self.num_strides = DETECTOR_CONFIG['num_strides']

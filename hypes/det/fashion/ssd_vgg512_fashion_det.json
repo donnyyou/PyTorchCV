@@ -81,10 +81,8 @@
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
       "num_anchor_list": [4, 6, 6, 6, 6, 4, 4],
-      "num_feature_list": [512, 1024, 512, 256, 256, 256, 256],
-      "stride_list": [8, 16, 32, 64, 128, 256, 512],
       "feature_maps_wh": [[64, 64], [32, 32], [16, 16], [8, 8], [4, 4], [2, 2], [1, 1]],
-      "default_ratio_list": [0.039, 0.10, 0.260, 0.420, 0.578, 0.738, 0.898, 1.06],
+      "cur_anchor_sizes": [20, 51, 133, 215, 296, 278, 460, 543],
       "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]]
     },
     "details": {
@@ -105,6 +103,8 @@
       "backbone": "vgg19_bn",
       "width_mult": 1.0,
       "model_name": "vgg512_ssd",
+      "num_feature_list": [512, 1024, 512, 256, 256, 256, 256],
+      "stride_list": [8, 16, 32, 64, 128, 256, 512],
       "init": "kaiming_normal"
     },
     "logging": {

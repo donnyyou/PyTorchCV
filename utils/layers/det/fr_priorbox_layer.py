@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 import numpy as np
 import torch
 
@@ -17,39 +18,47 @@ from utils.tools.logger import Logger as Log
 class FRPriorBoxLayer(object):
     """Compute prior boxes coordinates in center-offset form for each source feature map."""
 
-    def __init__(self, configer, clip=True):
+    def __init__(self, configer, clip=False):
         self.configer = configer
         self.clip = clip
 
     def __call__(self):
+        img_w, img_h = self.configer.get('data', 'input_size')
+        feature_map_w = [int(round(img_w / s)) for s in self.configer.get('gt', 'stride_list')]
+        feature_map_h = [int(round(img_h / s)) for s in self.configer.get('gt', 'stride_list')]
         num_layers = len(self.configer.get('gt', 'stride_list'))
-        input_size = self.configer.get('data', 'input_size')
-        prior_box_list = list()
-        for layer_num in range(num_layers):
-            stride = self.configer.get('gt', 'stride_list')[layer_num]
-            fm_w, fm_h = input_size[0] // stride, input_size[1] // stride
-            anchor_size = self.configer.get('gt', 'anchor_size_list')[layer_num]
-            aspect_ratio = self.configer.get('gt', 'aspect_ratio_list')[layer_num]
-            anchor_bases = np.zeros((len(anchor_size) * len(aspect_ratio), 4), dtype=np.float32)
-            for i in range(len(aspect_ratio)):
-                for j in range(len(anchor_size)):
-                    h = anchor_size[j] * np.sqrt(aspect_ratio[i])
-                    w = anchor_size[j] * np.sqrt(1. / aspect_ratio[i])
+        anchor_boxes_list = list()
+        for i in range(num_layers):
+            fm_w = feature_map_w[i]
+            fm_h = feature_map_h[i]
+            boxes = []
+            anchor_sizes = self.configer.get('gt', 'anchor_sizes_list')[i]
+            for j in range(len(anchor_sizes)):
+                s_w = anchor_sizes[j][0] / img_w
+                s_h = anchor_sizes[j][1] / img_h
+                boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w, s_h))
 
-                    index = i * len(anchor_size) + j
-                    anchor_bases[index, 0] = stride // 2 - w / 2.
-                    anchor_bases[index, 1] = stride // 2 - h / 2.
-                    anchor_bases[index, 2] = stride // 2 + w / 2.
-                    anchor_bases[index, 3] = stride // 2 + h / 2.
+                for ar in self.configer.get('gt', 'aspect_ratio_list')[i]:
+                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
+                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
 
-            shift_y = np.arange(0, fm_h * stride, stride)
-            shift_x = np.arange(0, fm_w * stride, stride)
-            shift_x, shift_y = np.meshgrid(shift_x, shift_y)
-            shift = np.stack((shift_y.ravel(), shift_x.ravel(), shift_y.ravel(), shift_x.ravel()), axis=1)
-            A = anchor_bases.shape[0]
-            K = shift.shape[0]
-            anchor = anchor_bases.reshape((1, A, 4)) + shift.reshape((1, K, 4)).transpose((1, 0, 2))
-            anchor = anchor.reshape((K * A, 4)).astype(np.float32)
-            prior_box_list.append(anchor)
+            anchor_bases = torch.from_numpy(np.array(boxes))
+            assert anchor_bases.size(0) == self.configer.get('gt', 'num_anchor_list')[i]
+            anchors = anchor_bases.contiguous().view(1, -1, 4).repeat(fm_h * fm_w, 1, 1).contiguous().view(-1, 4)
+            grid_len_h = np.arange(fm_h)
+            grid_len_w = np.arange(fm_w)
+            a, b = np.meshgrid(grid_len_w, grid_len_h)
 
-        return torch.cat(prior_box_list, 0)
+            x_offset = torch.FloatTensor(a).view(-1, 1).div(fm_w)
+            y_offset = torch.FloatTensor(b).view(-1, 1).div(fm_h)
+
+            x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(-1, 1, 2)
+            x_y_offset = x_y_offset.repeat(1, self.configer.get('gt', 'num_anchor_list')[i], 1).contiguous().view(-1, 2)
+            anchors[:, :2] = anchors[:, :2] + x_y_offset
+            anchor_boxes_list.append(anchors)
+
+        anchor_boxes = torch.cat(anchor_boxes_list, 0)
+        if self.clip:
+            anchor_boxes.clamp_(min=0., max=1.)
+
+        return anchor_boxes

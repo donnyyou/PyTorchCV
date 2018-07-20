@@ -16,10 +16,11 @@ from models.det.img.darknet_yolov3 import DarkNetYolov3
 
 from utils.tools.logger import Logger as Log
 
+
 DET_MODEL_DICT = {
     'dense_aspp_ssd': DenseASPPSSD,
     'vgg300_ssd': Vgg300SSD,
-    'vgg500_ssd': Vgg512SSD,
+    'vgg512_ssd': Vgg512SSD,
     'darknet_yolov2': DarkNetYolov2,
     'darknet_yolov3': DarkNetYolov3,
 }
