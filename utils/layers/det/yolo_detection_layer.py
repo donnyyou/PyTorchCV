@@ -65,7 +65,7 @@ class YOLODetectionLayer(object):
             x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(1, -1, 2)
             x_y_offset = x_y_offset.repeat(num_anchors, 1, 1).view(-1, 2).unsqueeze(0)
 
-            layer_out[:, :, :2] += x_y_offset
+            detect_out[:, :, :2] += x_y_offset
 
             # log space transform height and the width
             anchors = torch.FloatTensor(anchors)

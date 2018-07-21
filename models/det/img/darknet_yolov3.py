@@ -27,7 +27,7 @@ class DarkNetYolov3(nn.Module):
         _out_filters = self.backbone.num_features
 
         #  embedding0
-        final_out_filter0 = len(self.configer.get("gt", "anchors")[0]) * (5 + self.num_classes)
+        final_out_filter0 = len(self.configer.get("gt", "anchors_list")[0]) * (5 + self.num_classes)
 
         self.embedding0 = self._make_embedding([512, 1024], _out_filters[-1])
         self.conv_out1 = nn.Sequential(
@@ -40,7 +40,7 @@ class DarkNetYolov3(nn.Module):
         )
 
         #  embedding1
-        final_out_filter1 = len(self.configer.get("gt", "anchors")[1]) * (5 + self.num_classes)
+        final_out_filter1 = len(self.configer.get("gt", "anchors_list")[1]) * (5 + self.num_classes)
 
         self.embedding1_cbl = self._make_cbl(512, 256, 1)
         self.embedding1 = self._make_embedding([256, 512], _out_filters[-2] + 256)
@@ -53,7 +53,7 @@ class DarkNetYolov3(nn.Module):
             ])
         )
         #  embedding2
-        final_out_filter2 = len(self.configer.get("gt", "anchors")[2]) * (5 + self.num_classes)
+        final_out_filter2 = len(self.configer.get("gt", "anchors_list")[2]) * (5 + self.num_classes)
 
         self.embedding2_cbl = self._make_cbl(256, 128, 1)
         self.embedding2 = self._make_embedding([128, 256], _out_filters[-3] + 128)

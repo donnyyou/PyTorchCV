@@ -80,12 +80,11 @@
       "std": [0.229, 0.224, 0.225]
     },
     "gt": {
-      "anchors": [
+      "anchors_list": [
         [[116, 90], [156, 198], [373, 326]],
         [[30, 61], [62, 45], [59, 119]],
         [[10, 13], [16, 30], [33, 23]]
       ],
-      "stride_list": [32, 16, 8],
       "iou_threshold": 0.5
     },
     "details": {
@@ -126,6 +125,7 @@
       "backbone": "darknet53",
       "model_name": "darknet_yolov3",
       "init": "kaiming_normal",
+      "stride_list": [32, 16, 8],
       "loss_weights": {
         "coord_loss": 2.5,
         "obj_loss": 1.0,

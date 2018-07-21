@@ -208,11 +208,11 @@ class YOLOv3Test(object):
         for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
             targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)
             targets = targets.to(self.device)
-            anchors_list = self.configer.get('gt', 'anchors')
+            anchors_list = self.configer.get('gt', 'anchors_list')
             output_list = list()
             be_c = 0
             for f_index, anchors in enumerate(anchors_list):
-                feat_stride = self.configer.get('gt', 'stride_list')[f_index]
+                feat_stride = self.configer.get('network', 'stride_list')[f_index]
                 fm_size = [int(round(border / feat_stride)) for border in input_size]
                 num_c = len(anchors) * fm_size[0] * fm_size[1]
                 output_list.append(targets[:, be_c:be_c+num_c].contiguous()
@@ -222,7 +222,7 @@ class YOLOv3Test(object):
 
                 be_c += num_c
 
-            batch_detections = self.__decode(output_list)
+            batch_detections = self.decode(self.yolo_detection_layer(output_list)[1], self.configer)
 
             for j in range(inputs.size(0)):
                 count = count + 1

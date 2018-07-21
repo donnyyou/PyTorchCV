@@ -192,8 +192,8 @@ class DetDataUtilizer(object):
         return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
 
     def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels):
-        anchors_list = self.configer.get('gt', 'anchors')
-        stride_list = self.configer.get('gt', 'stride_list')
+        anchors_list = self.configer.get('gt', 'anchors_list')
+        stride_list = self.configer.get('network', 'stride_list')
         ignore_threshold = self.configer.get('gt', 'iou_threshold')
         img_size = self.configer.get('data', 'input_size')
 
