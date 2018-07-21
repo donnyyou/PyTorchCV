@@ -100,7 +100,7 @@ class RPNModule(nn.Module):
     def __init__(self, configer):
         super(RPNModule, self).__init__()
         self.configer = configer
-        self.anchor_bboxes = FRPriorBoxLayer(configer)()
+        self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.n_anchors = self.configer.get('gt', 'n_anchors_list')
         self.conv1 = nn.Conv2d(512, 512, 3, 1, 1)
         self.score = nn.Conv2d(512, self.n_anchors[0] * 2, 1, 1, 0)
@@ -159,7 +159,7 @@ class RPNModule(nn.Module):
         for i in range(batch_size):
             roi = self.fr_roi_genrator(rpn_locs[i].cpu().numpy(),
                                        rpn_fg_scores[i].cpu().numpy(),
-                                       self.anchor_bboxes, img_size)
+                                       self.fr_priorbox_layer())
 
             batch_index = i * np.ones((len(roi),), dtype=np.int32)
             rois.append(roi)
@@ -218,7 +218,7 @@ class RoIHead(nn.Module):
         # NOTE: important: yxhw->xywh
         indices_and_rois = indices_and_rois.contiguous()
 
-        pool = self.roi(x, indices_and_rois)
+        pool = self.roi_layer(x, indices_and_rois)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)
         roi_cls_locs = self.cls_loc(fc7)

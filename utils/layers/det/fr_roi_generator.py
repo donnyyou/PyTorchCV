@@ -53,7 +53,7 @@ class FRRoiGenerator(object):
         self.configer = configer
         self.parent_model = parent_model
 
-    def __call__(self, loc, score, anchor, img_size):
+    def __call__(self, loc, score, anchor):
         """input should  be ndarray
         Propose RoIs.
         Inputs :obj:`loc, score, anchor` refer to the same anchor when indexed
@@ -120,9 +120,12 @@ class FRRoiGenerator(object):
         dst_bbox[:, 2::4] = ctr_x + 0.5 * w
         dst_bbox[:, 3::4] = ctr_y + 0.5 * h
 
+        input_size = self.configer.get('data', 'input_size')
+        dst_bbox[:, slice(0, 4, 2)] = dst_bbox[:, slice(0, 4, 2)] * input_size[0]
+        dst_bbox[:, slice(1, 4, 2)] = dst_bbox[:, slice(1, 4, 2)] * input_size[1]
         # Clip predicted boxes to image.
-        dst_bbox[:, slice(0, 4, 2)] = np.clip(dst_bbox[:, slice(0, 4, 2)], 0, img_size[0])
-        dst_bbox[:, slice(1, 4, 2)] = np.clip(dst_bbox[:, slice(1, 4, 2)], 0, img_size[1])
+        dst_bbox[:, slice(0, 4, 2)] = np.clip(dst_bbox[:, slice(0, 4, 2)], 0, input_size[0])
+        dst_bbox[:, slice(1, 4, 2)] = np.clip(dst_bbox[:, slice(1, 4, 2)], 0, input_size[1])
 
         # Remove predicted boxes with either height or width < threshold.
         hs = dst_bbox[:, 2] - dst_bbox[:, 0]
