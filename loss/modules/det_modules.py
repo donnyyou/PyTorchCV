@@ -257,16 +257,43 @@ class YOLOv3Loss(nn.Module):
         return loss
 
 
+class FRLocLoss(nn.Module):
+    def __init__(self, configer):
+        super(FRLocLoss, self).__init__()
+        self.configer = configer
+
+    def forward(self, pred_locs, gt_locs, gt_labels, sigma):
+        in_weight = torch.zeros(gt_locs.shape).cuda()
+        # Localization loss is calculated only for positive rois.
+        # NOTE:  unlike origin implementation,
+        # we don't need inside_weight and outside_weight, they can calculate by gt_label
+        in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight).cuda()] = 1
+        loc_loss = self.smooth_l1_loss(pred_locs, gt_locs, in_weight, sigma)
+        # Normalize by total number of negtive and positive rois.
+        loc_loss /= (gt_labels >= 0).sum()  # ignore gt_label==-1 for rpn_loss
+        return loc_loss
+
+    @staticmethod
+    def smooth_l1_loss(x, t, in_weight, sigma):
+        sigma2 = sigma ** 2
+        diff = in_weight * (x - t)
+        abs_diff = diff.abs()
+        flag = (abs_diff.data < (1. / sigma2)).float()
+        flag = Variable(flag)
+        y = (flag * (sigma2 / 2.) * (diff ** 2) + (1 - flag) * (abs_diff - 0.5 / sigma2))
+        return y.sum()
+
+
 class FRLoss(nn.Module):
 
     def __init__(self, configer):
         super(FRLoss, self).__init__()
         self.configer = configer
 
-        self.lambda_xy = self.configer.get('network', 'loss_weights')['coord_loss']  # 2.5
-        self.lambda_wh = self.configer.get('network', 'loss_weights')['coord_loss']
-        self.lambda_conf = self.configer.get('network', 'loss_weights')['obj_loss']  # 1.0
-        self.lambda_cls = self.configer.get('network', 'loss_weights')['cls_loss']  # 1.0
+        self.lambda_rpn_loc = self.configer.get('network', 'loss_weights')['rpn_loss']  # 2.5
+        self.lambda_rpn_cls = self.configer.get('network', 'loss_weights')['rpn_loss']
+        self.lambda_roi_loc = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
+        self.lambda_roi_cls = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
 
     def forward(self, output_list, target_list):
         return None
