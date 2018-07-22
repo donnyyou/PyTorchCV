@@ -11,6 +11,7 @@ from __future__ import print_function
 import numpy as np
 import torch
 
+from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
@@ -49,11 +50,11 @@ class FRRoiGenerator(object):
             discarding bounding boxes based on their sizes.
     """
 
-    def __init__(self, configer, parent_model=None):
+    def __init__(self, configer):
         self.configer = configer
-        self.parent_model = parent_model
+        self.fr_priorbox_layer = FRPriorBoxLayer(self.configer)
 
-    def __call__(self, loc, score, anchor):
+    def __call__(self, loc, score, n_pre_nms, n_post_nms):
         """input should  be ndarray
         Propose RoIs.
         Inputs :obj:`loc, score, anchor` refer to the same anchor when indexed
@@ -85,40 +86,14 @@ class FRRoiGenerator(object):
         # NOTE: when test, remember
         # faster_rcnn.eval()
         # to set self.traing = False
-        if self.parent_model.training:
-            n_pre_nms = self.configer.get('rpn', 'n_train_pre_nms')
-            n_post_nms = self.configer.get('rpn', 'n_train_post_nms')
-        else:
-            n_pre_nms = self.configer.get('rpn', 'n_val_pre_nms')
-            n_post_nms = self.configer.get('rpn', 'n_val_post_nms')
+        default_boxes = self.fr_priorbox_layer().unqueeze(0).repeat(loc.size(0), 1, 1)
 
         # Convert anchors into proposal via bbox transformations.
         # roi = loc2bbox(anchor, loc)
-        if anchor.shape[0] == 0:
-            return np.zeros((0, 4), dtype=loc.dtype)
 
-        anchor = anchor.astype(anchor.dtype, copy=False)
-
-        src_height = anchor[:, 2] - anchor[:, 0]
-        src_width = anchor[:, 3] - anchor[:, 1]
-        src_ctr_y = anchor[:, 0] + 0.5 * src_height
-        src_ctr_x = anchor[:, 1] + 0.5 * src_width
-
-        dy = loc[:, 0::4]
-        dx = loc[:, 1::4]
-        dh = loc[:, 2::4]
-        dw = loc[:, 3::4]
-
-        ctr_y = dy * src_height[:, np.newaxis] + src_ctr_y[:, np.newaxis]
-        ctr_x = dx * src_width[:, np.newaxis] + src_ctr_x[:, np.newaxis]
-        h = np.exp(dh) * src_height[:, np.newaxis]
-        w = np.exp(dw) * src_width[:, np.newaxis]
-
-        dst_bbox = np.zeros(loc.shape, dtype=loc.dtype)
-        dst_bbox[:, 0::4] = ctr_x - 0.5 * w
-        dst_bbox[:, 1::4] = ctr_y - 0.5 * h
-        dst_bbox[:, 2::4] = ctr_x + 0.5 * w
-        dst_bbox[:, 3::4] = ctr_y + 0.5 * h
+        wh = loc[:, :, 2:] * default_boxes[:, :, 2:]
+        cxcy = loc[:, :, :2]  * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
+        dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
         input_size = self.configer.get('data', 'input_size')
         dst_bbox[:, slice(0, 4, 2)] = dst_bbox[:, slice(0, 4, 2)] * input_size[0]

@@ -36,14 +36,11 @@ class FRPriorBoxLayer(object):
             for j in range(len(anchor_sizes)):
                 s_w = anchor_sizes[j][0] / img_w
                 s_h = anchor_sizes[j][1] / img_h
-                boxes.append((0.5 / fm_w - s_w / 2, 0.5 / fm_h - s_h / 2,
-                              0.5 / fm_w + s_w / 2, 0.5 / fm_h + s_h / 2))
+                boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w, s_h))
 
                 for ar in self.configer.get('gt', 'aspect_ratio_list')[i]:
-                    boxes.append((0.5 / fm_w - s_w * math.sqrt(ar) / 2, 0.5 / fm_h - s_h / math.sqrt(ar) / 2,
-                                  0.5 / fm_w + s_w * math.sqrt(ar) / 2, 0.5 / fm_h + s_h / math.sqrt(ar) / 2))
-                    boxes.append((0.5 / fm_w - s_w / math.sqrt(ar) / 2, 0.5 / fm_h - s_h * math.sqrt(ar) / 2,
-                                  0.5 / fm_w + s_w / math.sqrt(ar) / 2, 0.5 / fm_h + s_h * math.sqrt(ar) / 2))
+                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
+                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
 
             anchor_bases = torch.from_numpy(np.array(boxes))
             assert anchor_bases.size(0) == self.configer.get('gt', 'num_anchor_list')[i]
@@ -56,8 +53,8 @@ class FRPriorBoxLayer(object):
             y_offset = torch.FloatTensor(b).view(-1, 1).div(fm_h)
 
             x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(-1, 1, 2)
-            x_y_offset = x_y_offset.repeat(1, self.configer.get('gt', 'num_anchor_list')[i], 2).contiguous().view(-1, 4)
-            anchors = anchors + x_y_offset
+            x_y_offset = x_y_offset.repeat(1, self.configer.get('gt', 'num_anchor_list')[i], 1).contiguous().view(-1, 4)
+            anchors[:, :2] = anchors[:, :2] + x_y_offset
             anchor_boxes_list.append(anchors)
 
         anchor_boxes = torch.cat(anchor_boxes_list, 0)

@@ -29,8 +29,10 @@ class DetDataUtilizer(object):
         # Calc indicies of anchors which are located completely inside of the image
         # whose size is speficied.
 
-        index_inside = np.where((default_boxes[:, 0] >= 0) & (default_boxes[:, 1] >= 0)
-                                & (default_boxes[:, 2] <= 1.0) & (default_boxes[:, 3] <= 1.0))[0]
+        index_inside = np.where((default_boxes[:, 0] - default_boxes[:, 2] / 2 >= 0)
+                                & (default_boxes[:, 1] - default_boxes[:, 3] / 2 >= 0)
+                                & (default_boxes[:, 0] + default_boxes[:, 2] / 2 <= 1.0)
+                                & (default_boxes[:, 1] - default_boxes[:, 3] / 2 <= 1.0))[0]
         default_boxes = default_boxes[index_inside]
         target_bboxes = list()
         target_labels = list()
@@ -39,7 +41,8 @@ class DetDataUtilizer(object):
             label = np.empty((len(index_inside),), dtype=np.int32)
             label.fill(-1)
 
-            ious = DetHelper.bbox_iou(default_boxes, gt_bboxes[i])
+            ious = DetHelper.bbox_iou(torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
+                                                 default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1), gt_bboxes[i])
             max_ious, argmax_ious = ious.max(axis=1, keepdim=False)
             _, gt_argmax_ious = ious.argmax(axis=0, keepdim=False)
 
@@ -67,9 +70,9 @@ class DetDataUtilizer(object):
                 label[disable_index] = -1
 
             boxes = gt_bboxes[i][argmax_ious]  # [8732,4]
-            cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (default_boxes[:, :2] + default_boxes[:, 2:]) / 2  # [8732,2]
-            cxcy /= (default_boxes[:, 2:] - default_boxes[:, :2])
-            wh = (boxes[:, 2:] - boxes[:, :2]) / (default_boxes[:, 2:] - default_boxes[:, :2])  # [8732,2]
+            cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
+            cxcy /= default_boxes[:, 2:]
+            wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
             wh = torch.log(wh)
             loc = torch.cat([cxcy, wh], 1)  # [8732,4]
             ret_label = np.empty((default_boxes.size(0),), dtype=label.dtype)
