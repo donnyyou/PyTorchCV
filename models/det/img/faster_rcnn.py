@@ -29,7 +29,7 @@ class FasterRCNN(nn.Module):
     def __init__(self, configer):
         super(FasterRCNN, self).__init__()
         self.extractor = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
-        self.rpn = RPNModule(configer)
+        self.rpn = NaiveRPN(configer)
         self.head = RoIHead(configer)
 
     def forward(self, x, scale=1.):
@@ -61,11 +61,29 @@ class FasterRCNN(nn.Module):
             * **roi_indices**: Batch indices of RoIs. Its shape is \
                 :math:`(R',)`.
         """
-        img_size = x.shape[2:]
         h = self.extractor(x)
-        rpn_locs, rpn_scores, rois, roi_indices = self.rpn(h, img_size, scale)
+        rpn_locs, rpn_scores, rois, roi_indices = self.rpn(h, scale)
         roi_cls_locs, roi_scores = self.head(h, rois, roi_indices)
         return rpn_locs, rpn_scores, roi_cls_locs, roi_scores, rois, roi_indices
+
+
+class NaiveRPN(nn.Module):
+    def __init__(self, configer):
+        super(NaiveRPN, self).__init__()
+        self.configer = configer
+        self.anchors_list = self.configer.get('rpn', 'anchors_list')
+        self.conv1 = nn.Conv2d(512, 512, 3, 1, 1)
+        self.score = nn.Conv2d(512, len(self.anchors_list[0]) * 2, 1, 1, 0)
+        self.loc = nn.Conv2d(512, len(self.anchors_list[0]) * 4, 1, 1, 0)
+
+    def forward(self, x):
+        h = F.relu(self.conv1(x))
+
+        rpn_locs = self.loc(h)
+        rpn_locs = rpn_locs.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1, 4)
+        rpn_scores = self.score(h)
+        rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1, 2)
+        return rpn_locs, rpn_scores
 
 
 class RPNModule(nn.Module):
