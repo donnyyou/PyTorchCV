@@ -63,8 +63,8 @@ class YOLOv3Test(object):
             inputs = inputs.unsqueeze(0).to(self.device)
             _, detections = self.det_net(inputs)
 
-        prediction = self.decode(detections, self.configer)
-        json_dict = self.__get_info_tree(prediction, ori_img_rgb)[0]
+        batch_detections = self.decode(detections, self.configer)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)[0]
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,

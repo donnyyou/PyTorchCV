@@ -19,9 +19,9 @@ from datasets.det.det_data_utilizer import DetDataUtilizer
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
-from utils.helpers.det_helper import DetHelper
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -149,13 +149,9 @@ class SingleShotDetector(object):
                 # Compute the loss of the val batch.
                 loss = self.det_loss(loc, bboxes, cls, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
-                batch_pred_bboxes = list()
-                for i in range(inputs.size(0)):
-                    bbox = loc.cpu().data.squeeze(0)
-                    cls = F.softmax(cls.cpu().squeeze(0), dim=-1).data
-                    boxes, lbls, scores = self.__decode(bbox, cls)
-                    pred_bboxes = self.__get_object_list(boxes, lbls, scores)
-                    batch_pred_bboxes.append(pred_bboxes)
+
+                batch_detections = SingleShotDetectorTest.decode(loc, cls, self.ssd_priorbox_layer(), self.configer)
+                batch_pred_bboxes = self.__get_object_list(batch_detections)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
@@ -175,63 +171,23 @@ class SingleShotDetector(object):
             self.val_losses.reset()
             self.module_utilizer.set_status(self.det_net, status='train')
 
-    def __decode(self, loc, conf):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
+    def __get_object_list(self, batch_detections):
+        batch_pred_bboxes = list()
+        for idx, detections in enumerate(batch_detections):
+            object_list = list()
+            if detections is not None:
+                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                    xmin = x1.cpu().item()
+                    ymin = y1.cpu().item()
+                    xmax = x2.cpu().item()
+                    ymax = y2.cpu().item()
+                    cf = conf.cpu().item()
+                    cls_pred = cls_pred.cpu().item()
+                    object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
 
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
+            batch_pred_bboxes.append(object_list)
 
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
-        variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
-        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
-
-        max_conf, labels = conf.max(1)  # [8732,1]
-        ids = labels.nonzero()
-        tmp = ids.cpu().numpy()
-
-        if tmp.__len__() > 0:
-            # print('detected %d objs' % tmp.__len__())
-            ids = ids.squeeze(1)  # [#boxes,]
-            keep = DetHelper.cls_nms(boxes[ids],
-                                     scores=max_conf[ids],
-                                     labels=labels[ids],
-                                     nms_threshold=self.configer.get('nms', 'overlap_threshold'),
-                                     mode=self.configer.get('nms', 'mode'))
-
-            pred_bboxes = boxes[ids][keep].cpu().numpy()
-            pred_bboxes = np.clip(pred_bboxes, 0, 1)
-            pred_labels = labels[ids][keep].cpu().numpy()
-            pred_confs = max_conf[ids][keep].cpu().numpy()
-
-            return pred_bboxes, pred_labels, pred_confs
-
-        else:
-            Log.info('None object detected!')
-            pred_bboxes = list()
-            pred_labels = list()
-            pred_confs = list()
-            return pred_bboxes, pred_labels, pred_confs
-
-    def __get_object_list(self, box_list, label_list, conf):
-        object_list = list()
-        for bbox, label, cf in zip(box_list, label_list, conf):
-            if cf < self.configer.get('vis', 'conf_threshold'):
-                continue
-
-            xmin = bbox[0]
-            xmax = bbox[2]
-            ymin = bbox[1]
-            ymax = bbox[3]
-            object_list.append([xmin, ymin, xmax, ymax, label - 1, float('%.2f' % cf)])
-
-        return object_list
+        return batch_pred_bboxes
 
     def train(self):
         cudnn.benchmark = True

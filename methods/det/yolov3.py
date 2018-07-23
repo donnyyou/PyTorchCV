@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -17,6 +16,7 @@ from datasets.det_data_loader import DetDataLoader
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.det.yolov3_test import YOLOv3Test
 from models.det_model_manager import DetModelManager
 from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.helpers.det_helper import DetHelper
@@ -149,7 +149,7 @@ class YOLOv3(object):
                 loss = self.det_loss(predictions, batch_gt_bboxes, batch_gt_labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
-                batch_detections = self.__decode(detections)
+                batch_detections = YOLOv3Test.decode(detections, self.configer)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
@@ -169,70 +169,6 @@ class YOLOv3(object):
             self.batch_time.reset()
             self.val_losses.reset()
             self.module_utilizer.set_status(self.det_net, status='train')
-
-    def __decode(self, output_list):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
-
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
-
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
-        anchors_list = self.configer.get('gt', 'anchors')
-        assert len(anchors_list) == len(output_list)
-
-        pred_list = list()
-        for outputs, anchors in zip(output_list, anchors_list):
-            pred_list.append(self.yolo_detection_layer(outputs, anchors, is_training=False))
-
-        batch_pred_bboxes = torch.cat(pred_list, 1)
-
-        batch_detections = self.__nms(batch_pred_bboxes)
-        return batch_detections
-
-    def __nms(self, prediction):
-        """
-        Removes detections with lower object confidence score than 'conf_thres' and performs
-        Non-Maximum Suppression to further filter detections.
-        Returns detections with shape:
-            (x1, y1, x2, y2, object_conf, class_score, class_pred)
-        """
-
-        # From (center x, center y, width, height) to (x1, y1, x2, y2)
-        box_corner = prediction.new(prediction.shape)
-        box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
-        box_corner[:, :, 1] = prediction[:, :, 1] - prediction[:, :, 3] / 2
-        box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2
-        box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
-        prediction[:, :, :4] = box_corner[:, :, :4]
-
-        output = [None for _ in range(len(prediction))]
-        for image_i, image_pred in enumerate(prediction):
-            # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] > self.configer.get('vis', 'obj_threshold')).squeeze()
-            image_pred = image_pred[conf_mask]
-            # If none are remaining => process next image
-            if not image_pred.size(0):
-                continue
-
-            # Get score and class with highest confidence
-            class_conf, class_pred = torch.max(
-                image_pred[:, 5:5 + self.configer.get('data', 'num_classes')], 1, keepdim=True)
-            # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
-            detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
-            keep_index = DetHelper.cls_nms(image_pred[:, :4],
-                                           scores=image_pred[:, 4],
-                                           labels=class_pred.squeeze(1),
-                                           nms_threshold=self.configer.get('nms', 'overlap_threshold'),
-                                           mode=self.configer.get('nms', 'mode'))
-
-            output[image_i] = detections[keep_index]
-
-        return output
 
     def __get_object_list(self, batch_detections):
         batch_pred_bboxes = list()
