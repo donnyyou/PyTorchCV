@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
@@ -37,8 +38,9 @@ class FastRCNNTest(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
+        self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.default_boxes = FRPriorBoxLayer(configer)
+        self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -220,7 +222,22 @@ class FastRCNNTest(object):
         self.module_utilizer.set_status(self.det_net, status='debug')
         val_data_loader = self.det_data_loader.get_valloader()
         count = 0
-        for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
+        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
+            gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
+                                                                                 self.fr_priorbox_layer())
+            eye_matrix = torch.eye(2)
+            gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
+            test_indices_and_rois = self.det_net.roi(gt_rpn_locs, gt_rpn_scores,
+                                                     self.configer.get('rpn', 'n_test_pre_nms'),
+                                                     self.configer.get('rpn', 'n_test_post_nms'))
+            sample_rois, gt_roi_locs, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
+                batch_gt_bboxes, batch_gt_labels, indices_and_rois=test_indices_and_rois)
+            eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
+            gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(inputs.size(0), -1,
+                                                                    self.configer.get('data', 'num_classes'))
+            batch_detections = FastRCNNTest.decode(gt_roi_locs, gt_roi_scores,
+                                                   sample_rois, self.configer, inputs.size(0))
+
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
@@ -230,11 +247,8 @@ class FastRCNNTest(object):
                                           std=self.configer.get('trans_params', 'std'))(inputs[j])
                 ori_img_rgb = ori_img_rgb.numpy().transpose(1, 2, 0).astype(np.uint8)
                 ori_img_bgr = cv2.cvtColor(ori_img_rgb, cv2.COLOR_RGB2BGR)
-                eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-                labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
-                                                                 self.configer.get('data', 'num_classes'))
-                boxes, lbls, scores = self.__decode(bboxes[j], labels_target[j])
-                json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_rgb)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
                                                            conf_threshold=self.configer.get('vis', 'conf_threshold'))

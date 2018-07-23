@@ -24,9 +24,9 @@ class FRPriorBoxLayer(object):
 
     def __call__(self):
         img_w, img_h = self.configer.get('data', 'input_size')
-        feature_map_w = [int(round(img_w / s)) for s in self.configer.get('network', 'stride_list')]
-        feature_map_h = [int(round(img_h / s)) for s in self.configer.get('network', 'stride_list')]
-        num_layers = len(self.configer.get('network', 'stride_list'))
+        feature_map_w = [int(round(img_w / s)) for s in self.configer.get('rpn', 'stride_list')]
+        feature_map_h = [int(round(img_h / s)) for s in self.configer.get('rpn', 'stride_list')]
+        num_layers = len(self.configer.get('rpn', 'stride_list'))
         anchor_boxes_list = list()
         for i in range(num_layers):
             fm_w = feature_map_w[i]
