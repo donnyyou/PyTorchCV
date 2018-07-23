@@ -64,8 +64,8 @@ class SingleShotDetectorTest(object):
             inputs = inputs.unsqueeze(0).to(self.device)
             bbox, cls = self.det_net(inputs)
 
-        boxes, lbls, scores = self.decode(bbox, cls, self.ssd_priorbox_layer(), self.configer)
-        json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+        batch_detections = self.decode(bbox, cls, self.ssd_priorbox_layer(), self.configer)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,

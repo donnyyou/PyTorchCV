@@ -100,6 +100,8 @@
 
     },
     "roi": {
+      "loc_normalize_mean": [],
+      "loc_normalize_std": [],
       "loss": {
         "n_sample": 128,
         "pos_ratio": 0.25,
@@ -188,6 +190,10 @@
       "overlap_threshold": 0.45
     },
     "vis": {
-      "obj_threshold": 0.0
+      "conf_threshold": 0.0
+    },
+    "fr_loss": {
+      "rpn_sigma": 3.0,
+      "roi_sigma": 1.0
     }
 }

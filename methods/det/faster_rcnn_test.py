@@ -19,16 +19,17 @@ from datasets.det_data_loader import DetDataLoader
 from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
+from utils.helpers.det_helper import DetHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
-from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
 
 
-class SingleShotDetectorTest(object):
+class FastRCNNTest(object):
     def __init__(self, configer):
         self.configer = configer
 
@@ -37,7 +38,7 @@ class SingleShotDetectorTest(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.default_boxes = SSDPriorBoxLayer(configer)()
+        self.default_boxes = FRPriorBoxLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -59,12 +60,21 @@ class SingleShotDetectorTest(object):
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
-            bbox, cls = self.det_net(inputs)
+            # Forward pass.
+            feat = self.det_net.extractor(inputs)
+            rpn_locs, rpn_scores = self.det_net.rpn(inputs)
 
-        bbox = bbox.cpu().data.squeeze(0)
-        cls = F.softmax(cls.cpu().squeeze(0), dim=-1).data
-        boxes, lbls, scores = self.__decode(bbox, cls)
-        json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+            test_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
+                                                     self.configer.get('rpn', 'n_test_pre_nms'),
+                                                     self.configer.get('rpn', 'n_test_post_nms'))
+            test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
+
+        batch_detections = self.decode(test_roi_locs,
+                                       test_roi_scores,
+                                       test_indices_and_rois,
+                                       self.configer,
+                                       inputs.size(0))
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -76,122 +86,76 @@ class SingleShotDetectorTest(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __nms(self, bboxes, scores, mode='union'):
-        """Non maximum suppression.
+    @staticmethod
+    def decode(roi_locs, roi_scores, indices_and_rois, configer, batch_size):
+        num_classes = configer.get('data', 'num_classes')
+        mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).cuda().repeat(num_classes)
+        std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).cuda().repeat(num_classes)
 
-        Args:
-          bboxes(tensor): bounding boxes, sized [N,4].
-          scores(tensor): bbox scores, sized [N,].
-          threshold(float): overlap threshold.
-          mode(str): 'union' or 'min'.
+        roi_locs = (roi_locs * std + mean)
+        roi_locs = roi_locs.contiguous().view(-1, num_classes, 4)
 
-        Returns:
-          keep(tensor): selected indices.
+        rois = indices_and_rois[:, 1:]
+        rois = rois.contiguous().view(-1, 1, 4).expand_as(roi_locs)
+        wh = roi_locs[:, :, 2:] * (rois[:, :, 2:] - rois[:, :, :2])
+        cxcy = roi_locs[:, :, :2] * (rois[:, :, 2:] - rois[:, :, :2]) + (rois[:, :, :2] + rois[:, :, 2:]) / 2
+        dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        Ref:
-          https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/nms/py_cpu_nms.py
-        """
+        # clip bounding box
+        dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=configer.get('data', 'input_size')[0])
+        dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=configer.get('data', 'input_size')[1])
 
-        x1 = bboxes[:, 0]
-        y1 = bboxes[:, 1]
-        x2 = bboxes[:, 2]
-        y2 = bboxes[:, 3]
+        cls_prob = F.softmax(roi_scores, dim=1)[:, 1:]
+        cls_label = torch.LongTensor([i for i in range(num_classes)])\
+            .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
 
-        areas = (x2 - x1) * (y2 - y1)
-        _, order = scores.sort(0, descending=True)
+        output = [None for _ in range(batch_size)]
+        for i in range(batch_size):
+            batch_index = (indices_and_rois[:, 0] == i).nonzero().contiguous().view(-1,)
+            tmp_dst_bbox = dst_bbox[batch_index]
+            tmp_cls_prob = cls_prob[batch_index]
+            tmp_cls_label = cls_label[batch_index]
 
-        keep = []
-        while order.numel() > 0:
-            i = order[0]
-            keep.append(i)
+            mask = tmp_cls_prob > configer.get('vis', 'conf_threshold')
 
-            if order.numel() == 1:
-                break
+            tmp_dst_bbox = tmp_dst_bbox[mask].contiguous().view(-1, 4)
+            tmp_cls_prob = tmp_cls_prob[mask].contiguous().view(-1,).unsqueeze(1)
+            tmp_cls_label = tmp_cls_label[mask].contiguous().view(-1,).unsqueeze(1)
 
-            xx1 = x1[order[1:]].clamp(min=x1[i])
-            yy1 = y1[order[1:]].clamp(min=y1[i])
-            xx2 = x2[order[1:]].clamp(max=x2[i])
-            yy2 = y2[order[1:]].clamp(max=y2[i])
+            valid_preds = torch.cat((tmp_dst_bbox, tmp_cls_prob.float(), tmp_cls_label.float()), 1)
 
-            w = (xx2-xx1).clamp(min=0)
-            h = (yy2-yy1).clamp(min=0)
-            inter = w*h
+            if valid_preds.numel() == 0:
+                continue
 
-            if self.configer.get('nms', 'mode') == 'union':
-                ovr = inter / (areas[i] + areas[order[1:]] - inter)
-            elif self.configer.get('nms', 'mode') == 'min':
-                ovr = inter / areas[order[1:]].clamp(max=areas[i])
-            else:
-                raise TypeError('Unknown nms mode: %s.' % mode)
+            keep = DetHelper.cls_nms(valid_preds[:, :4],
+                                     scores=valid_preds[:, 4],
+                                     labels=valid_preds[:, 5],
+                                     nms_threshold=configer.get('nms', 'overlap_threshold'),
+                                     mode=configer.get('nms', 'mode'))
 
-            ids = (ovr <= self.configer.get('nms', 'overlap_threshold')).nonzero().squeeze()
-            if ids.numel() == 0:
-                break
+            output[i] = valid_preds[keep]
 
-            order = order[ids + 1]
+        return output
 
-        return torch.LongTensor(keep)
-
-    def __decode(self, loc, conf):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
-
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
-
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
-        variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
-        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
-
-        max_conf, labels = conf.max(1)  # [8732,1]
-        ids = labels.nonzero()
-        tmp = ids.cpu().numpy()
-
-        if tmp.__len__() > 0:
-            # print('detected %d objs' % tmp.__len__())
-            ids = ids.squeeze(1)  # [#boxes,]
-            keep = self.__nms(boxes[ids], max_conf[ids])
-
-            pred_bboxes = boxes[ids][keep].cpu().numpy()
-            pred_bboxes = np.clip(pred_bboxes, 0, 1)
-            pred_labels = labels[ids][keep].cpu().numpy()
-            pred_confs = max_conf[ids][keep].cpu().numpy()
-
-            return pred_bboxes, pred_labels, pred_confs
-
-        else:
-            Log.info('None object detected!')
-            pred_bboxes = list()
-            pred_labels = list()
-            pred_confs = list()
-            return pred_bboxes, pred_labels, pred_confs
-
-    def __get_info_tree(self, box_list, label_list, conf, image_raw):
+    def __get_info_tree(self, detections, image_raw):
         height, width, _ = image_raw.shape
         json_dict = dict()
         object_list = list()
-        for bbox, label, cf in zip(box_list, label_list, conf):
-            if cf < self.configer.get('vis', 'conf_threshold'):
-                continue
+        if detections is not None:
+            for x1, y1, x2, y2, conf, cls_pred in detections:
+                object_dict = dict()
+                xmin = x1.cpu().item() * width
+                ymin = y1.cpu().item() * height
+                xmax = x2.cpu().item() * width
+                ymax = y2.cpu().item() * height
+                object_dict['bbox'] = [xmin, ymin, xmax, ymax]
+                object_dict['label'] = int(cls_pred.cpu().item()) - 1
+                object_dict['score'] = float('%.2f' % conf.cpu().item())
 
-            object_dict = dict()
-            xmin = bbox[0] * width
-            xmax = bbox[2] * width
-            ymin = bbox[1] * height
-            ymax = bbox[3] * height
-            object_dict['bbox'] = [xmin, ymin, xmax, ymax]
-            object_dict['label'] = label - 1
-            object_dict['score'] = cf
-
-            object_list.append(object_dict)
+                object_list.append(object_dict)
 
         json_dict['objects'] = object_list
+
         return json_dict
 
     def test(self):

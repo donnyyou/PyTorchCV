@@ -294,6 +294,18 @@ class FRLoss(nn.Module):
         self.lambda_rpn_cls = self.configer.get('network', 'loss_weights')['rpn_loss']
         self.lambda_roi_loc = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
         self.lambda_roi_cls = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
+        self.fr_loc_loss = FRLocLoss(configer)
 
     def forward(self, output_list, target_list):
-        return None
+        # output_list: rpn_locs, rpn_scores, roi_cls_locs, roi_scores
+        pred_rpn_locs, pred_rpn_scores, pred_roi_cls_locs, pred_roi_scores = output_list
+        gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_list
+        rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
+                                        gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
+        # NOTE: default value of ignore_index is -100 ...
+        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
+
+        roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
+                                        gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
+        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels)
+        return rpn_loc_loss + rpn_cls_loss + roi_loc_loss + roi_cls_loss

@@ -19,7 +19,9 @@ from datasets.det.det_data_utilizer import DetDataUtilizer
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.det.faster_rcnn_test import FastRCNNTest
 from models.det_model_manager import DetModelManager
+from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -41,6 +43,7 @@ class FasterRCNN(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
+        self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -62,7 +65,7 @@ class FasterRCNN(object):
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
 
-        self.rpn_loss = self.det_loss_manager.get_det_loss('fr_rpn_loss')
+        self.fr_loss = self.det_loss_manager.get_det_loss('fr_loss')
 
     def _get_parameters(self):
 
@@ -88,17 +91,28 @@ class FasterRCNN(object):
             inputs = self.module_utilizer.to_device(inputs)
 
             # Forward pass.
-            rpn_locs, rpn_scores, roi_cls_locs, roi_scores, rois, roi_indices = self.det_net(inputs)
+            feat = self.det_net.extractor(inputs)
+            rpn_locs, rpn_scores = self.det_net.rpn(inputs)
+            train_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
+                                                      self.configer.get('rpn', 'n_train_pre_nms'),
+                                                      self.configer.get('rpn', 'n_train_post_nms'))
 
-            rpn_bboxes, rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes, batch_gt_labels)
-            roi_bboxes, roi_labels = self.det_data_utilizer.roi_batch_encode(batch_gt_bboxes,
-                                                                             batch_gt_labels, rois, roi_indices)
+            gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
+                batch_gt_bboxes, self.fr_priorbox_layer())
+            sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
+                batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+
+            sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
+
+            sample_roi_locs = sample_roi_locs[
+                torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().cuda(),
+                gt_roi_labels.cuda().long()]
 
             # Compute the loss of the train batch & backward.
-            rpn_loss = self.rpn_loss(rpn_locs, rpn_scores, rpn_bboxes, rpn_labels)
-            cls_loss = self.rpn_loss(roi_cls_locs, roi_scores, roi_bboxes, roi_labels)
 
-            loss = rpn_loss + cls_loss
+            loss = self.fr_loss([rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores],
+                                [gt_rpn_locs, gt_rpn_labels, gt_roi_bboxes, gt_roi_labels])
+
             self.train_losses.update(loss.item(), inputs.size(0))
 
             self.optimizer.zero_grad()
@@ -142,27 +156,36 @@ class FasterRCNN(object):
                 inputs = self.module_utilizer.to_device(inputs)
 
                 # Forward pass.
-                rpn_locs, rpn_scores, roi_cls_locs, roi_scores, rois, roi_indices = self.det_net(inputs)
+                feat = self.det_net.extractor(inputs)
+                rpn_locs, rpn_scores = self.det_net.rpn(inputs)
+                train_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
+                                                          self.configer.get('rpn', 'n_train_pre_nms'),
+                                                          self.configer.get('rpn', 'n_train_post_nms'))
 
-                rpn_bboxes, rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes, batch_gt_labels)
-                roi_bboxes, roi_labels = self.det_data_utilizer.roi_batch_encode(batch_gt_bboxes,
-                                                                                 batch_gt_labels, rois, roi_indices)
+                test_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
+                                                         self.configer.get('rpn', 'n_test_pre_nms'),
+                                                         self.configer.get('rpn', 'n_test_post_nms'))
+
+                gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
+                    batch_gt_bboxes, self.fr_priorbox_layer())
+                sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
+                    batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+
+                sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
+                test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
 
                 # Compute the loss of the train batch & backward.
-                rpn_loss = self.rpn_loss(rpn_locs, rpn_scores, rpn_bboxes, rpn_labels)
-                cls_loss = self.rpn_loss(roi_cls_locs, roi_scores, roi_bboxes, roi_labels)
 
-                loss = rpn_loss + cls_loss
+                loss = self.fr_loss([rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores],
+                                    [gt_rpn_locs, gt_rpn_labels,  gt_roi_bboxes, gt_roi_labels])
+
                 self.val_losses.update(loss.item(), inputs.size(0))
-                batch_pred_bboxes = list()
-
-                for i in range(inputs.size(0)):
-                    bbox = loc.cpu().data.squeeze(0)
-                    cls = F.softmax(cls.cpu().squeeze(0), dim=-1).data
-                    boxes, lbls, scores = self.__decode(bbox, cls)
-                    pred_bboxes = self.__get_object_list(boxes, lbls, scores)
-                    batch_pred_bboxes.append(pred_bboxes)
-
+                batch_detections = FastRCNNTest.decode(test_roi_locs,
+                                                       test_roi_scores,
+                                                       test_indices_and_rois,
+                                                       self.configer,
+                                                       inputs.size(0))
+                batch_pred_bboxes = self.__get_object_list(batch_detections)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
                 # Update the vars of the val phase.
@@ -181,115 +204,23 @@ class FasterRCNN(object):
             self.val_losses.reset()
             self.module_utilizer.set_status(self.det_net, status='train')
 
-    def __nms(self, bboxes, scores, mode='union'):
-        """Non maximum suppression.
+    def __get_object_list(self, batch_detections):
+        batch_pred_bboxes = list()
+        for idx, detections in enumerate(batch_detections):
+            object_list = list()
+            if detections is not None:
+                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                    xmin = x1.cpu().item()
+                    ymin = y1.cpu().item()
+                    xmax = x2.cpu().item()
+                    ymax = y2.cpu().item()
+                    cf = conf.cpu().item()
+                    cls_pred = cls_pred.cpu().item()
+                    object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
 
-        Args:
-          bboxes(tensor): bounding boxes, sized [N,4].
-          scores(tensor): bbox scores, sized [N,].
-          threshold(float): overlap threshold.
-          mode(str): 'union' or 'min'.
+            batch_pred_bboxes.append(object_list)
 
-        Returns:
-          keep(tensor): selected indices.
-
-        Ref:
-          https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/nms/py_cpu_nms.py
-        """
-
-        x1 = bboxes[:, 0]
-        y1 = bboxes[:, 1]
-        x2 = bboxes[:, 2]
-        y2 = bboxes[:, 3]
-
-        areas = (x2 - x1) * (y2 - y1)
-        _, order = scores.sort(0, descending=True)
-
-        keep = []
-        while order.numel() > 0:
-            if order.numel() == 1:
-                keep.append(order.item())
-                break
-
-            i = order[0]
-            keep.append(i)
-            xx1 = x1[order[1:]].clamp(min=x1[i])
-            yy1 = y1[order[1:]].clamp(min=y1[i])
-            xx2 = x2[order[1:]].clamp(max=x2[i])
-            yy2 = y2[order[1:]].clamp(max=y2[i])
-
-            w = (xx2-xx1).clamp(min=0)
-            h = (yy2-yy1).clamp(min=0)
-            inter = w*h
-
-            if self.configer.get('nms', 'mode') == 'union':
-                ovr = inter / (areas[i] + areas[order[1:]] - inter)
-            elif self.configer.get('nms', 'mode') == 'min':
-                ovr = inter / areas[order[1:]].clamp(max=areas[i])
-            else:
-                raise TypeError('Unknown nms mode: %s.' % mode)
-
-            ids = (ovr <= self.configer.get('nms', 'overlap_threshold')).nonzero().squeeze()
-            if ids.numel() == 0:
-                break
-
-            order = order[ids + 1]
-
-        return torch.LongTensor(keep)
-
-    def __decode(self, loc, conf):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
-
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
-
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
-        variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
-        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
-
-        max_conf, labels = conf.max(1)  # [8732,1]
-        ids = labels.nonzero()
-        tmp = ids.cpu().numpy()
-
-        if tmp.__len__() > 0:
-            # print('detected %d objs' % tmp.__len__())
-            ids = ids.squeeze(1)  # [#boxes,]
-            keep = self.__nms(boxes[ids], max_conf[ids])
-
-            pred_bboxes = boxes[ids][keep].cpu().numpy()
-            pred_bboxes = np.clip(pred_bboxes, 0, 1)
-            pred_labels = labels[ids][keep].cpu().numpy()
-            pred_confs = max_conf[ids][keep].cpu().numpy()
-
-            return pred_bboxes, pred_labels, pred_confs
-
-        else:
-            Log.info('None object detected!')
-            pred_bboxes = list()
-            pred_labels = list()
-            pred_confs = list()
-            return pred_bboxes, pred_labels, pred_confs
-
-    def __get_object_list(self, box_list, label_list, conf):
-        object_list = list()
-        for bbox, label, cf in zip(box_list, label_list, conf):
-            if cf < self.configer.get('vis', 'conf_threshold'):
-                continue
-
-            xmin = bbox[0]
-            xmax = bbox[2]
-            ymin = bbox[1]
-            ymax = bbox[3]
-            object_list.append([xmin, ymin, xmax, ymax, label - 1, float('%.2f' % cf)])
-
-        return object_list
+        return batch_pred_bboxes
 
     def train(self):
         cudnn.benchmark = True

@@ -96,37 +96,56 @@ class FRRoiGenerator(object):
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
         input_size = self.configer.get('data', 'input_size')
-        dst_bbox[:, slice(0, 4, 2)] = dst_bbox[:, slice(0, 4, 2)] * input_size[0]
-        dst_bbox[:, slice(1, 4, 2)] = dst_bbox[:, slice(1, 4, 2)] * input_size[1]
+        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, :, slice(0, 4, 2)] * input_size[0]
+        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, :, slice(1, 4, 2)] * input_size[1]
         # Clip predicted boxes to image.
-        dst_bbox[:, slice(0, 4, 2)] = np.clip(dst_bbox[:, slice(0, 4, 2)], 0, input_size[0])
-        dst_bbox[:, slice(1, 4, 2)] = np.clip(dst_bbox[:, slice(1, 4, 2)], 0, input_size[1])
+        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, slice(0, 4, 2)].clamp_(min=0, max=input_size[0])
+        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, slice(1, 4, 2)].clamp_(min=0, max=input_size[1])
 
-        # Remove predicted boxes with either height or width < threshold.
-        hs = dst_bbox[:, 2] - dst_bbox[:, 0]
-        ws = dst_bbox[:, 3] - dst_bbox[:, 1]
-        min_size = self.configer.get('rpn', 'min_size')
-        keep = np.where((hs >= min_size) & (ws >= min_size))[0]
-        rois = dst_bbox[keep, :]
-        score = score[keep]
+        rpn_fg_scores = score[:, :, 1]
 
-        # Sort all (proposal, score) pairs by score from highest to lowest.
-        # Take top pre_nms_topN (e.g. 6000).
-        order = score.ravel().argsort()[::-1]
-        if n_pre_nms > 0:
-            order = order[:n_pre_nms]
+        rois = list()
+        roi_indices = list()
 
-        rois = rois[order, :]
+        for i in range(loc.size(0)):
+            tmp_dst_bbox = dst_bbox[i]
+            tmp_scores = rpn_fg_scores[i]
 
-        # Apply nms (e.g. threshold = 0.7).
-        # Take after_nms_topN (e.g. 300).
+            # Remove predicted boxes with either height or width < threshold.
+            hs = dst_bbox[:, 2] - dst_bbox[:, 0]
+            ws = dst_bbox[:, 3] - dst_bbox[:, 1]
+            min_size = self.configer.get('rpn', 'min_size')
+            keep = (hs >= min_size) & (ws >= min_size).squeeze()
+            rois = tmp_dst_bbox[keep]
+            tmp_scores = tmp_scores[keep]
 
-        # unNOTE: somthing is wrong here!
-        # TODO: remove cuda.to_gpu
-        keep = DetHelper.nms(torch.from_numpy(np.asarray(rois)),
-                             nms_threshold=self.configer.get('nms', 'iou_threshold'))
-        if n_post_nms > 0:
-            keep = keep[:n_post_nms]
+            # Sort all (proposal, score) pairs by score from highest to lowest.
+            # Take top pre_nms_topN (e.g. 6000).
+            order = score.ravel().argsort()[::-1]
+            if n_pre_nms > 0:
+                order = order[:n_pre_nms]
 
-        rois = rois[keep]
-        return rois
+            rois = rois[order, :]
+            tmp_scores = tmp_scores[order]
+
+            # Apply nms (e.g. threshold = 0.7).
+            # Take after_nms_topN (e.g. 300).
+
+            # unNOTE: somthing is wrong here!
+            # TODO: remove cuda.to_gpu
+            keep = DetHelper.nms(torch.from_numpy(np.asarray(rois)),
+                                 scores=tmp_scores,
+                                 nms_threshold=self.configer.get('rpn', 'nms_threshold'))
+            if n_post_nms > 0:
+                keep = keep[:n_post_nms]
+
+            rois = rois[keep]
+
+            batch_index = i * torch.ones((len(rois),))
+            rois.append(rois)
+            roi_indices.append(batch_index)
+
+        rois = torch.cat(rois, axis=0)
+        roi_indices = torch.cat(roi_indices, axis=0)
+        indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1).contiguous()
+        return indices_and_rois
