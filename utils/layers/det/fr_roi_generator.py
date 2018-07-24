@@ -108,11 +108,6 @@ class FRRoiGenerator(object):
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
             tmp_scores = rpn_fg_scores[i]
-            valid_index = (tmp_scores > 0.0).nonzero().contiguous().view(-1)
-            Log.info(valid_index)
-            # tmp_scores = tmp_scores[valid_index]
-            # tmp_dst_bbox = tmp_dst_bbox[valid_index]
-            Log.info(tmp_dst_bbox)
             # Remove predicted boxes with either height or width < threshold.
             ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
             hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]

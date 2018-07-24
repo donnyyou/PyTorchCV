@@ -33,9 +33,7 @@ class DetDataUtilizer(object):
                         & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 >= 0)
                         & (anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2 <= 1.0)
                         & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 <= 1.0)).nonzero().contiguous().view(-1,)
-        Log.info(anchor_boxes.size())
         default_boxes = anchor_boxes[index_inside]
-        Log.info(default_boxes.size())
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):

@@ -124,7 +124,7 @@ class FastRCNNTest(object):
             tmp_cls_prob = cls_prob[batch_index]
             tmp_cls_label = cls_label[batch_index]
 
-            mask = tmp_cls_prob > configer.get('vis', 'conf_threshold')
+            mask = (tmp_cls_prob > configer.get('vis', 'conf_threshold')) & (tmp_cls_label > 0)
 
             tmp_dst_bbox = tmp_dst_bbox[mask].contiguous().view(-1, 4)
             if tmp_dst_bbox.numel() == 0:
@@ -132,6 +132,7 @@ class FastRCNNTest(object):
 
             tmp_cls_prob = tmp_cls_prob[mask].contiguous().view(-1,).unsqueeze(1)
             tmp_cls_label = tmp_cls_label[mask].contiguous().view(-1,).unsqueeze(1)
+
             valid_preds = torch.cat((tmp_dst_bbox, tmp_cls_prob.float(), tmp_cls_label.float()), 1)
 
             keep = DetHelper.cls_nms(valid_preds[:, :4],
@@ -240,8 +241,11 @@ class FastRCNNTest(object):
             self.det_visualizer.vis_rois(inputs, test_indices_and_rois)
             sample_rois, gt_roi_locs, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
                 batch_gt_bboxes, batch_gt_labels, indices_and_rois=test_indices_and_rois)
+
+            gt_cls_roi_locs = torch.zeros((gt_roi_locs.size(0), self.configer.get('data', 'num_classes'), 4))
+            gt_cls_roi_locs[torch.arange(0, sample_rois.size(0)).long(), gt_roi_labels.long()] = gt_roi_locs
+            gt_cls_roi_locs = gt_cls_roi_locs.contiguous().view(-1, 4*self.configer.get('data', 'num_classes'))
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-            gt_cls_roi_locs = torch.zeros_like(gt_roi_locs).repeat(1, self.configer.get('data', 'num_classes'))
 
             gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(gt_roi_labels.size(0),
                                                                     self.configer.get('data', 'num_classes'))

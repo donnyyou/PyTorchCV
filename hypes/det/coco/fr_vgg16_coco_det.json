@@ -96,7 +96,7 @@
       },
       "n_train_pre_nms": 12000,
       "n_train_post_nms": 2000,
-      "n_test_pre_nms": 100,
+      "n_test_pre_nms": 6000,
       "n_test_post_nms": 300
 
     },
@@ -194,7 +194,7 @@
       "overlap_threshold": 0.3
     },
     "vis": {
-      "conf_threshold": 0.05
+      "conf_threshold": 0.02
     },
     "fr_loss": {
       "rpn_sigma": 3.0,
