@@ -21,19 +21,19 @@ class DetDataUtilizer(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def rpn_batch_encode(self, gt_bboxes, default_boxes):
-        n_sample = self.configer.get('rpn', 'n_sample')
-        pos_iou_thresh = self.configer.get('rpn', 'pos_iou_thresh')
-        neg_iou_thresh = self.configer.get('rpn', 'neg_iou_thresh')
-        pos_ratio = self.configer.get('rpn', 'pos_ratio')
+    def rpn_batch_encode(self, gt_bboxes, anchor_boxes):
+        n_sample = self.configer.get('rpn', 'loss')['n_sample']
+        pos_iou_thresh = self.configer.get('rpn', 'loss')['pos_iou_thresh']
+        neg_iou_thresh = self.configer.get('rpn', 'loss')['neg_iou_thresh']
+        pos_ratio = self.configer.get('rpn', 'loss')['pos_ratio']
         # Calc indicies of anchors which are located completely inside of the image
         # whose size is speficied.
 
-        index_inside = np.where((default_boxes[:, 0] - default_boxes[:, 2] / 2 >= 0)
-                                & (default_boxes[:, 1] - default_boxes[:, 3] / 2 >= 0)
-                                & (default_boxes[:, 0] + default_boxes[:, 2] / 2 <= 1.0)
-                                & (default_boxes[:, 1] - default_boxes[:, 3] / 2 <= 1.0))[0]
-        default_boxes = default_boxes[index_inside]
+        index_inside = np.where((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2 >= 0)
+                                & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 >= 0)
+                                & (anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2 <= 1.0)
+                                & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 <= 1.0))[0]
+        default_boxes = anchor_boxes[index_inside]
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):
@@ -43,8 +43,8 @@ class DetDataUtilizer(object):
 
             ious = DetHelper.bbox_iou(torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
                                                  default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1), gt_bboxes[i])
-            max_ious, argmax_ious = ious.max(axis=1, keepdim=False)
-            _, gt_argmax_ious = ious.argmax(axis=0, keepdim=False)
+            max_ious, argmax_ious = ious.max(1, keepdim=False)
+            _, gt_argmax_ious = ious.max(0, keepdim=False)
 
             # assign negative labels first so that positive labels can clobber them
             label[max_ious < neg_iou_thresh] = 0
@@ -75,23 +75,21 @@ class DetDataUtilizer(object):
             wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
             wh = torch.log(wh)
             loc = torch.cat([cxcy, wh], 1)  # [8732,4]
-            ret_label = np.empty((default_boxes.size(0),), dtype=label.dtype)
-            ret_label.fill(-1)
-            ret_label[index_inside] = label
-            ret_loc = np.empty((default_boxes.size(0),) + loc.shape[1:], dtype=loc.dtype)
-            ret_loc.fill(0)
+            ret_label = torch.ones((anchor_boxes.size(0),), dtype=torch.long).mul_(-1)
+            ret_label[index_inside] = torch.LongTensor(label)
+            ret_loc = torch.zeros((anchor_boxes.size(0), 4))
             ret_loc[index_inside, :] = loc
-            target_bboxes.append(torch.from_numpy(loc))
-            target_labels.append(torch.from_numpy(label))
+            target_bboxes.append(ret_loc)
+            target_labels.append(ret_label)
 
         return torch.stack(target_bboxes, 0), torch.stack(target_labels, 0)
 
     def roi_batch_encode(self, gt_bboxes, gt_labels, indices_and_rois):
-        n_sample = self.configer.get('roi', 'n_sample')
-        pos_iou_thresh = self.configer.get('roi', 'pos_iou_thresh')
-        neg_iou_thresh_hi = self.configer.get('roi', 'neg_iou_thresh_hi')
-        neg_iou_thresh_lo = self.configer.get('roi', 'neg_iou_thresh_lo')
-        pos_ratio = self.configer.get('roi', 'pos_ratio')
+        n_sample = self.configer.get('roi', 'loss')['n_sample']
+        pos_iou_thresh = self.configer.get('roi', 'loss')['pos_iou_thresh']
+        neg_iou_thresh_hi = self.configer.get('roi', 'loss')['neg_iou_thresh_hi']
+        neg_iou_thresh_lo = self.configer.get('roi', 'loss')['neg_iou_thresh_lo']
+        pos_ratio = self.configer.get('roi', 'loss')['pos_ratio']
         loc_normalize_mean = self.configer.get('roi', 'loc_normalize_mean')
         loc_normalize_std = self.configer.get('roi', 'loc_normalize_std')
         sample_roi_list = list()
@@ -99,14 +97,15 @@ class DetDataUtilizer(object):
         gt_roi_label_list= list()
 
         for i in range(len(gt_bboxes)):
-            rois = np.concatenate((indices_and_rois[indices_and_rois[:, 0] == i], gt_bboxes[i]), axis=0)
+            rois = torch.cat((indices_and_rois[indices_and_rois[:, 0] == i][:, :4], gt_bboxes[i]), 0)
             pos_roi_per_image = np.round(n_sample * pos_ratio)
-            iou = DetHelper.bbox_iou(rois, gt_bboxes)
-            max_iou, gt_assignment = iou.max(axis=1, keepdim=False)
+            iou = DetHelper.bbox_iou(rois, gt_bboxes[i])
+            max_iou, gt_assignment = iou.max(1, keepdim=False)
             # Offset range of classes from [0, n_fg_class - 1] to [1, n_fg_class].
             # The label with value 0 is the background.
-            gt_roi_label = gt_labels[gt_assignment] + 1
+            gt_roi_label = gt_labels[i][gt_assignment] + 1
 
+            max_iou = max_iou.cpu().numpy()
             # Select foreground RoIs as those with >= pos_iou_thresh IoU.
             pos_index = np.where(max_iou >= pos_iou_thresh)[0]
             pos_roi_per_this_image = int(min(pos_roi_per_image, pos_index.size))
@@ -128,19 +127,21 @@ class DetDataUtilizer(object):
             sample_roi = rois[keep_index]
 
             # Compute offsets and scales to match sampled RoIs to the GTs.
-            boxes = gt_bboxes[gt_assignment[keep_index]]
+            boxes = gt_bboxes[i][gt_assignment][keep_index]
             cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (sample_roi[:, :2] + sample_roi[:, 2:]) / 2  # [8732,2]
             cxcy /= (sample_roi[:, 2:] - sample_roi[:, :2])
             wh = (boxes[:, 2:] - boxes[:, :2]) / (sample_roi[:, 2:] - sample_roi[:, :2])  # [8732,2]
             wh = torch.log(wh)
             loc = torch.cat([cxcy, wh], 1)  # [8732,4]
-            gt_roi_loc = ((loc - np.array(loc_normalize_mean, np.float32)) / np.array(loc_normalize_std, np.float32))
+            gt_roi_loc = ((loc - torch.Tensor(loc_normalize_mean)) / torch.Tensor(loc_normalize_std))
 
+            batch_index = i * torch.ones((len(sample_roi),))
+            sample_roi = torch.cat([batch_index[:, None], sample_roi], dim=1).contiguous()
             sample_roi_list.append(sample_roi)
             gt_roi_loc_list.append(gt_roi_loc)
-            gt_roi_label_list.append(gt_roi_label_list)
+            gt_roi_label_list.append(gt_roi_label)
 
-        return torch.stack(sample_roi_list, 0), torch.stack(gt_roi_loc_list, 0), torch.stack(gt_roi_label_list, 0)
+        return torch.cat(sample_roi_list, 0), torch.cat(gt_roi_loc_list, 0), torch.cat(gt_roi_label_list, 0)
 
     def ssd_batch_encode(self, gt_bboxes, gt_labels, default_boxes):
         """Transform target bounding boxes and class labels to SSD boxes and classes.

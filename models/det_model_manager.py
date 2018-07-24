@@ -13,6 +13,7 @@ from models.det.img.vgg300_ssd import Vgg300SSD
 from models.det.img.vgg512_ssd import Vgg512SSD
 from models.det.img.darknet_yolov2 import DarkNetYolov2
 from models.det.img.darknet_yolov3 import DarkNetYolov3
+from models.det.img.faster_rcnn import FasterRCNN
 
 from utils.tools.logger import Logger as Log
 
@@ -23,6 +24,7 @@ DET_MODEL_DICT = {
     'vgg512_ssd': Vgg512SSD,
     'darknet_yolov2': DarkNetYolov2,
     'darknet_yolov3': DarkNetYolov3,
+    'faster_rcnn': FasterRCNN
 }
 
 

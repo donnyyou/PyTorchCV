@@ -86,7 +86,7 @@ class FRRoiGenerator(object):
         # NOTE: when test, remember
         # faster_rcnn.eval()
         # to set self.traing = False
-        default_boxes = self.fr_priorbox_layer().unqueeze(0).repeat(loc.size(0), 1, 1)
+        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
 
         # Convert anchors into proposal via bbox transformations.
         # roi = loc2bbox(anchor, loc)
@@ -99,21 +99,21 @@ class FRRoiGenerator(object):
         dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, :, slice(0, 4, 2)] * input_size[0]
         dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, :, slice(1, 4, 2)] * input_size[1]
         # Clip predicted boxes to image.
-        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, slice(0, 4, 2)].clamp_(min=0, max=input_size[0])
-        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, slice(1, 4, 2)].clamp_(min=0, max=input_size[1])
+        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, :, slice(0, 4, 2)].clamp_(min=0, max=input_size[0])
+        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, :, slice(1, 4, 2)].clamp_(min=0, max=input_size[1])
 
         rpn_fg_scores = score[:, :, 1]
 
-        rois = list()
-        roi_indices = list()
+        rois_list = list()
+        roi_indices_list = list()
 
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
             tmp_scores = rpn_fg_scores[i]
 
             # Remove predicted boxes with either height or width < threshold.
-            hs = dst_bbox[:, 2] - dst_bbox[:, 0]
-            ws = dst_bbox[:, 3] - dst_bbox[:, 1]
+            hs = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
+            ws = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
             min_size = self.configer.get('rpn', 'min_size')
             keep = (hs >= min_size) & (ws >= min_size).squeeze()
             rois = tmp_dst_bbox[keep]
@@ -121,11 +121,11 @@ class FRRoiGenerator(object):
 
             # Sort all (proposal, score) pairs by score from highest to lowest.
             # Take top pre_nms_topN (e.g. 6000).
-            order = score.ravel().argsort()[::-1]
+            _, order = tmp_scores.sort(0, descending=True)
             if n_pre_nms > 0:
                 order = order[:n_pre_nms]
 
-            rois = rois[order, :]
+            rois = rois[order]
             tmp_scores = tmp_scores[order]
 
             # Apply nms (e.g. threshold = 0.7).
@@ -133,7 +133,7 @@ class FRRoiGenerator(object):
 
             # unNOTE: somthing is wrong here!
             # TODO: remove cuda.to_gpu
-            keep = DetHelper.nms(torch.from_numpy(np.asarray(rois)),
+            keep = DetHelper.nms(rois,
                                  scores=tmp_scores,
                                  nms_threshold=self.configer.get('rpn', 'nms_threshold'))
             if n_post_nms > 0:
@@ -142,10 +142,10 @@ class FRRoiGenerator(object):
             rois = rois[keep]
 
             batch_index = i * torch.ones((len(rois),))
-            rois.append(rois)
-            roi_indices.append(batch_index)
+            rois_list.append(rois)
+            roi_indices_list.append(batch_index)
 
-        rois = torch.cat(rois, axis=0)
-        roi_indices = torch.cat(roi_indices, axis=0)
+        rois = torch.cat(rois_list, 0)
+        roi_indices = torch.cat(roi_indices_list, 0)
         indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1).contiguous()
         return indices_and_rois

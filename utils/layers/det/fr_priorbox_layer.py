@@ -42,7 +42,7 @@ class FRPriorBoxLayer(object):
                     boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
                     boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
 
-            anchor_bases = torch.from_numpy(np.array(boxes))
+            anchor_bases = torch.FloatTensor(np.array(boxes))
             assert anchor_bases.size(0) == self.configer.get('rpn', 'num_anchor_list')[i]
             anchors = anchor_bases.contiguous().view(1, -1, 4).repeat(fm_h * fm_w, 1, 1).contiguous().view(-1, 4)
             grid_len_h = np.arange(fm_h)
@@ -53,7 +53,7 @@ class FRPriorBoxLayer(object):
             y_offset = torch.FloatTensor(b).view(-1, 1).div(fm_h)
 
             x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(-1, 1, 2)
-            x_y_offset = x_y_offset.repeat(1, self.configer.get('rpn', 'num_anchor_list')[i], 1).contiguous().view(-1, 4)
+            x_y_offset = x_y_offset.repeat(1, self.configer.get('rpn', 'num_anchor_list')[i], 1).contiguous().view(-1, 2)
             anchors[:, :2] = anchors[:, :2] + x_y_offset
             anchor_boxes_list.append(anchors)
 

@@ -74,10 +74,10 @@ class NaiveRPN(nn.Module):
     def __init__(self, configer):
         super(NaiveRPN, self).__init__()
         self.configer = configer
-        self.anchors_list = self.configer.get('rpn', 'anchors_list')
+        self.num_anchor_list = self.configer.get('rpn', 'num_anchor_list')
         self.conv1 = nn.Conv2d(512, 512, 3, 1, 1)
-        self.score = nn.Conv2d(512, len(self.anchors_list[0]) * 2, 1, 1, 0)
-        self.loc = nn.Conv2d(512, len(self.anchors_list[0]) * 4, 1, 1, 0)
+        self.score = nn.Conv2d(512, self.num_anchor_list[0] * 2, 1, 1, 0)
+        self.loc = nn.Conv2d(512, self.num_anchor_list[0] * 4, 1, 1, 0)
 
     def forward(self, x):
         h = F.relu(self.conv1(x))

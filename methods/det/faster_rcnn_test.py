@@ -25,6 +25,7 @@ from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
+from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -41,6 +42,7 @@ class FastRCNNTest(object):
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
+        self.fr_roi_generator = FRRoiGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -66,9 +68,9 @@ class FastRCNNTest(object):
             feat = self.det_net.extractor(inputs)
             rpn_locs, rpn_scores = self.det_net.rpn(inputs)
 
-            test_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
-                                                     self.configer.get('rpn', 'n_test_pre_nms'),
-                                                     self.configer.get('rpn', 'n_test_post_nms'))
+            test_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
+                                                          self.configer.get('rpn', 'n_test_pre_nms'),
+                                                          self.configer.get('rpn', 'n_test_post_nms'))
             test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
 
         batch_detections = self.decode(test_roi_locs,
@@ -91,8 +93,12 @@ class FastRCNNTest(object):
     @staticmethod
     def decode(roi_locs, roi_scores, indices_and_rois, configer, batch_size):
         num_classes = configer.get('data', 'num_classes')
-        mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).cuda().repeat(num_classes)
-        std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).cuda().repeat(num_classes)
+        mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).repeat(num_classes)
+        std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).repeat(num_classes)
+
+        if roi_locs.is_cuda:
+            mean = mean.cuda()
+            std = std.cuda()
 
         roi_locs = (roi_locs * std + mean)
         roi_locs = roi_locs.contiguous().view(-1, num_classes, 4)
@@ -107,9 +113,13 @@ class FastRCNNTest(object):
         dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=configer.get('data', 'input_size')[0])
         dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=configer.get('data', 'input_size')[1])
 
-        cls_prob = F.softmax(roi_scores, dim=1)[:, 1:]
+        cls_prob = F.softmax(roi_scores, dim=1)
         cls_label = torch.LongTensor([i for i in range(num_classes)])\
             .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
+
+        print(roi_scores.size())
+        print(cls_label.size())
+        print(dst_bbox.size())
 
         output = [None for _ in range(batch_size)]
         for i in range(batch_size):
@@ -121,13 +131,12 @@ class FastRCNNTest(object):
             mask = tmp_cls_prob > configer.get('vis', 'conf_threshold')
 
             tmp_dst_bbox = tmp_dst_bbox[mask].contiguous().view(-1, 4)
+            if tmp_dst_bbox.numel() == 0:
+                continue
+
             tmp_cls_prob = tmp_cls_prob[mask].contiguous().view(-1,).unsqueeze(1)
             tmp_cls_label = tmp_cls_label[mask].contiguous().view(-1,).unsqueeze(1)
-
             valid_preds = torch.cat((tmp_dst_bbox, tmp_cls_prob.float(), tmp_cls_label.float()), 1)
-
-            if valid_preds.numel() == 0:
-                continue
 
             keep = DetHelper.cls_nms(valid_preds[:, :4],
                                      scores=valid_preds[:, 4],
@@ -227,15 +236,17 @@ class FastRCNNTest(object):
                                                                                  self.fr_priorbox_layer())
             eye_matrix = torch.eye(2)
             gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
-            test_indices_and_rois = self.det_net.roi(gt_rpn_locs, gt_rpn_scores,
-                                                     self.configer.get('rpn', 'n_test_pre_nms'),
-                                                     self.configer.get('rpn', 'n_test_post_nms'))
+            test_indices_and_rois = self.fr_roi_generator(gt_rpn_locs, gt_rpn_scores,
+                                                          self.configer.get('rpn', 'n_test_pre_nms'),
+                                                          self.configer.get('rpn', 'n_test_post_nms'))
             sample_rois, gt_roi_locs, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
                 batch_gt_bboxes, batch_gt_labels, indices_and_rois=test_indices_and_rois)
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-            gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(inputs.size(0), -1,
+            gt_cls_roi_locs = torch.zeros_like(gt_roi_locs).repeat(1, self.configer.get('data', 'num_classes'))
+
+            gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(gt_roi_labels.size(0),
                                                                     self.configer.get('data', 'num_classes'))
-            batch_detections = FastRCNNTest.decode(gt_roi_locs, gt_roi_scores,
+            batch_detections = FastRCNNTest.decode(gt_cls_roi_locs, gt_roi_scores,
                                                    sample_rois, self.configer, inputs.size(0))
 
             for j in range(inputs.size(0)):

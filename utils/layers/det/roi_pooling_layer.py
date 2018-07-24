@@ -19,7 +19,7 @@ class ROIPoolingLayer(object):
         self.configer = configer
         self.pooled_width = int(self.configer.get('roi', 'pooled_width'))
         self.pooled_height = int(self.configer.get('roi', 'pooled_height'))
-        self.spatial_scale = float(self.configer.get('roi', 'spatial_scale'))
+        self.spatial_scale = 1.0 / float(self.configer.get('roi', 'spatial_stride'))
         from extensions.layers.roi.roi_pool import _RoIPooling
         self.roi_pooling = _RoIPooling(self.pooled_height, self.pooled_width, self.spatial_scale)
 
@@ -33,7 +33,7 @@ class PyROIPoolingLayer(nn.Module):
         self.configer = configer
         self.pooled_width = int(self.configer.get('roi', 'pooled_width'))
         self.pooled_height = int(self.configer.get('roi', 'pooled_height'))
-        self.spatial_scale = float(self.configer.get('roi', 'spatial_scale'))
+        self.spatial_scale = 1.0 / float(self.configer.get('roi', 'spatial_stride'))
 
     def forward(self, features, rois):
         batch_size, num_channels, data_height, data_width = features.size()

@@ -9,6 +9,8 @@ from __future__ import print_function
 
 from methods.cls.fc_classifier import FCClassifier
 from methods.cls.fc_classifier_test import FCClassifierTest
+from methods.det.faster_rcnn import FasterRCNN
+from methods.det.faster_rcnn_test import FastRCNNTest
 from methods.det.single_shot_detector import SingleShotDetector
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.det.yolov3 import YOLOv3
@@ -51,10 +53,12 @@ SEG_TEST_DICT = {
 }
 
 DET_METHOD_DICT = {
+    'faster_rcnn': FasterRCNN,
     'single_shot_detector': SingleShotDetector,
     'yolov3': YOLOv3,
 }
 DET_TEST_DICT = {
+    'faster_rcnn': FastRCNNTest,
     'single_shot_detector': SingleShotDetectorTest,
     'yolov3': YOLOv3Test,
 }
