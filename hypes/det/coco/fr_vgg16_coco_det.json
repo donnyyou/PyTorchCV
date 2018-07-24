@@ -5,14 +5,14 @@
     "data": {
       "train_batch_size": 16,
       "val_batch_size": 2,
-      "train_input_size": [512, 512],
-      "val_input_size": [512, 512],
+      "train_input_size": [1024, 1024],
+      "val_input_size": [1024, 1024],
       "num_classes": 81,
       "data_dir": "/home/donny/DataSet/COCO_DET",
       "workers": 8
     },
     "test": {
-      "test_input_size": [512, 512],
+      "test_input_size": [1024, 1024],
       "scale_search": [0.5, 1.0, 1.5, 2.0],
       "mirror": true,
       "crop_test": false,
@@ -86,7 +86,7 @@
       "num_anchor_list": [9],
       "aspect_ratio_list": [[2]],
       "stride_list": [16],
-      "nms_threshold": 0.3,
+      "nms_threshold": 0.7,
       "min_size": 16,
       "loss": {
         "n_sample": 256,
@@ -96,7 +96,7 @@
       },
       "n_train_pre_nms": 12000,
       "n_train_post_nms": 2000,
-      "n_test_pre_nms": 6000,
+      "n_test_pre_nms": 100,
       "n_test_post_nms": 300
 
     },

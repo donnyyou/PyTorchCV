@@ -29,56 +29,63 @@ class DetDataUtilizer(object):
         # Calc indicies of anchors which are located completely inside of the image
         # whose size is speficied.
 
-        index_inside = np.where((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2 >= 0)
-                                & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 >= 0)
-                                & (anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2 <= 1.0)
-                                & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 <= 1.0))[0]
+        index_inside = ((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2 >= 0)
+                        & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 >= 0)
+                        & (anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2 <= 1.0)
+                        & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 <= 1.0)).nonzero().contiguous().view(-1,)
+        Log.info(anchor_boxes.size())
         default_boxes = anchor_boxes[index_inside]
+        Log.info(default_boxes.size())
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):
-            # label: 1 is positive, 0 is negative, -1 is dont care
-            label = np.empty((len(index_inside),), dtype=np.int32)
-            label.fill(-1)
+            loc = torch.zeros_like(default_boxes)
+            label = torch.zeros((default_boxes.size(0),)).long()
 
-            ious = DetHelper.bbox_iou(torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
-                                                 default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1), gt_bboxes[i])
-            max_ious, argmax_ious = ious.max(1, keepdim=False)
-            _, gt_argmax_ious = ious.max(0, keepdim=False)
+            if gt_bboxes[i] is not None and len(gt_bboxes[i]) > 0:
 
-            # assign negative labels first so that positive labels can clobber them
-            label[max_ious < neg_iou_thresh] = 0
+                # label: 1 is positive, 0 is negative, -1 is dont care
+                ious = DetHelper.bbox_iou(gt_bboxes[i],
+                                          torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
+                                                     default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1))
 
-            # positive label: for each gt, anchor with highest iou
-            label[gt_argmax_ious] = 1
+                max_ious, argmax_ious = ious.max(0, keepdim=False)
+                _, gt_argmax_ious = ious.max(1, keepdim=False)
 
-            # positive label: above threshold IOU
-            label[max_ious >= pos_iou_thresh] = 1
+                # assign negative labels first so that positive labels can clobber them
+                label[max_ious < neg_iou_thresh] = 0
 
-            # subsample positive labels if we have too many
-            n_pos = int(pos_ratio * n_sample)
-            pos_index = np.where(label == 1)[0]
-            if len(pos_index) > n_pos:
-                disable_index = np.random.choice(pos_index, size=(len(pos_index) - n_pos), replace=False)
-                label[disable_index] = -1
+                # positive label: for each gt, anchor with highest iou
+                label[gt_argmax_ious] = 1
 
-            # subsample negative labels if we have too many
-            n_neg = n_sample - np.sum(label == 1)
-            neg_index = np.where(label == 0)[0]
-            if len(neg_index) > n_neg:
-                disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
-                label[disable_index] = -1
+                # positive label: above threshold IOU
+                label[max_ious >= pos_iou_thresh] = 1
 
-            boxes = gt_bboxes[i][argmax_ious]  # [8732,4]
-            cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
-            cxcy /= default_boxes[:, 2:]
-            wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
-            wh = torch.log(wh)
-            loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+                # subsample positive labels if we have too many
+                n_pos = int(pos_ratio * n_sample)
+                pos_index = (label == 1).nonzero().contiguous().view(-1,).numpy()
+                if len(pos_index) > n_pos:
+                    disable_index = np.random.choice(pos_index, size=(len(pos_index) - n_pos), replace=False)
+                    label[disable_index] = -1
+
+                # subsample negative labels if we have too many
+                n_neg = n_sample - torch.sum(label == 1).item()
+                neg_index = (label == 0).nonzero().contiguous().view(-1,).numpy()
+                if len(neg_index) > n_neg:
+                    disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
+                    label[disable_index] = -1
+
+                boxes = gt_bboxes[i][argmax_ious]  # [8732,4]
+                cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
+                cxcy /= default_boxes[:, 2:]
+                wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
+                wh = torch.log(wh)
+                loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+
             ret_label = torch.ones((anchor_boxes.size(0),), dtype=torch.long).mul_(-1)
             ret_label[index_inside] = torch.LongTensor(label)
             ret_loc = torch.zeros((anchor_boxes.size(0), 4))
-            ret_loc[index_inside, :] = loc
+            ret_loc[index_inside] = loc
             target_bboxes.append(ret_loc)
             target_labels.append(ret_label)
 
@@ -161,38 +168,38 @@ class DetDataUtilizer(object):
         target_labels = list()
         for i in range(len(gt_bboxes)):
             if gt_bboxes[i] is None or len(gt_bboxes[i]) == 0:
-                loc = torch.zeros_like(default_boxes.size)
+                loc = torch.zeros_like(default_boxes)
                 conf = torch.zeros((default_boxes.size(0),)).long()
 
-                return loc, conf
-
-            iou = DetHelper.bbox_iou(gt_bboxes[i],
-                                     torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
-                                                default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1))  # [#obj,8732]
-
-            prior_box_iou, max_idx = iou.max(0, keepdim=False)  # [1,8732]
-
-            boxes = gt_bboxes[i][max_idx]  # [8732,4]
-            variances = [0.1, 0.2]
-            cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
-            cxcy /= variances[0] * default_boxes[:, 2:]
-            wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]  # [8732,2]
-            wh = torch.log(wh) / variances[1]
-            loc = torch.cat([cxcy, wh], 1)  # [8732,4]
-
-            conf = 1 + gt_labels[i][max_idx]  # [8732,], background class = 0
-
-            if self.configer.get('gt', 'anchor_method') == 'retina':
-                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = -1
-                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold') - 0.1] = 0
             else:
-                conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = 0  # background
 
-            # According to IOU, it give every prior box a class label.
-            # Then if the IOU is lower than the threshold, the class label is 0(background).
-            class_iou, prior_box_idx = iou.max(1, keepdim=False)
-            conf_class_idx = prior_box_idx.cpu().numpy()
-            conf[conf_class_idx] = gt_labels[i] + 1
+                iou = DetHelper.bbox_iou(gt_bboxes[i],
+                                        torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
+                                                   default_boxes[:, :2] + default_boxes[:, 2:] / 2], 1))  # [#obj,8732]
+
+                prior_box_iou, max_idx = iou.max(0, keepdim=False)  # [1,8732]
+
+                boxes = gt_bboxes[i][max_idx]  # [8732,4]
+                variances = [0.1, 0.2]
+                cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - default_boxes[:, :2]  # [8732,2]
+                cxcy /= variances[0] * default_boxes[:, 2:]
+                wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]  # [8732,2]
+                wh = torch.log(wh) / variances[1]
+                loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+
+                conf = 1 + gt_labels[i][max_idx]  # [8732,], background class = 0
+
+                if self.configer.get('gt', 'anchor_method') == 'retina':
+                    conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = -1
+                    conf[prior_box_iou < self.configer.get('gt', 'iou_threshold') - 0.1] = 0
+                else:
+                    conf[prior_box_iou < self.configer.get('gt', 'iou_threshold')] = 0  # background
+
+                # According to IOU, it give every prior box a class label.
+                # Then if the IOU is lower than the threshold, the class label is 0(background).
+                class_iou, prior_box_idx = iou.max(1, keepdim=False)
+                conf_class_idx = prior_box_idx.cpu().numpy()
+                conf[conf_class_idx] = gt_labels[i] + 1
 
             target_bboxes.append(loc)
             target_labels.append(conf)

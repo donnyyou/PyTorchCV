@@ -105,7 +105,7 @@ class FastRCNNTest(object):
 
         rois = indices_and_rois[:, 1:]
         rois = rois.contiguous().view(-1, 1, 4).expand_as(roi_locs)
-        wh = roi_locs[:, :, 2:] * (rois[:, :, 2:] - rois[:, :, :2])
+        wh = torch.exp(roi_locs[:, :, 2:]) * (rois[:, :, 2:] - rois[:, :, :2])
         cxcy = roi_locs[:, :, :2] * (rois[:, :, 2:] - rois[:, :, :2]) + (rois[:, :, :2] + rois[:, :, 2:]) / 2
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
@@ -116,10 +116,6 @@ class FastRCNNTest(object):
         cls_prob = F.softmax(roi_scores, dim=1)
         cls_label = torch.LongTensor([i for i in range(num_classes)])\
             .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
-
-        print(roi_scores.size())
-        print(cls_label.size())
-        print(dst_bbox.size())
 
         output = [None for _ in range(batch_size)]
         for i in range(batch_size):
@@ -235,10 +231,13 @@ class FastRCNNTest(object):
             gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
                                                                                  self.fr_priorbox_layer())
             eye_matrix = torch.eye(2)
+            gt_rpn_labels[gt_rpn_labels == -1] = 0
             gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
             test_indices_and_rois = self.fr_roi_generator(gt_rpn_locs, gt_rpn_scores,
                                                           self.configer.get('rpn', 'n_test_pre_nms'),
                                                           self.configer.get('rpn', 'n_test_post_nms'))
+
+            self.det_visualizer.vis_rois(inputs, test_indices_and_rois)
             sample_rois, gt_roi_locs, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
                 batch_gt_bboxes, batch_gt_labels, indices_and_rois=test_indices_and_rois)
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))

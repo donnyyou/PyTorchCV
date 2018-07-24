@@ -89,18 +89,16 @@ class FRRoiGenerator(object):
         default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
 
         # Convert anchors into proposal via bbox transformations.
-        # roi = loc2bbox(anchor, loc)
 
-        wh = loc[:, :, 2:] * default_boxes[:, :, 2:]
-        cxcy = loc[:, :, :2]  * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
+        wh = torch.exp(loc[:, :, 2:]) * default_boxes[:, :, 2:]
+        cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
         input_size = self.configer.get('data', 'input_size')
-        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, :, slice(0, 4, 2)] * input_size[0]
-        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, :, slice(1, 4, 2)] * input_size[1]
-        # Clip predicted boxes to image.
-        dst_bbox[:, :, slice(0, 4, 2)] = dst_bbox[:, :, slice(0, 4, 2)].clamp_(min=0, max=input_size[0])
-        dst_bbox[:, :, slice(1, 4, 2)] = dst_bbox[:, :, slice(1, 4, 2)].clamp_(min=0, max=input_size[1])
+        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0])
+        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0])
+        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1])
+        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1])
 
         rpn_fg_scores = score[:, :, 1]
 
@@ -110,10 +108,14 @@ class FRRoiGenerator(object):
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
             tmp_scores = rpn_fg_scores[i]
-
+            valid_index = (tmp_scores > 0.0).nonzero().contiguous().view(-1)
+            Log.info(valid_index)
+            # tmp_scores = tmp_scores[valid_index]
+            # tmp_dst_bbox = tmp_dst_bbox[valid_index]
+            Log.info(tmp_dst_bbox)
             # Remove predicted boxes with either height or width < threshold.
-            hs = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
-            ws = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
+            ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
+            hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
             min_size = self.configer.get('rpn', 'min_size')
             keep = (hs >= min_size) & (ws >= min_size).squeeze()
             rois = tmp_dst_bbox[keep]

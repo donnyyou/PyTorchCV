@@ -45,6 +45,31 @@ class DetVisualizer(object):
         image = cv2.resize(image, tuple(self.configer.get('data', 'input_size')))
         cv2.imwrite(img_path, image)
 
+    def vis_rois(self, inputs, indices_and_rois, name='default', sub_dir='rois'):
+        base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
+
+        if not os.path.exists(base_dir):
+            log.error('Dir:{} not exists!'.format(base_dir))
+            os.makedirs(base_dir)
+
+        for i in range(inputs.size(0)):
+            rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
+            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
+                                  std=self.configer.get('trans_params', 'std'))(inputs[i])
+            ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
+            ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+
+            for j in range(len(rois)):
+                cv2.rectangle(ori_img,
+                                (int(rois[j][0]), int(rois[j][1])),
+                                (int(rois[j][2]), int(rois[j][3])),
+                                color=self.configer.get('details', 'color_list')[0], thickness=3)
+
+            ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
+            img_path = os.path.join(base_dir, '{}_{}.jpg'.format(name, i))
+
+            cv2.imwrite(img_path, ori_img)
+
     def vis_ssd_encode(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
