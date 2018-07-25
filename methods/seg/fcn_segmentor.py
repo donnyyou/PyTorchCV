@@ -138,7 +138,7 @@ class FCNSegmentor(object):
                 loss = self.pixel_loss(outputs, targets)
 
                 self.val_losses.update(loss.item(), inputs.size(0))
-                self.seg_running_score.update(outputs.max(1)[1].cpu().numpy(), targets.cpu().numpy())
+                self.seg_running_score.update(outputs[0].max(1)[1].cpu().numpy(), targets.cpu().numpy())
 
                 # Update the vars of the val phase.
                 self.batch_time.update(time.time() - start_time)
