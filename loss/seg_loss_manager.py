@@ -8,13 +8,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from loss.modules.seg_modules import CrossEntropyLoss, FocalLoss
+from loss.modules.seg_modules import CrossEntropyLoss, FocalLoss, FCNSegLoss
 from utils.tools.logger import Logger as Log
 
 
 SEG_LOSS_DICT = {
     'cross_entropy_loss': CrossEntropyLoss,
     'focal_loss': FocalLoss,
+    'fcn_seg_loss': FCNSegLoss
 }
 
 

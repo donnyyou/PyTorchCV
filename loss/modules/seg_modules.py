@@ -62,9 +62,9 @@ class FocalLoss(nn.Module):
     def __init__(self, configer):
         super(FocalLoss, self).__init__()
         self.configer = configer
-        self.y = self.configer.get('focal_loss', 'y')
 
     def forward(self, output, target):
+        self.y = self.configer.get('focal_loss', 'y')
         P = F.softmax(output)
         f_out = F.log_softmax(output)
         Pt = P.gather(1, torch.unsqueeze(target, 1))
@@ -129,7 +129,7 @@ class SegEncodeLoss(nn.Module):
         return tvect
 
 
-class FCNSegLoss(nn.Module):
+class FCNSegLoss(nn.CrossEntropyLoss):
     def __init__(self, configer):
         super(FCNSegLoss, self).__init__()
         self.configer = configer
@@ -137,9 +137,9 @@ class FCNSegLoss(nn.Module):
         self.se_loss = SegEncodeLoss(self.configer)
         self.focal_loss = FocalLoss(self.configer)
 
-    def forward(self, outputs, targets):
+    def forward(self, *outputs):
         if self.configer.get('network', 'model_name') == 'pyramid_encnet':
-            seg_out, se_out_list, aux_out = outputs
+            seg_out, se_out_list, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
@@ -152,9 +152,9 @@ class FCNSegLoss(nn.Module):
             return loss
 
         elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
-            seg_out, aux_out = outputs
+            seg_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
-            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
+            aux_targets = self._scale_target(targets, (aux_out.size(3), aux_out.size(2)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
             loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
@@ -164,9 +164,12 @@ class FCNSegLoss(nn.Module):
 
     @staticmethod
     def _scale_target(targets_, scaled_size):
-        targets = targets_.clone().transpose(1, 2, 0).cpu().numpy()
-        targets = cv2.resize(targets, scaled_size, cv2.INTER_NEAREST)
-        targets = torch.from_numpy(targets.transpose(2, 0, 1))
+        targets = targets_.clone().permute(1, 2, 0).cpu().numpy()
+        targets = cv2.resize(targets, (0, 0),
+                             fx=scaled_size[1] / targets.shape[0],
+                             fy=scaled_size[0] / targets.shape[1],
+                             interpolation=cv2.INTER_NEAREST)
+        targets = torch.from_numpy(targets.transpose(2, 0, 1)).long().to(targets_.device)
         return targets
 
 

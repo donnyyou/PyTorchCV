@@ -59,7 +59,7 @@ class FCNSegmentor(object):
         self.train_loader = self.seg_data_loader.get_trainloader()
         self.val_loader = self.seg_data_loader.get_valloader()
 
-        self.pixel_loss = self.seg_loss_manager.get_seg_loss('cross_entropy_loss')
+        self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
 
         if not self.configer.is_empty('network', 'encoding_parallel') \
                 and self.configer.get('network', 'encoding_parallel'):

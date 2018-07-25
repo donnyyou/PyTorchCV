@@ -99,11 +99,11 @@ class SyncBNPSPNet(nn.Sequential):
     def forward(self, x):
         low = self.low_features(x)
         aux = self.high_features1(low)
-        x = self.high_features2(_)
+        x = self.high_features2(aux)
         x, aux = self.decoder([x, aux])
         x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
 
-        return [x, aux]
+        return (x, aux)
 
 
 if __name__ == '__main__':
