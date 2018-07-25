@@ -151,12 +151,21 @@ class FCNSegLoss(nn.Module):
 
             return loss
 
+        elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
+            seg_out, aux_out = outputs
+            seg_loss = self.ce_loss(seg_out, targets)
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
+            aux_loss = self.ce_loss(aux_out, aux_targets)
+            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
+            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+            return loss
+
         return self.ce_loss(outputs, targets)
 
     @staticmethod
     def _scale_target(targets_, scaled_size):
         targets = targets_.clone().transpose(1, 2, 0).cpu().numpy()
-        targets = cv2.resize(targets, scaled_size)
+        targets = cv2.resize(targets, scaled_size, cv2.INTER_NEAREST)
         targets = torch.from_numpy(targets.transpose(2, 0, 1))
         return targets
 
