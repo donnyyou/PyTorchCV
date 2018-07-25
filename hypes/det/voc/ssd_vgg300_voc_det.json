@@ -8,10 +8,11 @@
       "train_input_size": [300, 300],
       "val_input_size": [300, 300],
       "num_classes": 21,
-      "data_dir": "/home/donny/DataSet/VOC",
+      "data_dir": "/home/donny/DataSet/VOC2007_DET",
       "workers": 8
     },
     "test": {
+      "test_input_size": [300, 300],
       "scale_search": [0.5, 1.0, 1.5, 2.0],
       "mirror": true,
       "crop_test": false,
@@ -82,11 +83,9 @@
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
       "num_anchor_list": [4, 6, 6, 6, 4, 4],
-      "num_feature_list": [512, 1024, 512, 256, 256, 256],
-      "stride_list": [8, 16, 30, 60, 100, 300],
+
       "feature_maps_wh": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
-      "cur_anchor_sizes": [30, 60, 111, 162, 213, 264],
-      "next_anchor_sizes": [60, 111, 162, 213, 264, 315],
+      "cur_anchor_sizes": [30, 60, 111, 162, 213, 264, 315],
       "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
     },
     "details": {
@@ -109,7 +108,9 @@
       "backbone": "vgg19_bn",
       "width_mult": 1.0,
       "model_name": "vgg300_ssd",
-      "init": "kaiming_normal"
+      "init": "kaiming_normal",
+      "num_feature_list": [512, 1024, 512, 256, 256, 256],
+      "stride_list": [8, 16, 30, 60, 100, 300]
     },
     "logging": {
       "logfile_level": "info",
