@@ -103,7 +103,7 @@ class SyncBNPSPNet(nn.Sequential):
         x, aux = self.decoder([x, aux])
         x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
 
-        return (x, aux)
+        return tuple([x, aux])
 
 
 if __name__ == '__main__':

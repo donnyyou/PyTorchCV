@@ -137,14 +137,20 @@ class FCNSegmentor(object):
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
+                tmp = []  # collect the data
+                for i in range(len(outputs)):
+                    assert isinstance(outputs[i][0],torch.Tensor)
+                    tmp.append(outputs[i][0]) # append the output tensor
+                pred = torch.cat(tmp, dim=0)
+
                 self.val_losses.update(loss.item(), inputs.size(0))
-                self.seg_running_score.update(outputs[0].max(1)[1].cpu().numpy(), targets.cpu().numpy())
+                self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
 
                 # Update the vars of the val phase.
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.configer.update_value(['performace'], self.seg_running_score.get_mean_iou())
+            self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
             self.configer.update_value(['val_loss'], self.val_losses.avg)
             self.module_utilizer.save_net(self.seg_net, metric='performance')
             self.module_utilizer.save_net(self.seg_net, metric='val_loss')
