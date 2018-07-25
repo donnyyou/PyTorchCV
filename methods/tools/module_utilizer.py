@@ -43,6 +43,7 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['performance'], 0.0)
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
+        self.configer.add_key_value(['network', 'parallel'], False)
         self.configer.add_key_value(['data', 'input_size'], None)
 
         if self.configer.is_empty('data', 'train_input_size'):
@@ -78,42 +79,59 @@ class ModuleUtilizer(object):
         if not self.configer.is_empty('network', 'encoding_parallel')\
                 and self.configer.get('network', 'encoding_parallel'):
             from extensions.layers.encoding.parallel import DataParallelModel
+            self.configer.update_value(['network', 'parallel'], True)
             return DataParallelModel(net)
 
-        else:
+        elif len(self.configer.get('gpu')) > 1:
+            self.configer.update_value(['network', 'parallel'], True)
             return nn.DataParallel(net)
 
+        else:
+            return net
+
     def load_net(self, net):
-        net = self._make_parallel(net)
+        if self.configer.get('gpu') is not None:
+            net = self._make_parallel(net)
+
         net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         if self.configer.get('network', 'resume') is not None:
-            if self.configer.get('network', 'resume_level') == 'full':
-                checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
-                if 'state_dict' not in checkpoint_dict:
-                    net.load_state_dict(checkpoint_dict)
+            checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
+            if 'state_dict' in checkpoint_dict:
+                checkpoint_dict = checkpoint_dict['state_dict']
+
+            net_dict = net.state_dict()
+
+            not_match_list = list()
+            for key, value in checkpoint_dict['state_dict'].items():
+                if key.split('.')[0] == 'module':
+                    module_key = key
+                    norm_key = '.'.join(key.split('.')[1:])
                 else:
-                    net.load_state_dict(checkpoint_dict['state_dict'])
+                    module_key = 'module.{}'.format(key)
+                    norm_key = key
+
+                if self.configer.get('network', 'parallel'):
+                    key = module_key
+                else:
+                    key = norm_key
+
+                if net_dict[key].size() == value.size():
+                    net_dict[key] = value
+                else:
+                    not_match_list.append(key)
+
+            if self.configer.get('network', 'resume_level') == 'full':
+                assert len(not_match_list) == 0
 
             elif self.configer.get('network', 'resume_level') == 'part':
-                checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
-                load_dict = net.state_dict()
-                pretrained_dict = dict()
-                for key, value in checkpoint_dict['state_dict'].items():
-                    if key.split('.')[0] == 'module':
-                        key_in = key
+                Log.info('Not Matched Keys: {}'.format(not_match_list))
 
-                    else:
-                        key_in = 'module.{}'.format(key)
+            else:
+                Log.error('Resume Level: {} is invalid.'.format_map(self.configer.get('network', 'resume_level')))
+                exit(1)
 
-                    if key_in in load_dict and load_dict[key_in].size() == value.size():
-                        pretrained_dict[key_in] = checkpoint_dict['state_dict'][key]
-
-                    else:
-                        Log.info('Key {} is not match!'.format(key_in))
-
-                load_dict.update(pretrained_dict)
-                net.load_state_dict(load_dict)
+            net.load_state_dict(net_dict)
 
         elif not self.configer.get('network', 'pretrained'):
             net.apply(self.__weights_init)
