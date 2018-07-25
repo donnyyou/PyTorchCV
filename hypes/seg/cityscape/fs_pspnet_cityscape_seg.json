@@ -27,7 +27,7 @@
       "flip_ratio": 0.5,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
+      "crop_ratio": 1.0,
       "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
                     "random_hsv", "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "resize"]
@@ -73,7 +73,8 @@
       "random_crop":{
         "crop_size": [832, 832],
         "method": "grid",
-        "grid":[4, 2]
+        "grid":[4, 2],
+        "center_jitter": 20
       },
       "mean": [0.290101, 0.328081, 0.286964],
       "std": [0.182954, 0.186566, 0.184475]
@@ -91,9 +92,9 @@
       "save_iters": 2000
     },
     "network":{
+      "backbone": "syncbn_resnet101_dilated8",
       "model_name": "syncbn_pspnet",
       "stride": 8,
-      "pretrained": true,
       "init": "kaiming_normal",
       "loss_weights": {
         "aux_loss": 0.4,

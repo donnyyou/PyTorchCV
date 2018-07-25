@@ -78,9 +78,9 @@ class PPMBilinearDeepsup(nn.Module):
         return x, aux
 
 
-class PSPNetResnet(nn.Sequential):
+class SyncBNPSPNet(nn.Sequential):
     def __init__(self, configer):
-        super(PSPNetResnet, self).__init__()
+        super(SyncBNPSPNet, self).__init__()
         self.configer = configer
         self.num_classes = self.configer.get('data', 'num_classes')
         self.backbone = BackboneSelector(configer).get_backbone()
