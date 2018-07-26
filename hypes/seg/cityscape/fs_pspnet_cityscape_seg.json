@@ -108,10 +108,10 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.01,
+      "base_lr": 0.0002,
       "lr_policy": "step",
       "step": {
-        "gamma": 0.1,
+        "gamma": 0.5,
         "step_size": 100
       }
     },
