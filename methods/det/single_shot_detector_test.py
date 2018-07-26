@@ -78,7 +78,7 @@ class SingleShotDetectorTest(object):
         return json_dict
 
     @staticmethod
-    def decode(bbox, cls, default_boxes, configer):
+    def decode(bbox, conf, default_boxes, configer):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -91,7 +91,8 @@ class SingleShotDetectorTest(object):
 
         """
         loc = bbox.cpu()
-        conf = F.softmax(cls.cpu(), dim=-1)
+        if configer.get('phase') != 'debug':
+            conf = F.softmax(conf.cpu(), dim=-1)
 
         default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
 

@@ -113,7 +113,11 @@ class FastRCNNTest(object):
         dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=configer.get('data', 'input_size')[0])
         dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=configer.get('data', 'input_size')[1])
 
-        cls_prob = F.softmax(roi_scores, dim=1)
+        if configer.get('phase') != 'debug':
+            cls_prob = F.softmax(roi_scores, dim=1)
+        else:
+            cls_prob = roi_scores
+
         cls_label = torch.LongTensor([i for i in range(num_classes)])\
             .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
 
