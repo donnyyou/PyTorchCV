@@ -107,7 +107,7 @@ class ModuleUtilizer(object):
             net_dict = net.state_dict()
 
             not_match_list = list()
-            for key, value in checkpoint_dict['state_dict'].items():
+            for key, value in checkpoint_dict.items():
                 if key.split('.')[0] == 'module':
                     module_key = key
                     norm_key = '.'.join(key.split('.')[1:])
