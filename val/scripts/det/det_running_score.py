@@ -68,7 +68,7 @@ class DetRunningScore(object):
             class_recs = self.gt_list[i]
             pred_recs = self.pred_list[i]
             for key in class_recs.keys():
-                class_recs[key]['det'] = [False] * len(pred_recs)
+                class_recs[key]['det'] = [False] * class_recs[key]['bbox'].shape[0]
 
             image_ids = np.array([pred_rec[0] for pred_rec in pred_recs])
             confidence = np.array([pred_rec[1] for pred_rec in pred_recs])
