@@ -129,7 +129,7 @@ class SegEncodeLoss(nn.Module):
         return tvect
 
 
-class FCNSegLoss(nn.CrossEntropyLoss):
+class FCNSegLoss(nn.Module):
     def __init__(self, configer):
         super(FCNSegLoss, self).__init__()
         self.configer = configer
@@ -160,7 +160,8 @@ class FCNSegLoss(nn.CrossEntropyLoss):
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
             return loss
 
-        return self.ce_loss(outputs, targets)
+        seg_out, targets = outputs
+        return self.ce_loss(seg_out, targets)
 
     @staticmethod
     def _scale_target(targets_, scaled_size):

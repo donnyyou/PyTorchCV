@@ -40,12 +40,12 @@ class SegDataLoader(object):
         if self.configer.get('method') == 'fcn_segmentor':
             trainloader = data.DataLoader(
                 FSDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
-                       aug_transform=self.aug_train_transform,
-                       img_transform=self.img_transform,
-                       label_transform=self.label_transform,
-                       configer=self.configer),
+                             aug_transform=self.aug_train_transform,
+                             img_transform=self.img_transform,
+                             label_transform=self.label_transform,
+                             configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
 
             return trainloader
 
@@ -57,12 +57,12 @@ class SegDataLoader(object):
         if self.configer.get('method') == 'fcn_segmentor':
             valloader = data.DataLoader(
                 FSDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
-                       aug_transform=self.aug_val_transform,
-                       img_transform=self.img_transform,
-                       label_transform=self.label_transform,
-                       configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                             aug_transform=self.aug_val_transform,
+                             img_transform=self.img_transform,
+                             label_transform=self.label_transform,
+                             configer=self.configer),
+                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=True,
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
 
             return valloader
 

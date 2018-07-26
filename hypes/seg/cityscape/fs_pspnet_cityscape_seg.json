@@ -6,7 +6,7 @@
       "train_batch_size": 8,
       "val_batch_size": 8,
       "train_input_size": [832, 832],
-      "val_input_size": [832, 832],
+      "val_input_size": [2048, 1024],
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -21,29 +21,27 @@
     },
     "train_trans": {
       "pad_ratio": 0.0,
-      "brightness_ratio": 0.0,
+      "brightness_ratio": 0.5,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "val_trans": {
       "pad_ratio":0.0,
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
-      "flip_ratio": 0.5,
+      "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 1.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "crop_ratio": 0.0,
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "trans_params": {
       "random_pad":{

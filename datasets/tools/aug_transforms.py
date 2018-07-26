@@ -513,8 +513,16 @@ class RandomCrop(object):
         elif self.method == 'grid':
             grid_x = random.randint(0, self.grid[0] - 1)
             grid_y = random.randint(0, self.grid[1] - 1)
-            x = self.size[0] // 2 + grid_x * ((img_size[0] - self.size[0]) // (self.grid[0] - 1))
-            y = self.size[1] // 2 + grid_y * ((img_size[1] - self.size[1]) // (self.grid[1] - 1))
+            if img_size[0] - self.size[0] < 0:
+                x = img_size[0] // 2
+            else:
+                x = self.size[0] // 2 + grid_x * ((img_size[0] - self.size[0]) // (self.grid[0] - 1))
+
+            if img_size[1] - self.size[1] < 0:
+                y = img_size[1] // 2
+            else:
+                y = self.size[1] // 2 + grid_y * ((img_size[1] - self.size[1]) // (self.grid[1] - 1))
+
             return [x, y], -1
 
         else:

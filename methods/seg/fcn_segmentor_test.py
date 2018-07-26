@@ -45,17 +45,17 @@ class FCNSegmentorTest(object):
         self.seg_net = self.module_utilizer.load_net(self.seg_net)
         self.module_utilizer.set_status(self.seg_net, status='test')
 
-    def __test_img(self, image_path, save_path):
-        image = ImageHelper.pil_open_rgb(image_path)
-        ori_width, ori_height = image.size
+    def __test_img(self, image_path, label_path, vis_path, raw_path):
+        ori_image = ImageHelper.pil_open_rgb(image_path)
+        ori_width, ori_height = ori_image.size
         if self.configer.is_empty('test', 'test_input_size'):
-            in_width, in_height = image.size
+            in_width, in_height = ori_image.size
         else:
             in_width, in_height = self.configer.get('test', 'test_input_size')
 
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
         for scale in self.configer.get('test', 'scale_search'):
-            image = Scale(size=(int(in_width * scale), int(in_height * scale)))(image)
+            image = Scale(size=(int(in_width * scale), int(in_height * scale)))(ori_image)
 
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
@@ -70,7 +70,7 @@ class FCNSegmentorTest(object):
             total_logits += results
 
         if self.configer.get('test', 'mirror'):
-            image = Scale(size=(in_width, in_height))(image)
+            image = Scale(size=(in_width, in_height))(ori_image)
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
@@ -86,11 +86,16 @@ class FCNSegmentorTest(object):
 
         label_map = np.argmax(total_logits, axis=-1)
         label_img = np.array(label_map, dtype=np.uint8)
+        image_bgr = cv2.cvtColor(np.array(ori_image), cv2.COLOR_RGB2BGR)
+        image_canvas = self.seg_parser.colorize(label_img, image_canvas=image_bgr)
+        cv2.imwrite(vis_path, image_canvas)
+        ori_image.save(raw_path)
+
         if not self.configer.is_empty('details', 'label_list'):
             label_img = self.__relabel(label_img)
 
         label_img = Image.fromarray(label_img, 'P')
-        label_img.save(save_path)
+        label_img.save(label_path)
 
     def _crop_predict(self, image, crop_size):
         width, height = image.size
@@ -111,7 +116,7 @@ class FCNSegmentorTest(object):
         with torch.no_grad():
             inputs = inputs.to(self.device)
             results = self.seg_net.forward(inputs)
-            results = results.permute(0, 2, 3, 1).cpu().numpy()
+            results = results[0].permute(0, 2, 3, 1).cpu().numpy()
 
         reassemble = np.zeros((np_image.shape[0], np_image.shape[1], results.shape[-1]), np.float32)
         index = 0
@@ -141,7 +146,7 @@ class FCNSegmentorTest(object):
         with torch.no_grad():
             inputs = image.unsqueeze(0).to(self.device)
             results = self.seg_net.forward(inputs)
-            results = results.squeeze().permute(1, 2, 0).cpu().numpy()
+            results = results[0].squeeze().permute(1, 2, 0).cpu().numpy()
 
         return results
 
@@ -171,12 +176,20 @@ class FCNSegmentorTest(object):
 
         if test_img is not None:
             base_dir = os.path.join(base_dir, 'test_img')
-            if not os.path.exists(base_dir):
-                os.makedirs(base_dir)
-
             filename = test_img.rstrip().split('/')[-1]
-            save_path = os.path.join(base_dir, filename)
-            self.__test_img(test_img, save_path)
+            label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
+            raw_path = os.path.join(base_dir, 'raw', filename)
+            vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
+            if not os.path.exists(os.path.dirname(label_path)):
+                os.makedirs(os.path.dirname(label_path))
+
+            if not os.path.exists(os.path.dirname(raw_path)):
+                os.makedirs(os.path.dirname(raw_path))
+
+            if not os.path.exists(os.path.dirname(vis_path)):
+                os.makedirs(os.path.dirname(vis_path))
+
+            self.__test_img(test_img, label_path, vis_path, raw_path)
 
         else:
             base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
@@ -185,11 +198,19 @@ class FCNSegmentorTest(object):
 
             for filename in FileHelper.list_dir(test_dir):
                 image_path = os.path.join(test_dir, filename)
-                save_path = os.path.join(base_dir, filename)
-                if not os.path.exists(os.path.dirname(save_path)):
-                    os.makedirs(os.path.dirname(save_path))
+                label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
+                raw_path = os.path.join(base_dir, 'raw', filename)
+                vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
+                if not os.path.exists(os.path.dirname(label_path)):
+                    os.makedirs(os.path.dirname(label_path))
 
-                self.__test_img(image_path, save_path)
+                if not os.path.exists(os.path.dirname(raw_path)):
+                    os.makedirs(os.path.dirname(raw_path))
+
+                if not os.path.exists(os.path.dirname(vis_path)):
+                    os.makedirs(os.path.dirname(vis_path))
+
+                self.__test_img(image_path, label_path, vis_path, raw_path)
 
     def debug(self):
         base_dir = os.path.join(self.configer.get('project_dir'),
