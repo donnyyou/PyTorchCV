@@ -5,14 +5,14 @@
     "data": {
       "train_batch_size": 16,
       "val_batch_size": 2,
-      "train_input_size": [1024, 1024],
-      "val_input_size": [1024, 1024],
+      "train_input_size": [720, 720],
+      "val_input_size": [720, 720],
       "num_classes": 21,
       "data_dir": "/home/donny/DataSet/VOC2007_DET",
       "workers": 8
     },
     "test": {
-      "test_input_size": [1024, 1024],
+      "test_input_size": [720, 720],
       "scale_search": [0.5, 1.0, 1.5, 2.0],
       "mirror": true,
       "crop_test": false,
