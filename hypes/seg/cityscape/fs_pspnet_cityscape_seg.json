@@ -121,7 +121,7 @@
       "max_epoch": 300
     },
     "optim": {
-      "optim_method": "sgd",
+      "optim_method": "adam",
       "adam": {
         "betas": [0.9, 0.999],
         "eps": 1e-08,
