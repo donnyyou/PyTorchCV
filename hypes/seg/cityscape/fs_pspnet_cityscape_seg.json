@@ -5,8 +5,8 @@
     "data": {
       "train_batch_size": 8,
       "val_batch_size": 8,
-      "train_input_size": [832, 832],
-      "val_input_size": [2048, 1024],
+      "train_input_size": [864, 864],
+      "val_input_size": [864, 864],
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -16,7 +16,7 @@
       "scale_search": [0.5, 1.0, 1.5, 2.0],
       "mirror": true,
       "crop_test": false,
-      "crop_size": [864, 864],
+      "crop_size": [832, 832],
       "crop_stride_ratio": 0.667
     },
     "train_trans": {
@@ -39,7 +39,7 @@
       "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
+      "crop_ratio": 1.0,
       "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
@@ -69,7 +69,7 @@
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [832, 832],
+        "crop_size": [864, 864],
         "method": "grid",
         "grid":[4, 2],
         "center_jitter": 20
