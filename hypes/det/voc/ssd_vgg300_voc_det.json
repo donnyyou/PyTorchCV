@@ -80,7 +80,6 @@
       "anchor_method": "ssd",
       "iou_threshold": 0.5,
       "num_anchor_list": [4, 6, 6, 6, 4, 4],
-
       "feature_maps_wh": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
       "cur_anchor_sizes": [30, 60, 111, 162, 213, 264, 315],
       "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
@@ -149,4 +148,3 @@
       "conf_threshold": 0.0
     }
 }
-

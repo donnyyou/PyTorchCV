@@ -152,7 +152,7 @@ class SingleShotDetector(object):
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls, self.ssd_priorbox_layer(), self.configer)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
-
+                # batch_pred_bboxes = self._get_gt_object_list(batch_gt_bboxes, batch_gt_labels)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
                 # Update the vars of the val phase.
@@ -171,18 +171,31 @@ class SingleShotDetector(object):
             self.val_losses.reset()
             self.module_utilizer.set_status(self.det_net, status='train')
 
+    def _get_gt_object_list(self, batch_gt_bboxes, batch_gt_labels):
+        batch_pred_bboxes = list()
+        for i in range(len(batch_gt_bboxes)):
+            object_list = list()
+            if batch_gt_bboxes[i].numel() > 0:
+                for j in range(batch_gt_bboxes[i].size(0)):
+                    object_list.append([batch_gt_bboxes[i][j][0].item(), batch_gt_bboxes[i][j][1].item(),
+                                        batch_gt_bboxes[i][j][2].item(), batch_gt_bboxes[i][j][3].item(),
+                                        batch_gt_labels[i][j].item(), 1.0])
+
+            batch_pred_bboxes.append(object_list)
+        return batch_pred_bboxes
+
     def __get_object_list(self, batch_detections):
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
-                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                for x1, y1, x2, y2, conf, cls_pred in detections:
                     xmin = x1.cpu().item()
                     ymin = y1.cpu().item()
                     xmax = x2.cpu().item()
                     ymax = y2.cpu().item()
                     cf = conf.cpu().item()
-                    cls_pred = cls_pred.cpu().item()
+                    cls_pred = cls_pred.cpu().item() - 1
                     object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
 
             batch_pred_bboxes.append(object_list)

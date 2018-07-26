@@ -23,7 +23,7 @@ class DetRunningScore(object):
         for i in range(self.configer.get('data', 'num_classes')):
             self.gt_list.append(dict())
             self.pred_list.append(list())
-            self.num_positive.append(0)
+            self.num_positive.append(1e-9)
 
     def _voc_ap(self, rec, prec, use_07_metric=False):
         """ ap = voc_ap(rec, prec, [use_07_metric])
@@ -58,7 +58,7 @@ class DetRunningScore(object):
             ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
         return ap
 
-    def _voc_eval(self):
+    def _voc_eval(self, iou_threshold=0.5):
 
         ap_list = list()
         rc_list = list()
@@ -70,14 +70,13 @@ class DetRunningScore(object):
             for key in class_recs.keys():
                 class_recs[key]['det'] = [False] * len(pred_recs)
 
-            image_ids = [pred_rec[0] for pred_rec in pred_recs]
-            confidence = [pred_rec[1] for pred_rec in pred_recs]
+            image_ids = np.array([pred_rec[0] for pred_rec in pred_recs])
+            confidence = np.array([pred_rec[1] for pred_rec in pred_recs])
             BB = np.array([pred_rec[2] for pred_rec in pred_recs])
 
             # sort by confidence
             sorted_ind = np.argsort(-confidence)
-            sorted_scores = np.sort(-confidence)
-            BB = BB[sorted_ind, :]
+            BB = BB[sorted_ind]
             image_ids = [image_ids[x] for x in sorted_ind]
 
             # go down dets and mark TPs and FPs
@@ -86,7 +85,7 @@ class DetRunningScore(object):
             fp = np.zeros(nd)
             for d in range(nd):
                 R = class_recs[image_ids[d]]
-                bb = BB[d, :].astype(float)
+                bb = BB[d].astype(float)
                 ovmax = -np.inf
                 BBGT = R['bbox'].astype(float)
                 if BBGT.size > 0:
@@ -106,7 +105,7 @@ class DetRunningScore(object):
                     ovmax = np.max(overlaps)
                     jmax = np.argmax(overlaps)
 
-                if ovmax > self.configer.get('vis', 'iou_threshold'):
+                if ovmax > iou_threshold:
                     if not R['det'][jmax]:
                         tp[d] = 1.
                         R['det'][jmax] = 1
@@ -130,13 +129,13 @@ class DetRunningScore(object):
         return rc_list, pr_list, ap_list
 
     def update(self, batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels):
-        image_name_prefix = str(int(time.time()))
+        image_name_prefix = str(time.time())
         for i in range(len(batch_gt_bboxes)):
             image_name = '{}_{}'.format(image_name_prefix, i)
             for cls in range(self.configer.get('data', 'num_classes')):
                 self.gt_list[cls][image_name] = {
-                    'bbox': np.array([batch_gt_bboxes[i][j]
-                                      for j in range(batch_gt_bboxes[i].shape[0])
+                    'bbox': np.array([batch_gt_bboxes[i][j].cpu().numpy()
+                                      for j in range(batch_gt_bboxes[i].size(0))
                                       if batch_gt_labels[i][j] == cls])
                 }
 
@@ -147,7 +146,11 @@ class DetRunningScore(object):
 
     def get_mAP(self):
         # compute mAP by APs under different oks thresholds
-        return None
+        rc_list, pr_list, ap_list = self._voc_eval()
+        if self.num_positive[self.configer.get('data', 'num_classes') - 1] < 1:
+            return sum(ap_list) / (self.configer.get('data', 'num_classes') - 1)
+        else:
+            return sum(ap_list) / self.configer.get('data', 'num_classes')
 
     def reset(self):
         self.gt_list = list()
@@ -157,4 +160,4 @@ class DetRunningScore(object):
         for i in range(self.configer.get('data', 'num_classes')):
             self.gt_list.append(dict())
             self.pred_list.append(list())
-            self.num_positive.append(0)
+            self.num_positive.append(1e-9)
