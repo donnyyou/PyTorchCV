@@ -3,8 +3,8 @@
     "task": "det",
     "method": "single_shot_detector",
     "data": {
-      "train_batch_size": 6,
-      "val_batch_size": 2,
+      "train_batch_size": 12,
+      "val_batch_size": 12,
       "train_input_size": [300, 300],
       "val_input_size": [300, 300],
       "num_classes": 21,
@@ -101,8 +101,7 @@
       "save_iters": 3000
     },
     "network":{
-      "backbone": "vgg19_bn",
-      "width_mult": 1.0,
+      "backbone": "vgg16_bn",
       "model_name": "vgg300_ssd",
       "init": "kaiming_normal",
       "num_feature_list": [512, 1024, 512, 256, 256, 256],
