@@ -137,11 +137,16 @@ class FCNSegmentor(object):
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
-                tmp = []  # collect the data
-                for i in range(len(outputs)):
-                    assert isinstance(outputs[i][0],torch.Tensor)
-                    tmp.append(outputs[i][0]) # append the output tensor
-                pred = torch.cat(tmp, dim=0)
+                if not self.configer.is_empty('network', 'encoding_parallel') \
+                        and self.configer.get('network', 'encoding_parallel'):
+                    tmp = []  # collect the data
+                    for i in range(len(outputs)):
+                        assert isinstance(outputs[i][0],torch.Tensor)
+                        tmp.append(outputs[i][0]) # append the output tensor
+
+                    pred = torch.cat(tmp, dim=0)
+                else:
+                    pred = outputs[0]
 
                 self.val_losses.update(loss.item(), inputs.size(0))
                 self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
