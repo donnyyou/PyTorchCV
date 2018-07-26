@@ -9,7 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from extensions.layers.encoding.syncbn import BatchNorm2d
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -20,6 +19,7 @@ class _ConvBatchNormReluBlock(nn.Module):
         self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
                             kernel_size=kernel_size, stride=stride, padding=padding,
                             dilation = dilation, bias=False)
+        from extensions.layers.encoding.syncbn import BatchNorm2d
         self.bn = BatchNorm2d(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
@@ -37,6 +37,7 @@ class PPMBilinearDeepsup(nn.Module):
         super(PPMBilinearDeepsup, self).__init__()
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
+        from extensions.layers.encoding.syncbn import BatchNorm2d
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
@@ -108,7 +109,7 @@ class SyncBNPSPNet(nn.Sequential):
 
 if __name__ == '__main__':
     i = torch.Tensor(1,3,512,512).cuda()
-    model = PSPNetResnet(num_classes=19).cuda()
+    model = SyncBNPSPNet(num_classes=19).cuda()
     model.eval()
     o, _ = model(i)
     #print(o.size())

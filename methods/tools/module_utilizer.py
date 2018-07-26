@@ -23,7 +23,7 @@ class ModuleUtilizer(object):
 
     def __weights_init(self, m):
         classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
+        if classname in ['Conv2d', 'Conv1d']:
             if self.configer.get('network', 'init') == 'kaiming_normal':
                 nn.init.kaiming_normal_(m.weight.data)
 
