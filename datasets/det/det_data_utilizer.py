@@ -266,8 +266,8 @@ class DetDataUtilizer(object):
                     # One-hot encoding of label
                     tcls[b, best_n, gj, gi, int(batch_gt_labels[b][t])] = 1
 
-            obj_mask = obj_mask.view(batch_size, -1).unsqueeze(2)
-            noobj_mask = noobj_mask.view(batch_size, -1).unsqueeze(2)
+            obj_mask = obj_mask.view(batch_size, -1)
+            noobj_mask = noobj_mask.view(batch_size, -1)
             tx = tx.view(batch_size, -1).unsqueeze(2)
             ty = ty.view(batch_size, -1).unsqueeze(2)
             tw = tw.view(batch_size, -1).unsqueeze(2)

@@ -13,8 +13,8 @@ from models.backbones.backbone_selector import BackboneSelector
 
 DETECTOR_CONFIG = {
     'num_centrals': [256, 128, 128, 128, 128],
-    'num_strides': [2, 2, 1, 1, 1],
-    'num_padding': [1, 1, 0, 0, 1],
+    'num_strides': [2, 2, 2, 2, 2],
+    'num_padding': [1, 1, 1, 1, 1],
     'vgg_cfg': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512],
 }
 

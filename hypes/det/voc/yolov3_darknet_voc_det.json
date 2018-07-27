@@ -7,7 +7,7 @@
       "val_batch_size": 2,
       "train_input_size": [416, 416],
       "val_input_size": [416, 416],
-      "num_classes": 80,
+      "num_classes": 20,
       "data_dir": "/home/donny/DataSet/VOC2007_DET",
       "workers": 8
     },

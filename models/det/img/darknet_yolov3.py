@@ -86,23 +86,28 @@ class DarkNetYolov3(nn.Module):
             self._make_cbl(filters_list[1], filters_list[0], 1)])
         return m
 
-    def forward(self, x, is_training=True):
+    def forward(self, x):
+        def _branch(_embedding, _in):
+            for i, e in enumerate(_embedding):
+                _in = e(_in)
+            return _in
+
         #  backbone
         tuple_features = self.backbone(x)
         #  yolo branch 0
-        x0_in = self.embedding0(tuple_features[-1])
+        x0_in = _branch(self.embedding0, tuple_features[-1])
         out0 = self.conv_out1(x0_in)
 
         #  yolo branch 1
         x1_in = self.embedding1_cbl(x0_in)
         x1_in = torch.cat([F.upsample_nearest(x1_in, scale_factor=2), tuple_features[-2]], 1)
-        x1_in = self.embedding1(x1_in)
+        x1_in = _branch(self.embedding1, x1_in)
         out1 = self.conv_out2(x1_in)
 
         #  yolo branch 2
         x2_in = self.embedding2_cbl(x1_in)
         x2_in = torch.cat([F.upsample_nearest(x2_in, scale_factor=2), tuple_features[-3]], 1)
-        x2_in = self.embedding2(x2_in)
+        x2_in = _branch(self.embedding2, x2_in)
         out2 = self.conv_out3(x2_in)
         output = self.yolo_detection_layer([out0, out1, out2])
         return output

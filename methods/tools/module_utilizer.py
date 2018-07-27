@@ -56,7 +56,7 @@ class ModuleUtilizer(object):
         for i in range(len(params)):
             return_list.append(params[i].to(device))
 
-        return return_list
+        return return_list[0] if len(params) == 1 else return_list
 
     def set_status(self, net, status='train'):
         if status == 'train':

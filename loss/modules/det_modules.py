@@ -235,20 +235,17 @@ class YOLOv3Loss(nn.Module):
         ty = targets[..., 1]  # Center y
         tw = targets[..., 2]  # Width
         th = targets[..., 3]  # Height
-        tconf = targets[..., 4]  # Conf
         tcls = targets[..., 5:]  # Cls pred.
 
-        mask, noobj_mask = objmask.cuda(), noobjmask.cuda()
-        tx, ty, tw, th = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda()
-        tconf, tcls = tconf.cuda(), tcls.cuda()
         #  losses.
-        loss_x = self.bce_loss(x * mask, tx * mask)
-        loss_y = self.bce_loss(y * mask, ty * mask)
-        loss_w = self.mse_loss(w * mask, tw * mask)
-        loss_h = self.mse_loss(h * mask, th * mask)
-        loss_conf = self.bce_loss(conf * mask, mask) + \
-                    0.5 * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
-        loss_cls = self.bce_loss(pred_cls[mask == 1], tcls[mask == 1])
+        objmask = objmask.unsqueeze(2)
+        loss_x = self.bce_loss(x * objmask, tx * objmask)
+        loss_y = self.bce_loss(y * objmask, ty * objmask)
+        loss_w = self.mse_loss(w * objmask, tw * objmask)
+        loss_h = self.mse_loss(h * objmask, th * objmask)
+        objmask = objmask.squeeze(2)
+        loss_conf = self.bce_loss(conf * objmask, objmask) + 0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
+        loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
         #  total loss = losses * weight
         loss = loss_x * self.lambda_xy + loss_y * self.lambda_xy + \
                loss_w * self.lambda_wh + loss_h * self.lambda_wh + \
