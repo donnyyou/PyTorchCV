@@ -25,7 +25,7 @@ class RandomPad(object):
                 pad_value: the value that pad to the image border.
                 img: Image object as input.
 
-            Returns:
+            Returns::
                 img: Image object.
     """
     def __init__(self, pad_border=None, pad_ratio=0.5):
@@ -33,14 +33,14 @@ class RandomPad(object):
         self.pad_border = pad_border
         self.ratio = pad_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
         if rand_value > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         left_pad = random.randint(-self.pad_border, self.pad_border)  # pad_left
         up_pad = random.randint(-self.pad_border, self.pad_border)  # pad_up
@@ -49,11 +49,11 @@ class RandomPad(object):
 
         img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
 
-        if label is not None:
-            label = ImageOps.expand(label, (left_pad, up_pad, right_pad, down_pad), fill=255)
+        if labelmap is not None:
+            labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
 
-        if mask is not None:
-            mask = ImageOps.expand(mask, (left_pad, up_pad, right_pad, down_pad), fill=1)
+        if maskmap is not None:
+            maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
 
         if kpts is not None and len(kpts) > 0:
             num_objects = len(kpts)
@@ -71,7 +71,7 @@ class RandomPad(object):
                 bboxes[i][2] += left_pad
                 bboxes[i][3] += up_pad
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomHFlip(object):
@@ -79,23 +79,23 @@ class RandomHFlip(object):
         self.swap_pair = swap_pair
         self.ratio = flip_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
 
         if rand_value > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
         img = img.transpose(Image.FLIP_LEFT_RIGHT)
-        if label is not None:
-            label = label.transpose(Image.FLIP_LEFT_RIGHT)
+        if labelmap is not None:
+            labelmap = labelmap.transpose(Image.FLIP_LEFT_RIGHT)
 
-        if mask is not None:
-            mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
+        if maskmap is not None:
+            maskmap = maskmap.transpose(Image.FLIP_LEFT_RIGHT)
 
         if bboxes is not None and len(bboxes) > 0:
             for i in range(len(bboxes)):
@@ -118,7 +118,7 @@ class RandomHFlip(object):
                     kpts[i][pair[0] - 1] = kpts[i][pair[1] - 1]
                     kpts[i][pair[1] - 1] = temp_point
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomBrightness(object):
@@ -126,14 +126,14 @@ class RandomBrightness(object):
         self.shift_value = shift_value
         self.ratio = brightness_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
         if rand_value > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         shift = np.random.uniform(-self.shift_value, self.shift_value, size=1)
         image = np.array(img, dtype=float)
@@ -143,7 +143,7 @@ class RandomBrightness(object):
         image = image.astype(np.uint8)
         image = Image.fromarray(image)
 
-        return image, label, mask, kpts, bboxes
+        return image, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomGaussBlur(object):
@@ -151,18 +151,18 @@ class RandomGaussBlur(object):
         self.max_blur = max_blur
         self.ratio = blur_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
         if rand_value > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         blur_value = np.random.uniform(0, self.max_blur)
         img = img.filter(ImageFilter.GaussianBlur(radius=blur_value))
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomHSV(object):
@@ -189,14 +189,14 @@ class RandomHSV(object):
         self.v_range = v_range
         self.ratio = hsv_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
         if rand_value > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img)
         img_hsv = matplotlib.colors.rgb_to_hsv(img)
@@ -210,7 +210,7 @@ class RandomHSV(object):
         img_hsv = np.stack([img_h, img_s, img_v], axis=2)
         img_new = matplotlib.colors.hsv_to_rgb(img_hsv)
 
-        return Image.fromarray(img_new.astype(np.uint8)), label, mask, kpts, bboxes
+        return Image.fromarray(img_new.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
 
 
 class Resize(object):
@@ -233,23 +233,23 @@ class Resize(object):
         else:
             self.size = None
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
         Args:
             img     (Image):   Image to be resized.
-            mask    (Image):   Mask to be resized.
+            maskmap    (Image):   Mask to be resized.
             kpt     (list):    keypoints to be resized.
             center: (list):    center points to be resized.
 
         Returns:
             Image:  Randomly resize image.
-            Image:  Randomly resize mask.
+            Image:  Randomly resize maskmap.
             list:   Randomly resize keypoints.
             list:   Randomly resize center points.
         """
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         width, height = img.size
         w_scale_ratio = self.size[0] / width
@@ -272,12 +272,12 @@ class Resize(object):
                 bboxes[i][3] *= h_scale_ratio
 
         img = img.resize(self.size, Image.BILINEAR)
-        if label is not None:
-            label = label.resize(self.size, Image.NEAREST)
-        if mask is not None:
-            mask = mask.resize(self.size, Image.CUBIC)
+        if labelmap is not None:
+            labelmap = labelmap.resize(self.size, Image.NEAREST)
+        if maskmap is not None:
+            maskmap = maskmap.resize(self.size, Image.CUBIC)
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomResize(object):
@@ -313,23 +313,23 @@ class RandomResize(object):
 
         return scale
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
         Args:
             img     (Image):   Image to be resized.
-            mask    (Image):   Mask to be resized.
+            maskmap    (Image):   Mask to be resized.
             kpt     (list):    keypoints to be resized.
             center: (list):    center points to be resized.
 
         Returns:
             Image:  Randomly resize image.
-            Image:  Randomly resize mask.
+            Image:  Randomly resize maskmap.
             list:   Randomly resize keypoints.
             list:   Randomly resize center points.
         """
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         width, height = img.size
         rand_value = random.randint(1, 100)
@@ -358,12 +358,12 @@ class RandomResize(object):
         converted_size = (int(width*scale_ratio), int(height*scale_ratio))
 
         img = img.resize(converted_size, Image.BILINEAR)
-        if label is not None:
-            label = label.resize(converted_size, Image.NEAREST)
-        if mask is not None:
-            mask = mask.resize(converted_size, Image.CUBIC)
+        if labelmap is not None:
+            labelmap = labelmap.resize(converted_size, Image.NEAREST)
+        if maskmap is not None:
+            maskmap = maskmap.resize(converted_size, Image.CUBIC)
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomRotate(object):
@@ -378,11 +378,11 @@ class RandomRotate(object):
         self.max_degree = max_degree
         self.ratio = rotate_ratio
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
         Args:
             img    (Image):     Image to be rotated.
-            mask   (Image):     Mask to be rotated.
+            maskmap   (Image):     Mask to be rotated.
             kpt    (list):      Keypoints to be rotated.
             center (list):      Center points to be rotated.
 
@@ -391,14 +391,14 @@ class RandomRotate(object):
             list:      Rotated key points.
         """
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         rand_value = random.randint(1, 100)
         if rand_value <= 100 * self.ratio:
             rotate_degree = random.uniform(-self.max_degree, self.max_degree)
         else:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img)
         height, width, _ = img.shape
@@ -414,16 +414,16 @@ class RandomRotate(object):
         rotate_mat[1, 2] += (new_height / 2.) - img_center[1]
         img = cv2.warpAffine(img, rotate_mat, (new_width, new_height), borderValue=(128, 128, 128))
         img = Image.fromarray(img)
-        if label is not None:
-            label = np.array(label)
-            label = cv2.warpAffine(label, rotate_mat, (new_width, new_height),
-                                   borderValue=(255, 255, 255), flags=cv2.INTER_NEAREST)
-            label = Image.fromarray(label)
+        if labelmap is not None:
+            labelmap = np.array(labelmap)
+            labelmap = cv2.warpAffine(labelmap, rotate_mat, (new_width, new_height),
+                                      borderValue=(255, 255, 255), flags=cv2.INTER_NEAREST)
+            labelmap = Image.fromarray(labelmap)
 
-        if mask is not None:
-            mask = np.array(mask)
-            mask = cv2.warpAffine(mask, rotate_mat, (new_width, new_height), borderValue=(1, 1, 1))
-            mask = Image.fromarray(mask)
+        if maskmap is not None:
+            maskmap = np.array(maskmap)
+            maskmap = cv2.warpAffine(maskmap, rotate_mat, (new_width, new_height), borderValue=(1, 1, 1))
+            maskmap = Image.fromarray(maskmap)
 
         if kpts is not None and len(kpts) > 0:
             num_objects = len(kpts)
@@ -456,7 +456,7 @@ class RandomRotate(object):
                              max(bbox_temp[0], bbox_temp[2], bbox_temp[4], bbox_temp[6]),
                              max(bbox_temp[1], bbox_temp[3], bbox_temp[5], bbox_temp[7])]
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomCrop(object):
@@ -528,26 +528,26 @@ class RandomCrop(object):
             Log.error('Crop method {} is invalid.'.format(self.method))
             exit(1)
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
         Args:
             img (Image):   Image to be cropped.
-            mask (Image):  Mask to be cropped.
+            maskmap (Image):  Mask to be cropped.
             kpts (list):    keypoints to be cropped.
             bboxes (list): bounding boxes.
 
         Returns:
             Image:  Cropped image.
-            Image:  Cropped mask.
+            Image:  Cropped maskmap.
             list:   Cropped keypoints.
             list:   Cropped center points.
         """
         assert isinstance(img, Image.Image)
-        assert label is None or isinstance(label, Image.Image)
-        assert mask is None or isinstance(mask, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
 
         if random.randint(1, 100) > 100 * self.ratio:
-            return img, label, mask, kpts, bboxes
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         center, index = self.get_center(img.size, bboxes)
 
@@ -580,18 +580,19 @@ class RandomCrop(object):
                               fill=(128, 128, 128))
         img = img.crop((0, 0, self.size[0], self.size[1]))
 
-        if mask is not None:
-            mask = ImageOps.expand(mask,
-                                   border=(-offset_left, -offset_up,
-                                           self.size[0] + offset_left, self.size[1] + offset_up), fill=1)
-            mask = mask.crop((0, 0, self.size[0], self.size[1]))
+        if maskmap is not None:
+            maskmap = ImageOps.expand(maskmap,
+                                      border=(-offset_left, -offset_up,
+                                              self.size[0] + offset_left, self.size[1] + offset_up), fill=1)
+            maskmap = maskmap.crop((0, 0, self.size[0], self.size[1]))
 
-        if label is not None:
-            label = ImageOps.expand(label, border=(-offset_left, -offset_up,
-                                                   self.size[0] + offset_left, self.size[1] + offset_up), fill=255)
-            label = label.crop((0, 0, self.size[0], self.size[1]))
+        if labelmap is not None:
+            labelmap = ImageOps.expand(labelmap, border=(-offset_left, -offset_up,
+                                                         self.size[0] + offset_left,
+                                                         self.size[1] + offset_up), fill=255)
+            labelmap = labelmap.crop((0, 0, self.size[0], self.size[1]))
 
-        return img, label, mask, kpts, bboxes
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class RandomDetCrop(object):
@@ -647,8 +648,8 @@ class RandomDetCrop(object):
         union = area_a + area_b - inter
         return inter / union  # [A,B]
 
-    def __call__(self, img, labelmap=None, mask=None, kpts=None, bboxes=None, labels=None):
-        assert labelmap is None and mask is None and kpts is None and bboxes is not None
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert labelmap is None and maskmap is None and kpts is None and bboxes is not None
 
         width, height = img.size
 
@@ -656,7 +657,7 @@ class RandomDetCrop(object):
             # randomly choose a mode
             mode = random.choice(self.sample_options)
             if mode is None:
-                return img, labelmap, mask, kpts, bboxes, labels
+                return img, labelmap, maskmap, kpts, bboxes, labels
 
             min_iou, max_iou = mode
             if min_iou is None:
@@ -723,7 +724,7 @@ class RandomDetCrop(object):
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
 
-                return current_img, labelmap, mask, kpts, current_boxes, current_labels
+                return current_img, labelmap, maskmap, kpts, current_boxes.tolist(), current_labels.tolist()
 
 
 class AugCompose(object):
@@ -839,42 +840,47 @@ class AugCompose(object):
 
         return True
 
-    def __call__(self, img, label=None, mask=None, kpts=None, bboxes=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
 
         if self.split == 'train':
             for trans_key in self.configer.get('train_trans', 'trans_seq'):
-                img, label, mask, kpts, bboxes = self.transforms[trans_key](img, label, mask, kpts, bboxes)
+                (img, labelmap, maskmap,
+                 kpts, bboxes, labels) = self.transforms[trans_key](img, labelmap, maskmap, kpts, bboxes, labels)
 
         else:
             for trans_key in self.configer.get('val_trans', 'trans_seq'):
-                img, label, mask, kpts, bboxes = self.transforms[trans_key](img, label, mask, kpts, bboxes)
+                (img, labelmap, maskmap,
+                 kpts, bboxes, labels) = self.transforms[trans_key](img, labelmap, maskmap, kpts, bboxes, labels)
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'n', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'n', 'n']):
             return img
 
-        if self.__check_none([label, mask, kpts, bboxes], ['y', 'n', 'n', 'n']):
-            return img, label
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'n', 'n', 'n', 'n']):
+            return img, labelmap
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'n', 'n', 'y']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'y', 'n']):
             return img, bboxes
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'n', 'y', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'y', 'n', 'n']):
             return img, kpts
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'n', 'y', 'y']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'y', 'y', 'n']):
             return img, kpts, bboxes
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'y', 'y', 'n']):
-            return img, mask, kpts
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'y', 'y', 'n', 'n']):
+            return img, maskmap, kpts
 
-        if self.__check_none([label, mask, kpts, bboxes], ['y', 'y', 'y', 'n']):
-            return img, label, mask, kpts
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'y', 'y', 'n', 'n']):
+            return img, labelmap, maskmap, kpts
 
-        if self.__check_none([label, mask, kpts, bboxes], ['n', 'y', 'y', 'y']):
-            return img, mask, kpts, bboxes
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'y', 'y', 'y', 'n']):
+            return img, maskmap, kpts, bboxes
 
-        if self.__check_none([label, mask, kpts, bboxes], ['y', 'y', 'y', 'y']):
-            return img, label, mask, kpts, bboxes
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'y', 'y', 'y', 'n']):
+            return img, labelmap, maskmap, kpts, bboxes
+
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'y', 'y']):
+            return img, bboxes, labels
 
         Log.error('Params is not valid.')
         exit(1)
