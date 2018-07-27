@@ -22,6 +22,7 @@ from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.faster_rcnn_test import FastRCNNTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
+from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -44,6 +45,7 @@ class FasterRCNN(object):
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
+        self.fr_roi_generator = FRRoiGenerator(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -92,10 +94,10 @@ class FasterRCNN(object):
 
             # Forward pass.
             feat = self.det_net.extractor(inputs)
-            rpn_locs, rpn_scores = self.det_net.rpn(inputs)
-            train_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
-                                                      self.configer.get('rpn', 'n_train_pre_nms'),
-                                                      self.configer.get('rpn', 'n_train_post_nms'))
+            rpn_locs, rpn_scores = self.det_net.rpn(feat)
+            train_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
+                                                           self.configer.get('rpn', 'n_train_pre_nms'),
+                                                           self.configer.get('rpn', 'n_train_post_nms'))
 
             gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
                 batch_gt_bboxes, self.fr_priorbox_layer())
@@ -103,13 +105,12 @@ class FasterRCNN(object):
                 batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
 
             sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
-
+            sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().cuda(),
-                gt_roi_labels.cuda().long()]
+                gt_roi_labels.cuda().long()].contiguous().view(-1, 4)
 
             # Compute the loss of the train batch & backward.
-
             loss = self.fr_loss([rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores],
                                 [gt_rpn_locs, gt_rpn_labels, gt_roi_bboxes, gt_roi_labels])
 
@@ -157,14 +158,14 @@ class FasterRCNN(object):
 
                 # Forward pass.
                 feat = self.det_net.extractor(inputs)
-                rpn_locs, rpn_scores = self.det_net.rpn(inputs)
-                train_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
-                                                          self.configer.get('rpn', 'n_train_pre_nms'),
-                                                          self.configer.get('rpn', 'n_train_post_nms'))
+                rpn_locs, rpn_scores = self.det_net.rpn(feat)
+                train_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
+                                                               self.configer.get('rpn', 'n_train_pre_nms'),
+                                                               self.configer.get('rpn', 'n_train_post_nms'))
 
-                test_indices_and_rois = self.det_net.roi(rpn_locs, rpn_scores,
-                                                         self.configer.get('rpn', 'n_test_pre_nms'),
-                                                         self.configer.get('rpn', 'n_test_post_nms'))
+                test_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
+                                                              self.configer.get('rpn', 'n_test_pre_nms'),
+                                                              self.configer.get('rpn', 'n_test_post_nms'))
 
                 gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
                     batch_gt_bboxes, self.fr_priorbox_layer())
@@ -172,6 +173,7 @@ class FasterRCNN(object):
                     batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
 
                 sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
+
                 test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
 
                 # Compute the loss of the train batch & backward.

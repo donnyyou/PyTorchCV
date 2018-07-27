@@ -13,7 +13,7 @@ from torch.nn import functional as F
 from torch import nn
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.roi_pooling_layer import ROIPoolingLayer
+from utils.layers.det.roi_pooling_layer import ROIPoolingLayer, PyROIPoolingLayer
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -114,7 +114,7 @@ class RoIHead(nn.Module):
         )
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
-        self.roi_layer = ROIPoolingLayer(self.configer)
+        self.roi_layer = PyROIPoolingLayer(self.configer)
 
     def forward(self, x, indices_and_rois):
         """Forward the chain.

@@ -90,6 +90,8 @@ class FRRoiGenerator(object):
 
         # Convert anchors into proposal via bbox transformations.
 
+        loc = loc.cpu()
+        score = score.cpu()
         wh = torch.exp(loc[:, :, 2:]) * default_boxes[:, :, 2:]
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
@@ -115,7 +117,6 @@ class FRRoiGenerator(object):
             keep = (hs >= min_size) & (ws >= min_size).squeeze()
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
-
             # Sort all (proposal, score) pairs by score from highest to lowest.
             # Take top pre_nms_topN (e.g. 6000).
             _, order = tmp_scores.sort(0, descending=True)

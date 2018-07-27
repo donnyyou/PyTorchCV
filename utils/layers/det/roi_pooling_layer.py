@@ -42,7 +42,7 @@ class PyROIPoolingLayer(nn.Module):
         outputs = torch.zeros(num_rois, num_channels, self.pooled_height, self.pooled_width).cuda()
 
         for roi_ind, roi in enumerate(rois):
-            batch_ind = int(roi[0].data[0])
+            batch_ind = int(roi[0].item())
             roi_start_w, roi_start_h, roi_end_w, roi_end_h = np.round(
                 roi[1:].data.cpu().numpy() * self.spatial_scale).astype(int)
             roi_width = max(roi_end_w - roi_start_w + 1, 1)
@@ -67,6 +67,6 @@ class PyROIPoolingLayer(nn.Module):
                     else:
                         data = features[batch_ind]
                         outputs[roi_ind, :, ph, pw] = torch.max(
-                            torch.max(data[:, hstart:hend, wstart:wend], 1)[0], 2)[0].view(-1)
+                            torch.max(data[:, hstart:hend, wstart:wend], 1)[0], 1)[0].view(-1)
 
         return outputs

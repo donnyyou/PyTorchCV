@@ -267,13 +267,13 @@ class FRLocLoss(nn.Module):
         in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight).cuda()] = 1
         loc_loss = self.smooth_l1_loss(pred_locs, gt_locs, in_weight, sigma)
         # Normalize by total number of negtive and positive rois.
-        loc_loss /= (gt_labels >= 0).sum()  # ignore gt_label==-1 for rpn_loss
+        loc_loss /= (gt_labels.cuda().float() >= 0).sum().float()  # ignore gt_label==-1 for rpn_loss
         return loc_loss
 
     @staticmethod
     def smooth_l1_loss(x, t, in_weight, sigma):
         sigma2 = sigma ** 2
-        diff = in_weight * (x - t)
+        diff = in_weight * (x - t.cuda())
         abs_diff = diff.abs()
         flag = (abs_diff.data < (1. / sigma2)).float()
         flag = Variable(flag)
@@ -297,12 +297,15 @@ class FRLoss(nn.Module):
         # output_list: rpn_locs, rpn_scores, roi_cls_locs, roi_scores
         pred_rpn_locs, pred_rpn_scores, pred_roi_cls_locs, pred_roi_scores = output_list
         gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_list
+        gt_rpn_labels = gt_rpn_labels.contiguous().view(-1)
+        pred_rpn_scores = pred_rpn_scores.contiguous().view(-1, 2)
+
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
                                         gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
         # NOTE: default value of ignore_index is -100 ...
-        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
+        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels.cuda(), ignore_index=-1)
 
         roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
                                         gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
-        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels)
+        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels.cuda())
         return rpn_loc_loss + rpn_cls_loss + roi_loc_loss + roi_cls_loss
