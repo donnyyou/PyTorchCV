@@ -781,8 +781,7 @@ class AugCompose(object):
                     method=self.configer.get('trans_params', 'random_crop')['method'],
                     grid=self.configer.get('trans_params', 'random_crop')['grid'],
                     center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
-                    crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
-                    task_type=self.configer.get('task')
+                    crop_ratio=self.configer.get('train_trans', 'crop_ratio')
                 ),
                 'resize': Resize(size=self.configer.get('data', 'train_input_size')),
             }
@@ -825,8 +824,7 @@ class AugCompose(object):
                     method=self.configer.get('trans_params', 'random_crop')['method'],
                     grid=self.configer.get('trans_params', 'random_crop')['grid'],
                     center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
-                    crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
-                    task_type=self.configer.get('task')
+                    crop_ratio=self.configer.get('val_trans', 'crop_ratio')
                 ),
                 'resize': Resize(size=self.configer.get('data', 'val_input_size')),
             }
