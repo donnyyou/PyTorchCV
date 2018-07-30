@@ -213,73 +213,6 @@ class RandomHSV(object):
         return Image.fromarray(img_new.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
 
 
-class Resize(object):
-    """Resize the given numpy.ndarray to random size and aspect ratio.
-
-    Args:
-        scale_min: the min scale to resize.
-        scale_max: the max scale to resize.
-    """
-
-    def __init__(self, size=None):
-
-        if size is not None:
-            if isinstance(size, int):
-                self.size = (size, size)
-            elif isinstance(size, collections.Iterable) and len(size) == 2:
-                self.size = size
-            else:
-                raise TypeError('Got inappropriate size arg: {}'.format(size))
-        else:
-            self.size = None
-
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
-        """
-        Args:
-            img     (Image):   Image to be resized.
-            maskmap    (Image):   Mask to be resized.
-            kpt     (list):    keypoints to be resized.
-            center: (list):    center points to be resized.
-
-        Returns:
-            Image:  Randomly resize image.
-            Image:  Randomly resize maskmap.
-            list:   Randomly resize keypoints.
-            list:   Randomly resize center points.
-        """
-        assert isinstance(img, Image.Image)
-        assert labelmap is None or isinstance(labelmap, Image.Image)
-        assert maskmap is None or isinstance(maskmap, Image.Image)
-
-        width, height = img.size
-        w_scale_ratio = self.size[0] / width
-        h_scale_ratio = self.size[1] / height
-
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
-
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] *= w_scale_ratio
-                    kpts[i][j][1] *= h_scale_ratio
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] *= w_scale_ratio
-                bboxes[i][1] *= h_scale_ratio
-                bboxes[i][2] *= w_scale_ratio
-                bboxes[i][3] *= h_scale_ratio
-
-        img = img.resize(self.size, Image.BILINEAR)
-        if labelmap is not None:
-            labelmap = labelmap.resize(self.size, Image.NEAREST)
-        if maskmap is not None:
-            maskmap = maskmap.resize(self.size, Image.CUBIC)
-
-        return img, labelmap, maskmap, kpts, bboxes, labels
-
-
 class RandomResize(object):
     """Resize the given numpy.ndarray to random size and aspect ratio.
 
@@ -608,7 +541,8 @@ class RandomDetCrop(object):
             boxes (Tensor): the adjusted bounding boxes in pt form
             labels (Tensor): the class labels for each bbox
     """
-    def __init__(self):
+    def __init__(self, det_crop_ratio=0.5):
+        self.ratio = det_crop_ratio
         self.sample_options = (
             # using entire original input image
             None,
@@ -649,15 +583,21 @@ class RandomDetCrop(object):
         return inter / union  # [A,B]
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
-        assert labelmap is None and maskmap is None and kpts is None and bboxes is not None
+        assert labelmap is None and maskmap is None and kpts is None
+        assert bboxes is not None and labels is not None
+
+        if random.randint(1, 100) > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
 
+        bboxes = np.array(bboxes)
+        labels = np.array(labels)
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
             if mode is None:
-                return img, labelmap, maskmap, kpts, bboxes, labels
+                return img, labelmap, maskmap, kpts, bboxes.tolist(), labels.tolist()
 
             min_iou, max_iou = mode
             if min_iou is None:
@@ -668,15 +608,15 @@ class RandomDetCrop(object):
             # max trails (50)
             for _ in range(50):
 
-                w = random.uniform(0.3 * width, width)
-                h = random.uniform(0.3 * height, height)
+                w = random.randint(int(0.3 * width), width)
+                h = random.randint(int(0.3 * height), height)
 
                 # aspect ratio constraint b/t .5 & 2
                 if h / w < 0.5 or h / w > 2:
                     continue
 
-                left = random.uniform(width - w)
-                top = random.uniform(height - h)
+                left = random.randint(0, width - w)
+                top = random.randint(0, height - h)
 
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left+w), int(top+h)])
@@ -725,6 +665,73 @@ class RandomDetCrop(object):
                 current_boxes[:, 2:] -= rect[:2]
 
                 return current_img, labelmap, maskmap, kpts, current_boxes.tolist(), current_labels.tolist()
+
+
+class Resize(object):
+    """Resize the given numpy.ndarray to random size and aspect ratio.
+
+    Args:
+        scale_min: the min scale to resize.
+        scale_max: the max scale to resize.
+    """
+
+    def __init__(self, size=None):
+
+        if size is not None:
+            if isinstance(size, int):
+                self.size = (size, size)
+            elif isinstance(size, collections.Iterable) and len(size) == 2:
+                self.size = size
+            else:
+                raise TypeError('Got inappropriate size arg: {}'.format(size))
+        else:
+            self.size = None
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        """
+        Args:
+            img     (Image):   Image to be resized.
+            maskmap    (Image):   Mask to be resized.
+            kpt     (list):    keypoints to be resized.
+            center: (list):    center points to be resized.
+
+        Returns:
+            Image:  Randomly resize image.
+            Image:  Randomly resize maskmap.
+            list:   Randomly resize keypoints.
+            list:   Randomly resize center points.
+        """
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        width, height = img.size
+        w_scale_ratio = self.size[0] / width
+        h_scale_ratio = self.size[1] / height
+
+        if kpts is not None and len(kpts) > 0:
+            num_objects = len(kpts)
+            num_keypoints = len(kpts[0])
+
+            for i in range(num_objects):
+                for j in range(num_keypoints):
+                    kpts[i][j][0] *= w_scale_ratio
+                    kpts[i][j][1] *= h_scale_ratio
+
+        if bboxes is not None and len(bboxes) > 0:
+            for i in range(len(bboxes)):
+                bboxes[i][0] *= w_scale_ratio
+                bboxes[i][1] *= h_scale_ratio
+                bboxes[i][2] *= w_scale_ratio
+                bboxes[i][3] *= h_scale_ratio
+
+        img = img.resize(self.size, Image.BILINEAR)
+        if labelmap is not None:
+            labelmap = labelmap.resize(self.size, Image.NEAREST)
+        if maskmap is not None:
+            maskmap = maskmap.resize(self.size, Image.CUBIC)
+
+        return img, labelmap, maskmap, kpts, bboxes, labels
 
 
 class AugCompose(object):
@@ -784,6 +791,9 @@ class AugCompose(object):
                     center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                     crop_ratio=self.configer.get('train_trans', 'crop_ratio')
                 ),
+                'random_det_crop': RandomDetCrop(
+                    det_crop_ratio=self.configer.get('train_trans', 'det_crop_ratio')
+                ),
                 'resize': Resize(size=self.configer.get('data', 'train_input_size')),
             }
         else:
@@ -826,6 +836,9 @@ class AugCompose(object):
                     grid=self.configer.get('trans_params', 'random_crop')['grid'],
                     center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                     crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                ),
+                'random_det_crop': RandomDetCrop(
+                    det_crop_ratio=self.configer.get('val_trans', 'det_crop_ratio')
                 ),
                 'resize': Resize(size=self.configer.get('data', 'val_input_size')),
             }

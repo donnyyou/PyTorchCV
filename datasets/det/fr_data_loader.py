@@ -36,7 +36,7 @@ class FRDataLoader(data.Dataset):
         labels, bboxes = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
-            img, bboxes = self.aug_transform(img, bboxes=bboxes)
+            img, bboxes, labels = self.aug_transform(img, bboxes=bboxes, labels=labels)
 
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
 
