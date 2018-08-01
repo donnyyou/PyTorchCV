@@ -5,7 +5,8 @@
     "data": {
       "train_batch_size": 8,
       "val_batch_size": 8,
-      "input_size": [1024, 512],
+      "train_input_size": [864, 864],
+      "val_input_size": [864, 864],
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -15,41 +16,41 @@
       "scale_search": [0.5, 1.0, 1.5, 2.0],
       "mirror": true,
       "crop_test": false,
-      "crop_size": [864, 864],
+      "crop_size": [832, 832],
       "crop_stride_ratio": 0.667
     },
     "train_trans": {
       "pad_ratio": 0.0,
-      "brightness_ratio": 0.0,
+      "brightness_ratio": 1.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "crop_ratio": 1.0,
+      "det_crop_ratio": 0.0,
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "val_trans": {
       "pad_ratio":0.0,
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
-      "flip_ratio": 0.5,
+      "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "crop_ratio": 1.0,
+      "det_crop_ratio": 0.0,
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "trans_params": {
       "random_pad":{
         "pad_border": 2
       },
       "random_brightness": {
-        "shift_value": 30
+        "shift_value": 10
       },
       "random_gauss_blur": {
         "max_blur": 4
@@ -63,19 +64,20 @@
         "swap_pair": []
       },
       "random_resize": {
-        "scale_min": 0.75,
-        "scale_max": 1.25
+        "scale_min": 0.5,
+        "scale_max": 2.0
       },
       "random_rotate": {
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [1024, 512],
+        "crop_size": [864, 864],
         "method": "grid",
-        "grid":[3, 2]
+        "grid":[4, 2],
+        "center_jitter": 20
       },
-      "mean": [0.485, 0.456, 0.406],
-      "std": [0.229, 0.224, 0.225]
+      "mean": [0.290101, 0.328081, 0.286964],
+      "std": [0.182954, 0.186566, 0.184475]
     },
     "details": {
       "label_list": [7, 8, 11, 12, 13, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33],
@@ -85,36 +87,40 @@
                      [0, 80, 100], [0, 0, 230], [119, 11, 32]]
     },
     "checkpoints": {
-      "checkpoints_name": "deeplabv3plus",
+      "checkpoints_name": "fs_pspnet_cityscape_seg",
       "checkpoints_dir": "./checkpoints/seg/cityscape",
       "save_iters": 2000
     },
     "network":{
-      "model_name": "deeplabv3_plus",
-      "stride": 1,
-      "out_channels": 20,
-      "pretrained": true,
-      "init": "kaiming_normal"
+      "backbone": "syncbn_densenet21_dilated8",
+      "model_name": "syncbn_dense_aspp",
+      "stride": 8,
+      "init": "kaiming_normal",
+      "loss_weights": {
+        "aux_loss": 0.4,
+        "seg_loss": 1.0
+      },
+      "encoding_parallel": true
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/seg/deeplabv3_plus.log",
+      "log_file": "./log/seg/fs_pspnet_cityscape_seg.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.00005,
+      "base_lr": 0.00003,
       "lr_policy": "step",
       "step": {
-        "gamma": 0.1,
-        "step_size": 400
+        "gamma": 0.5,
+        "step_size": 100
       }
     },
     "solver": {
-      "display_iter": 100,
+      "display_iter": 20,
       "test_interval": 100,
-      "max_epoch": 1000
+      "max_epoch": 300
     },
     "optim": {
       "optim_method": "adam",
@@ -129,15 +135,11 @@
       }
     },
     "cross_entropy_loss": {
-      "weight_enc": [2.3653597831726, 4.4237880706787, 2.9691488742828, 5.3442072868347, 5.2983593940735,
-                     5.2275490760803, 5.4394111633301, 5.3659925460815, 3.4170460700989, 5.2414722442627,
-                     4.7376127243042, 5.2286224365234, 5.455126285553, 4.3019247055054, 5.4264230728149,
-                     5.4331531524658, 5.433765411377, 5.4631009101868, 5.3947434425354, 0.0],
-      "weight_dec": [2.8149201869965, 6.9850029945374, 3.7890393733978, 9.9428062438965, 9.7702074050903,
-                     9.5110931396484, 10.311357498169, 10.026463508606, 4.6323022842407, 9.5608062744141,
-                     7.8698215484619, 9.5168733596802, 10.373730659485, 6.6616044044495, 10.260489463806,
-                     10.287888526917, 10.289801597595, 10.405355453491, 10.138095855713, 0.0],
+      "weight": [0.8194,  0.8946,  0.9416,  1.0091,  0.9925,  0.9740,  1.0804,
+                 1.0192,  0.8528,  0.9771,  0.9139,  0.9744,  1.1098,  0.8883,
+                 1.0639,  1.2476,  1.0729,  1.1323,  1.0365],
       "size_average": true,
-      "reduce": true
+      "reduce": true,
+      "ignore_index": 19
     }
 }
