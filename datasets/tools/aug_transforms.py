@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You (youansheng@gmail.com)
 
 
@@ -28,9 +28,12 @@ class RandomPad(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, pad_border=None, pad_ratio=0.5):
-        assert isinstance(pad_border, int)
-        self.pad_border = pad_border
+    def __init__(self, pad_border_wh=None, up_scale_range=None, pad_ratio=0.5):
+        # do something
+        assert isinstance(pad_border_wh, (list, tuple))
+        assert isinstance(up_scale_range, (list, tuple))
+        self.pad_border_wh = pad_border_wh
+        self.up_scale_range = up_scale_range
         self.ratio = pad_ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
@@ -42,8 +45,74 @@ class RandomPad(object):
         if rand_value > 100 * self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
-        left_pad = random.randint(-self.pad_border, self.pad_border)  # pad_left
-        up_pad = random.randint(-self.pad_border, self.pad_border)  # pad_up
+        width, height = img.size
+        if len(self.pad_border_wh):
+            pad_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+            pad_ratio = pad_ratio - 1.0
+            pad_width = int(pad_ratio * width)
+            pad_height = int(pad_ratio * height)
+
+        else:
+            pad_width = self.pad_border_wh[0]
+            pad_height = self.pad_border_wh[1]
+
+        left_pad = random.randint(0, pad_width)  # pad_left
+        up_pad = random.randint(0, pad_height)  # pad_up
+        right_pad = pad_width - left_pad  # pad_right
+        down_pad = pad_height - up_pad  # pad_down
+
+        img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
+
+        if labelmap is not None:
+            labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
+
+        if maskmap is not None:
+            maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
+
+        if kpts is not None and len(kpts) > 0:
+            num_objects = len(kpts)
+            num_keypoints = len(kpts[0])
+
+            for i in range(num_objects):
+                for j in range(num_keypoints):
+                    kpts[i][j][0] += left_pad
+                    kpts[i][j][1] += up_pad
+
+        if bboxes is not None and len(bboxes) > 0:
+            for i in range(len(bboxes)):
+                bboxes[i][0] += left_pad
+                bboxes[i][1] += up_pad
+                bboxes[i][2] += left_pad
+                bboxes[i][3] += up_pad
+
+        return img, labelmap, maskmap, kpts, bboxes, labels
+
+
+class RandomShift(object):
+    """ Padding the Image to proper size.
+            Args:
+                stride: the stride of the network.
+                pad_value: the value that pad to the image border.
+                img: Image object as input.
+            Returns::
+                img: Image object.
+    """
+    def __init__(self, shift_pixel=None, shift_ratio=0.5):
+        assert isinstance(shift_pixel, int)
+        self.shift_pixel = shift_pixel
+        self.ratio = shift_ratio
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        rand_value = random.randint(1, 100)
+        if rand_value > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        left_pad = random.randint(-self.shift_pixel, self.shift_pixel)  # pad_left
+        up_pad = random.randint(-self.shift_pixel, self.shift_pixel)  # pad_up
         right_pad = -left_pad  # pad_right
         down_pad = -up_pad  # pad_down
 
@@ -508,21 +577,23 @@ class RandomCrop(object):
                 bboxes[i][2] = min(max(0, bboxes[i][2]), self.size[0]-1)
                 bboxes[i][3] = min(max(0, bboxes[i][3]), self.size[1]-1)
 
+        w, h = img.size
         img = ImageOps.expand(img,
-                              border=(-offset_left, -offset_up, self.size[0] + offset_left, self.size[1] + offset_up),
+                              border=(-offset_left, -offset_up,
+                                      self.size[0] + offset_left - w, self.size[1] + offset_up - h),
                               fill=(128, 128, 128))
         img = img.crop((0, 0, self.size[0], self.size[1]))
 
         if maskmap is not None:
             maskmap = ImageOps.expand(maskmap,
                                       border=(-offset_left, -offset_up,
-                                              self.size[0] + offset_left, self.size[1] + offset_up), fill=1)
+                                              self.size[0] + offset_left - w, self.size[1] + offset_up - h), fill=1)
             maskmap = maskmap.crop((0, 0, self.size[0], self.size[1]))
 
         if labelmap is not None:
             labelmap = ImageOps.expand(labelmap, border=(-offset_left, -offset_up,
-                                                         self.size[0] + offset_left,
-                                                         self.size[1] + offset_up), fill=255)
+                                                         self.size[0] + offset_left - w,
+                                                         self.size[1] + offset_up - h), fill=255)
             labelmap = labelmap.crop((0, 0, self.size[0], self.size[1]))
 
         return img, labelmap, maskmap, kpts, bboxes, labels
@@ -629,7 +700,7 @@ class RandomDetCrop(object):
                     continue
 
                 # cut the crop from the image
-                current_img = img.crop((rect[0], rect[1], rect[2], rect[3]))
+                current_img = img.crop((left, top, left + w, top + h))
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
@@ -753,8 +824,13 @@ class AugCompose(object):
         if split == 'train':
             self.transforms = {
                 'random_pad': RandomPad(
-                    pad_border=self.configer.get('trans_params', 'random_pad')['pad_border'],
-                    pad_ratio=self.configer.get('train_trans', 'pad_ratio')
+                    pad_border_wh=self.configer.get('trans_params', 'random_pad')['pad_border_wh'],
+                    up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
+                    pad_ratio = self.configer.get('train_trans', 'pad_ratio')
+                ),
+                'random_shift': RandomShift(
+                    shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
+                    shift_ratio=self.configer.get('train_trans', 'shift_ratio')
                 ),
                 'random_brightness': RandomBrightness(
                     shift_value=self.configer.get('trans_params', 'random_brightness')['shift_value'],
@@ -799,8 +875,13 @@ class AugCompose(object):
         else:
             self.transforms = {
                 'random_pad': RandomPad(
-                    pad_border=self.configer.get('trans_params', 'random_pad')['pad_border'],
+                    pad_border_wh=self.configer.get('trans_params', 'random_pad')['pad_border_wh'],
+                    up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio=self.configer.get('val_trans', 'pad_ratio')
+                ),
+                'random_shift': RandomShift(
+                    shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
+                    shift_ratio=self.configer.get('val_trans', 'shift_ratio')
                 ),
                 'random_brightness': RandomBrightness(
                     shift_value=self.configer.get('trans_params', 'random_brightness')['shift_value'],
