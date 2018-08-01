@@ -25,6 +25,7 @@
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
+      "det_crop_ratio": 0.0,
       "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
                     "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "resize"]
@@ -38,6 +39,7 @@
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
+      "det_crop_ratio": 0.0,
       "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
                     "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "resize"]
@@ -119,13 +121,13 @@
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
-        "step_size": 60
+        "step_size": 300
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 1000,
-      "max_epoch": 160
+      "test_interval": 10000,
+      "max_epoch": 500
     },
     "optim": {
       "optim_method": "sgd",
