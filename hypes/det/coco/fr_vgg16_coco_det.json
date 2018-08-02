@@ -43,8 +43,11 @@
                     "random_crop", "resize"]
     },
     "trans_params": {
-      "random_pad":{
-        "pad_border": 2
+      "random_shift":{
+        "shift_pixel": 2
+      },
+      "random_pad": {
+        "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {
         "shift_value": 30

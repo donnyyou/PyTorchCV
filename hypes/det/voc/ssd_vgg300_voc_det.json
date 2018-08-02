@@ -18,7 +18,6 @@
     },
     "train_trans": {
       "pad_ratio": 1.0,
-      "shift_ratio": 0.0,
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
@@ -33,7 +32,6 @@
     },
     "val_trans": {
       "pad_ratio":0.0,
-      "shift_ratio": 0.0,
       "brightness_ratio": 0.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
@@ -47,9 +45,6 @@
                     "random_det_crop", "resize"]
     },
     "trans_params": {
-      "random_shift":{
-        "shift_pixel": 2
-      },
       "random_pad": {
         "up_scale_range": [1.0, 3.0]
       },
