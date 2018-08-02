@@ -51,7 +51,6 @@
         "shift_pixel": 2
       },
       "random_pad": {
-        "pad_border_wh": [],
         "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {

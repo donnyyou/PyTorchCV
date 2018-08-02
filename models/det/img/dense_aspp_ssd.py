@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# Author: YangMaoke, DuanZhixiang({maokeyang, zhixiangduan}@deepmotion.ai)
+# Author: Donny You (youansheng@gmail.com)
 # The class of DenseASPPDetecNet
 
 

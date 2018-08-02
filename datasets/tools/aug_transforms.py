@@ -28,11 +28,9 @@ class RandomPad(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, pad_border_wh=None, up_scale_range=None, pad_ratio=0.5):
+    def __init__(self, up_scale_range=None, pad_ratio=0.5):
         # do something
-        assert isinstance(pad_border_wh, (list, tuple))
         assert isinstance(up_scale_range, (list, tuple))
-        self.pad_border_wh = pad_border_wh
         self.up_scale_range = up_scale_range
         self.ratio = pad_ratio
 
@@ -46,15 +44,10 @@ class RandomPad(object):
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
-        if len(self.pad_border_wh):
-            pad_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
-            pad_ratio = pad_ratio - 1.0
-            pad_width = int(pad_ratio * width)
-            pad_height = int(pad_ratio * height)
-
-        else:
-            pad_width = self.pad_border_wh[0]
-            pad_height = self.pad_border_wh[1]
+        pad_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+        pad_ratio = pad_ratio - 1.0
+        pad_width = int(pad_ratio * width)
+        pad_height = int(pad_ratio * height)
 
         left_pad = random.randint(0, pad_width)  # pad_left
         up_pad = random.randint(0, pad_height)  # pad_up
@@ -824,7 +817,6 @@ class AugCompose(object):
         if split == 'train':
             self.transforms = {
                 'random_pad': RandomPad(
-                    pad_border_wh=self.configer.get('trans_params', 'random_pad')['pad_border_wh'],
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio = self.configer.get('train_trans', 'pad_ratio')
                 ),
@@ -875,7 +867,6 @@ class AugCompose(object):
         else:
             self.transforms = {
                 'random_pad': RandomPad(
-                    pad_border_wh=self.configer.get('trans_params', 'random_pad')['pad_border_wh'],
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio=self.configer.get('val_trans', 'pad_ratio')
                 ),
