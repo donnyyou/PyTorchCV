@@ -1,4 +1,8 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
+
+
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict

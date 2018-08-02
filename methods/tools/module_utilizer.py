@@ -21,19 +21,6 @@ class ModuleUtilizer(object):
         self.configer = configer
         self._init()
 
-    def __weights_init(self, m):
-        classname = m.__class__.__name__
-        if classname in ['Conv2d', 'Conv1d']:
-            if self.configer.get('network', 'init') == 'kaiming_normal':
-                nn.init.kaiming_normal_(m.weight.data)
-
-            elif self.configer.get('network', 'init') == 'xavier_normal':
-                nn.init.xavier_normal_(m.weight.data)
-
-            else:
-                Log.error('Invalid init method {}'.format(self.configer.get('network', 'init')))
-                exit(1)
-
     def _init(self):
         self.configer.add_key_value(['iters'], 0)
         self.configer.add_key_value(['last_iters'], 0)
@@ -136,9 +123,6 @@ class ModuleUtilizer(object):
                 exit(1)
 
             net.load_state_dict(net_dict)
-
-        elif not self.configer.get('network', 'pretrained'):
-            net.apply(self.__weights_init)
 
         return net
 

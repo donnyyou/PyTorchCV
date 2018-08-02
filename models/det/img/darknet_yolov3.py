@@ -20,9 +20,21 @@ class DarkNetYolov3(nn.Module):
     def __init__(self, configer):
         super(DarkNetYolov3, self).__init__()
         self.configer = configer
+        self.backbone = BackboneSelector(configer).get_backbone()
+        self.yolov3_head = Yolov3Head(configer)
+
+    def forward(self, x):
+        tuple_features = self.backbone(x)
+        out = self.yolov3_head(tuple_features)
+        return out
+
+
+class Yolov3Head(nn.Module):
+    def __init__(self, configer):
+        super(Yolov3Head, self).__init__()
+        self.configer = configer
         self.num_classes = self.configer.get('data', 'num_classes')
 
-        self.backbone = BackboneSelector(configer).get_backbone()
         #  backbone
         _out_filters = self.backbone.num_features
 
@@ -86,14 +98,12 @@ class DarkNetYolov3(nn.Module):
             self._make_cbl(filters_list[1], filters_list[0], 1)])
         return m
 
-    def forward(self, x):
+    def forward(self, tuple_features):
         def _branch(_embedding, _in):
             for i, e in enumerate(_embedding):
                 _in = e(_in)
             return _in
 
-        #  backbone
-        tuple_features = self.backbone(x)
         #  yolo branch 0
         x0_in = _branch(self.embedding0, tuple_features[-1])
         out0 = self.conv_out1(x0_in)

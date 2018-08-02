@@ -93,8 +93,6 @@ class ResNetDeepLabV3Plus(nn.Sequential):
         self.num_classes = self.configer.get('data', 'num_classes')
         self.backbone = BackboneSelector(configer).get_backbone()
 
-        num_features = self.backbone.get_num_features()
-
         self.low_features = nn.Sequential(
             self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
             self.backbone.maxpool,

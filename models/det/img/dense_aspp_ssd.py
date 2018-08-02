@@ -58,10 +58,22 @@ class DenseASPPSSD(nn.Module):
         super(DenseASPPSSD, self).__init__()
 
         self.configer = configer
+        self.features = BackboneSelector(configer).get_backbone()
+        self.ssd_head = SSDHead(configer)
+
+    def forward(self, x):
+        x = self.features(x)
+        out = self.ssd_head(x)
+        return out
+
+
+class SSDHead(nn.Module):
+    def __init__(self, configer):
+        super(SSDHead, self).__init__()
+
+        self.configer = configer
         det_features = self.configer.get('details', 'num_feature_list')
         self.num_classes = self.configer.get('data', 'num_classes')
-
-        self.features = BackboneSelector(configer).get_backbone()
 
         num_features = self.features.get_num_features()
 
@@ -126,8 +138,7 @@ class DenseASPPSSD(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def forward(self, _input):
-        feature = self.features(_input)
+    def forward(self, feature):
 
         aspp3 = self.ASPP_3(feature)
         feature = torch.cat((aspp3, feature), dim=1)
