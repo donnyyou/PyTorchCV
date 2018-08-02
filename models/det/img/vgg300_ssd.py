@@ -20,9 +20,21 @@ DETECTOR_CONFIG = {
 
 
 class Vgg300SSD(nn.Module):
-
     def __init__(self, configer):
         super(Vgg300SSD, self).__init__()
+        self.vgg_features = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
+        self.ssd_head = SSDHead(configer)
+
+    def forward(self, x):
+        x = self.vgg_features(x)
+        out = self.ssd_head(x)
+        return out
+
+
+class SSDHead(nn.Module):
+
+    def __init__(self, configer):
+        super(SSDHead, self).__init__()
 
         self.configer = configer
         self.img_size = self.configer.get('data', 'input_size')
@@ -30,7 +42,6 @@ class Vgg300SSD(nn.Module):
         self.num_centrals = DETECTOR_CONFIG['num_centrals']
         self.num_paddings = DETECTOR_CONFIG['num_padding']
         self.num_strides = DETECTOR_CONFIG['num_strides']
-        self.vgg_features = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
         self.norm4 = L2Norm2d(20)
 
         self.feature1 = nn.Sequential(
@@ -67,7 +78,7 @@ class Vgg300SSD(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_uniform_(m.weight.data)
+                nn.init.xavier_uniform_(m.weight.data)
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
@@ -82,9 +93,9 @@ class Vgg300SSD(nn.Module):
         )
         return layer
 
-    def forward(self, _input):
-        det_feature = []
-        feature = self.vgg_features(_input)
+    def forward(self, feature):
+        det_feature = list()
+
         det_feature.append(self.norm4(feature))
         feature = F.max_pool2d(feature, kernel_size=2, stride=2, ceil_mode=True)
 
