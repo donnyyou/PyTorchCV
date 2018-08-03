@@ -45,8 +45,8 @@ class VocDetGenerator(object):
         if not os.path.exists(self.val_image_dir):
             os.makedirs(self.val_image_dir)
 
-    def _get_info_tree(self, label_file):
-        label_file_path = os.path.join(self.args.root_dir, 'Annotations', label_file)
+    def _get_info_tree(self, label_file, dataset='VOC2007'):
+        label_file_path = os.path.join(self.args.root_dir, dataset, 'Annotations', label_file)
         object_list = list()
         tree_dict = dict()
         with open(label_file_path, 'r') as file_stream:
@@ -74,19 +74,31 @@ class VocDetGenerator(object):
 
     def generate_label(self):
         file_count = 0
-        with open(os.path.join(self.args.root_dir, 'ImageSets/Main/trainval.txt'), 'r') as train_stream:
+        with open(os.path.join(self.args.root_dir, 'VOC2007/ImageSets/Main/trainval.txt'), 'r') as train_stream:
             for img_name in train_stream.readlines():
                 img_name = img_name.rstrip()
                 label_file = '{}.xml'.format(img_name)
                 file_count += 1
-                tree_dict = self._get_info_tree(label_file)
+                tree_dict = self._get_info_tree(label_file, dataset='VOC2007')
                 fw = open(os.path.join(self.train_json_dir, '{}.json'.format(img_name)), 'w')
                 fw.write(json.dumps(tree_dict))
                 fw.close()
-                shutil.copy(os.path.join(self.args.root_dir, 'JPEGImages', '{}.jpg'.format(img_name)),
+                shutil.copy(os.path.join(self.args.root_dir, 'VOC2007/JPEGImages', '{}.jpg'.format(img_name)),
                             os.path.join(self.train_image_dir, '{}.jpg'.format(img_name)))
 
-        with open(os.path.join(self.args.root_dir, 'ImageSets/Main/test.txt'), 'r') as train_stream:
+        with open(os.path.join(self.args.root_dir, 'VOC2012/ImageSets/Main/trainval.txt'), 'r') as train_stream:
+            for img_name in train_stream.readlines():
+                img_name = img_name.rstrip()
+                label_file = '{}.xml'.format(img_name)
+                file_count += 1
+                tree_dict = self._get_info_tree(label_file, dataset='VOC2012')
+                fw = open(os.path.join(self.train_json_dir, '{}.json'.format(img_name)), 'w')
+                fw.write(json.dumps(tree_dict))
+                fw.close()
+                shutil.copy(os.path.join(self.args.root_dir, 'VOC2012/JPEGImages', '{}.jpg'.format(img_name)),
+                            os.path.join(self.train_image_dir, '{}.jpg'.format(img_name)))
+
+        with open(os.path.join(self.args.root_dir, 'VOC2007/ImageSets/Main/test.txt'), 'r') as train_stream:
             for img_name in train_stream.readlines():
                 img_name = img_name.rstrip()
                 label_file = '{}.xml'.format(img_name)
@@ -95,7 +107,7 @@ class VocDetGenerator(object):
                 fw = open(os.path.join(self.val_json_dir, '{}.json'.format(img_name)), 'w')
                 fw.write(json.dumps(tree_dict))
                 fw.close()
-                shutil.copy(os.path.join(self.args.root_dir, 'JPEGImages', '{}.jpg'.format(img_name)),
+                shutil.copy(os.path.join(self.args.root_dir, 'VOC2007/JPEGImages', '{}.jpg'.format(img_name)),
                             os.path.join(self.val_image_dir, '{}.jpg'.format(img_name)))
 
 if __name__ == "__main__":

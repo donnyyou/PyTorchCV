@@ -7,8 +7,8 @@
 export PYTHONPATH='/home/donny/Projects/PytorchCV'
 
 
-ROOT_DIR='/home/donny/DataSet/VOC/VOCdevkit/VOC2007'
-SAVE_DIR='/home/donny/DataSet/VOC2007_DET'
+ROOT_DIR='/home/donny/DataSet/VOC/VOCdevkit'
+SAVE_DIR='/home/donny/DataSet/VOC07+12_DET'
 
 
 python2.7 voc_det_generator.py --root_dir $ROOT_DIR \
