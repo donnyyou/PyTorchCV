@@ -183,6 +183,104 @@ class RandomHFlip(object):
         return img, labelmap, maskmap, kpts, bboxes, labels
 
 
+class RandomSaturation(object):
+    def __init__(self, lower=0.5, upper=1.5, saturation_ratio=0.5):
+        self.lower = lower
+        self.upper = upper
+        self.ratio = saturation_ratio
+        assert self.upper >= self.lower, "saturation upper must be >= lower."
+        assert self.lower >= 0, "saturation lower must be non-negative."
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        rand_value = random.randint(1, 100)
+        if rand_value > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        img = np.array(img).astype(np.float32)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+        img[:, :, 1] *= random.uniform(self.lower, self.upper)
+        img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+        img = np.clip(img, 0, 255)
+        return Image.fromarray(img.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
+
+
+class RandomHue(object):
+    def __init__(self, delta=18, hue_ratio=0.5):
+        assert 0 <= delta <= 360
+        self.delta = delta
+        self.ratio = hue_ratio
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        rand_value = random.randint(1, 100)
+        if rand_value > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        img = np.array(img).astype(np.float32)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+        img[:, :, 0] += random.uniform(-self.delta, self.delta)
+        img[:, :, 0][img[:, :, 0] > 360] -= 360
+        img[:, :, 0][img[:, :, 0] < 0] += 360
+        img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+        img = np.clip(img, 0, 255)
+        return Image.fromarray(img.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
+
+
+class RandomPerm(object):
+    def __init__(self, perm_ratio=0.5):
+        self.ratio = perm_ratio
+        self.perms = ((0, 1, 2), (0, 2, 1),
+                      (1, 0, 2), (1, 2, 0),
+                      (2, 0, 1), (2, 1, 0))
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        rand_value = random.randint(1, 100)
+        if rand_value > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        swap = self.perms[random.randint(0, len(self.perms)-1)]
+        img = np.array(img)
+        img = img[:, :, swap]
+        return Image.fromarray(img.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
+
+
+class RandomContrast(object):
+    def __init__(self, lower=0.5, upper=1.5, contrast_ratio=0.5):
+        self.lower = lower
+        self.upper = upper
+        self.ratio = contrast_ratio
+        assert self.upper >= self.lower, "contrast upper must be >= lower."
+        assert self.lower >= 0, "contrast lower must be non-negative."
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        assert isinstance(img, Image.Image)
+        assert labelmap is None or isinstance(labelmap, Image.Image)
+        assert maskmap is None or isinstance(maskmap, Image.Image)
+
+        rand_value = random.randint(1, 100)
+        if rand_value > 100 * self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        img = np.array(img).astype(np.float32)
+        img *= random.uniform(self.lower, self.upper)
+        img = np.clip(img, 0, 255)
+
+        return Image.fromarray(img.astype(np.uint8)), labelmap, maskmap, kpts, bboxes, labels
+
+
 class RandomBrightness(object):
     def __init__(self, shift_value=30, brightness_ratio=0.5):
         self.shift_value = shift_value
@@ -198,7 +296,7 @@ class RandomBrightness(object):
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         shift = np.random.uniform(-self.shift_value, self.shift_value, size=1)
-        image = np.array(img, dtype=float)
+        image = np.array(img).astype(np.float32)
         image[:, :, :] += shift
         image = np.around(image)
         image = np.clip(image, 0, 255)
@@ -408,17 +506,18 @@ class RandomRotate(object):
         rotate_mat[0, 2] += (new_width / 2.) - img_center[0]
         rotate_mat[1, 2] += (new_height / 2.) - img_center[1]
         img = cv2.warpAffine(img, rotate_mat, (new_width, new_height), borderValue=(128, 128, 128))
-        img = Image.fromarray(img)
+        img = Image.fromarray(img.astype(np.uint8))
         if labelmap is not None:
             labelmap = np.array(labelmap)
             labelmap = cv2.warpAffine(labelmap, rotate_mat, (new_width, new_height),
                                       borderValue=(255, 255, 255), flags=cv2.INTER_NEAREST)
-            labelmap = Image.fromarray(labelmap)
+            labelmap = Image.fromarray(labelmap.astype(np.uint8))
 
         if maskmap is not None:
             maskmap = np.array(maskmap)
-            maskmap = cv2.warpAffine(maskmap, rotate_mat, (new_width, new_height), borderValue=(1, 1, 1))
-            maskmap = Image.fromarray(maskmap)
+            maskmap = cv2.warpAffine(maskmap, rotate_mat, (new_width, new_height),
+                                     borderValue=(1, 1, 1), flags=cv2.INTER_NEAREST)
+            maskmap = Image.fromarray(maskmap.astype(np.uint8))
 
         if kpts is not None and len(kpts) > 0:
             num_objects = len(kpts)
@@ -807,6 +906,31 @@ class AugCompose(object):
 
         self.transforms = dict()
         if self.split == 'train':
+            if 'random_saturation' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['random_saturation'] = RandomSaturation(
+                    lower=self.configer.get('trans_params', 'random_saturation')['lower'],
+                    upper=self.configer.get('trans_params', 'random_saturation')['upper'],
+                    saturation_ratio=self.configer.get('train_trans', 'saturation_ratio')
+                )
+
+            if 'random_hue' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['random_hue'] = RandomHue(
+                    delta=self.configer.get('trans_params', 'random_hue')['delta'],
+                    hue_ratio=self.configer.get('train_trans', 'hue_ratio')
+                )
+
+            if 'random_perm' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['random_perm'] = RandomPerm(
+                    perm_ratio=self.configer.get('train_trans', 'perm_ratio')
+                )
+
+            if 'random_contrast' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['random_contrast'] = RandomContrast(
+                    lower=self.configer.get('trans_params', 'random_contrast')['lower'],
+                    upper=self.configer.get('trans_params', 'random_contrast')['upper'],
+                    contrast_ratio=self.configer.get('train_trans', 'contrast_ratio')
+                )
+
             if 'random_pad' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
@@ -877,6 +1001,31 @@ class AugCompose(object):
                 self.transforms['resize'] = Resize(self.configer)
 
         else:
+            if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['random_saturation'] = RandomSaturation(
+                    lower=self.configer.get('trans_params', 'random_saturation')['lower'],
+                    upper=self.configer.get('trans_params', 'random_saturation')['upper'],
+                    saturation_ratio=self.configer.get('val_trans', 'saturation_ratio')
+                )
+
+            if 'random_hue' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['random_hue'] = RandomHue(
+                    delta=self.configer.get('trans_params', 'random_hue')['delta'],
+                    hue_ratio=self.configer.get('val_trans', 'hue_ratio')
+                )
+
+            if 'random_perm' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['random_perm'] = RandomPerm(
+                    perm_ratio=self.configer.get('val_trans', 'perm_ratio')
+                )
+
+            if 'random_contrast' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['random_contrast'] = RandomContrast(
+                    lower=self.configer.get('trans_params', 'random_contrast')['lower'],
+                    upper=self.configer.get('trans_params', 'random_contrast')['upper'],
+                    contrast_ratio=self.configer.get('val_trans', 'contrast_ratio')
+                )
+
             if 'random_pad' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
