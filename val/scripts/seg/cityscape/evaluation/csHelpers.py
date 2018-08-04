@@ -35,8 +35,8 @@ except:
 
 # Cityscapes modules
 try:
-    from annotation   import Annotation
-    from labels       import labels, name2label, id2label, trainId2label, category2labels
+    from val.scripts.seg.cityscape.helpers.annotation   import Annotation
+    from val.scripts.seg.cityscape.helpers.labels       import labels, name2label, id2label, trainId2label, category2labels
 except:
     print("Failed to find all Cityscapes modules")
     sys.exit(-1)

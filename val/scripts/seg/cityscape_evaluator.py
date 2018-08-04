@@ -1,8 +1,11 @@
-#!/usr/bin/python
-# -*- coding:utf-8 -*-
-# Author: Xiangtai Li
-# Python warper Code for evaluate pixel level semantic label task on cityscapes dataset, most of them from Github cityscape scripts
+#!/usr/bin/env python
+#-*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
+# Evaluation of cityscape.
 
+
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import fnmatch
@@ -16,8 +19,7 @@ except ImportError:
     izip = zip
 
 # Cityscapes imports
-sys.path.append( os.path.normpath( os.path.join( os.path.dirname( __file__ ) , '..' , 'helpers' ) ) )
-from csHelpers import *
+from val.scripts.seg.cityscape.evaluation.csHelpers import *
 
 # C Support
 # Enable the cython support for faster evaluation, this is necessary for speeding up your model results
@@ -429,106 +431,6 @@ def printCategoryScores(scoreDict, instScoreDict, args):
         print("{:<14}: ".format(categoryName) + iouStr + "    " + niouStr)
 
 
-# Evaluate image lists pairwise.
-def evaluateImgLists(predictionImgList, groundTruthImgList, args):
-    if len(predictionImgList) != len(groundTruthImgList):
-        printError("List of images for prediction and groundtruth are not of equal size.")
-    confMatrix = generateMatrix(args)
-    instStats = generateInstanceStats(args)
-    perImageStats = {}
-    nbPixels = 0
-
-    if not args.quiet:
-        print("Evaluating {} pairs of images...".format(len(predictionImgList)))
-
-    # Evaluate all pairs of images and save them into a matrix
-    for i in range(len(predictionImgList)):
-        predictionImgFileName = predictionImgList[i]
-        groundTruthImgFileName = groundTruthImgList[i]
-        # print "Evaluate ", predictionImgFileName, "<>", groundTruthImgFileName
-        nbPixels += evaluatePair(predictionImgFileName, groundTruthImgFileName, confMatrix, instStats,
-                                 perImageStats, args)
-
-        # sanity check
-        if confMatrix.sum() != nbPixels:
-            printError(
-                'Number of analyzed pixels and entries in confusion matrix disagree: contMatrix {}, pixels {}'.format(
-                    confMatrix.sum(), nbPixels))
-
-        if not args.quiet:
-            print("\rImages Processed: {}".format(i + 1), end=' ')
-            sys.stdout.flush()
-    if not args.quiet:
-        print("\n")
-
-    # sanity check
-    if confMatrix.sum() != nbPixels:
-        printError(
-            'Number of analyzed pixels and entries in confusion matrix disagree: contMatrix {}, pixels {}'.format(
-                confMatrix.sum(), nbPixels))
-
-    # print confusion matrix
-    if (not args.quiet):
-        printConfMatrix(confMatrix, args)
-
-    # Calculate IOU scores on class level from matrix
-    classScoreList = {}
-    for label in args.evalLabels:
-        labelName = id2label[label].name
-        classScoreList[labelName] = getIouScoreForLabel(label, confMatrix, args)
-
-    # Calculate instance IOU scores on class level from matrix
-    classInstScoreList = {}
-    for label in args.evalLabels:
-        labelName = id2label[label].name
-        classInstScoreList[labelName] = getInstanceIouScoreForLabel(label, confMatrix, instStats, args)
-
-    # Print IOU scores
-    if (not args.quiet):
-        print("")
-        print("")
-        printClassScores(classScoreList, classInstScoreList, args)
-        iouAvgStr = getColorEntry(getScoreAverage(classScoreList, args), args) + "{avg:5.3f}".format(
-            avg=getScoreAverage(classScoreList, args)) + args.nocol
-        niouAvgStr = getColorEntry(getScoreAverage(classInstScoreList, args), args) + "{avg:5.3f}".format(
-            avg=getScoreAverage(classInstScoreList, args)) + args.nocol
-        print("--------------------------------")
-        print("Score Average : " + iouAvgStr + "    " + niouAvgStr)
-        print("--------------------------------")
-        print("")
-
-    # Calculate IOU scores on category level from matrix
-    categoryScoreList = {}
-    for category in category2labels.keys():
-        categoryScoreList[category] = getIouScoreForCategory(category, confMatrix, args)
-
-    # Calculate instance IOU scores on category level from matrix
-    categoryInstScoreList = {}
-    for category in category2labels.keys():
-        categoryInstScoreList[category] = getInstanceIouScoreForCategory(category, confMatrix, instStats, args)
-
-    # Print IOU scores
-    if (not args.quiet):
-        print("")
-        printCategoryScores(categoryScoreList, categoryInstScoreList, args)
-        iouAvgStr = getColorEntry(getScoreAverage(categoryScoreList, args), args) + "{avg:5.3f}".format(
-            avg=getScoreAverage(categoryScoreList, args)) + args.nocol
-        niouAvgStr = getColorEntry(getScoreAverage(categoryInstScoreList, args), args) + "{avg:5.3f}".format(
-            avg=getScoreAverage(categoryInstScoreList, args)) + args.nocol
-        print("--------------------------------")
-        print("Score Average : " + iouAvgStr + "    " + niouAvgStr)
-        print("--------------------------------")
-        print("")
-
-    # write result file
-    allResultsDict = createResultDict(confMatrix, classScoreList, classInstScoreList, categoryScoreList,
-                                      categoryInstScoreList, perImageStats, args)
-    writeJSONFile(allResultsDict, args)
-
-    # return confusion matrix
-    return allResultsDict
-
-
 class EvalPixel():
     def __init__(self, args, predictionImgList = None, groundTruthImgList = None):
         self.args = args
@@ -743,6 +645,7 @@ class EvalPixel():
     # launch the process
     def run(self):
         self.evaluateImgLists(self.predictionImgList, self.groundTruthImgList, self.args)
+
     # get the default data
     def getDefaultData(self, args):
         groundTruthImgList, predictionImgList = [], []
@@ -755,14 +658,25 @@ class EvalPixel():
             predictionImgList.append(getPrediction(args, gt))
         return groundTruthImgList, predictionImgList
 
+
+class CityScapeEvaluator(object):
+
+    def evaluate(self, pred_dir, gt_dir):
+        """
+        :param pred_dir: directory of model output results(must be consistent with val directory)
+        :param gt_dir: directory of  cityscape data(root)
+        :return:
+        """
+        pred_path = pred_dir
+        data_path = gt_dir
+        print("evaluate the result...")
+        args = CArgs(data_path=data_path, out_path=data_path, predict_path=pred_path)
+        ob = EvalPixel(args)
+        ob.run()
+
+
 if __name__ == '__main__':
-    # args 里面存放数据集路径，结果json文件路径，预测结果路径
-    # 评估类除了args传入参数外，也支持直接传入对应的list
-    # this is for the test
+    evaluator = CityScapeEvaluator()
     data_path = "/dev/shm/DataSet/cityscapes/"
-    out_path = "/dev/shm/DataSet/output/val/results/seg/cityscape/test_dir/image/out"
     res_path = "/dev/shm/DataSet/output/val/results/seg/cityscape/test_dir/image"
-    args = CArgs(data_path=data_path,out_path=out_path, predict_path=res_path)
-    ob = EvalPixel(args)
-    ob.run()
-    pass
+    evaluator.evaluate(res_path,data_path)
