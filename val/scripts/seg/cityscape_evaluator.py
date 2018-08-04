@@ -28,7 +28,7 @@ CSUPPORT = True
 # Check if C-Support is available for better performance
 if CSUPPORT:
     try:
-        import addToConfusionMatrix
+        import val.scripts.seg.cityscape.evaluation.addToConfusionMatrix as addToConfusionMatrix
     except:
         CSUPPORT = False
 
@@ -677,6 +677,6 @@ class CityScapeEvaluator(object):
 
 if __name__ == '__main__':
     evaluator = CityScapeEvaluator()
-    data_path = "/dev/shm/DataSet/cityscapes/"
-    res_path = "/dev/shm/DataSet/output/val/results/seg/cityscape/test_dir/image"
+    data_path = "/home/donny/DataSet/"
+    res_path = "/mnt/disk1/donny/DataSet/temp_crop/leftImg8bit/val/"
     evaluator.evaluate(res_path,data_path)

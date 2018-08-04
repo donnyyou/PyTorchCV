@@ -18,5 +18,5 @@ import numpy
 os.environ["CC"]  = "g++"
 os.environ["CXX"] = "g++"
 
-setup(ext_modules = cythonize("evaluation/addToConfusionMatrix.pyx"),
+setup(ext_modules = cythonize("val/scripts/seg/cityscape/evaluation/addToConfusionMatrix.pyx"),
       include_dirs=[numpy.get_include()])
