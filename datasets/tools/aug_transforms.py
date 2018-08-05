@@ -986,7 +986,7 @@ class AugCompose(object):
                     crop_ratio=self.configer.get('train_trans', 'crop_ratio')
                 )
 
-            if 'random_ratate' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_rotate' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('train_trans', 'rotate_ratio')
