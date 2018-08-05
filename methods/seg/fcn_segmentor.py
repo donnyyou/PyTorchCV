@@ -66,8 +66,18 @@ class FCNSegmentor(object):
             self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_10 = []
+        params_dict = dict(self.seg_net.named_parameters())
+        for key, value in params_dict.items():
+            if 'backbone.' not in key:
+                lr_10.append(value)
+            else:
+                lr_1.append(value)
 
-        return self.seg_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 10.}]
+        return params
 
     def __train(self):
         """
