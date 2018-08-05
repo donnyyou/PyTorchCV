@@ -642,6 +642,8 @@ class RandomCrop(object):
 
         if random.randint(1, 100) > 100 * self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
+    
+        self.size = (min(self.size[0], img.size[0]), min(self.size[1], img.size[1]))
 
         center, index = self.get_center(img.size, bboxes)
 
@@ -860,8 +862,13 @@ class Resize(object):
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
         width, height = img.size
-        w_scale_ratio = self.configer.get('data', 'input_size')[0] / width
-        h_scale_ratio = self.configer.get('data', 'input_size')[1] / height
+        target_width, target_height = self.configer.get('data', 'input_size')
+
+        w_scale_ratio = target_width / width
+        h_scale_ratio = target_height / height
+        if self.configer.get('trans_params', 'resize')['keep_scale']:
+            w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
+            h_scale_ratio = w_scale_ratio
 
         if kpts is not None and len(kpts) > 0:
             num_objects = len(kpts)
@@ -879,11 +886,43 @@ class Resize(object):
                 bboxes[i][2] *= w_scale_ratio
                 bboxes[i][3] *= h_scale_ratio
 
-        img = img.resize(tuple(self.configer.get('data', 'input_size')), Image.BILINEAR)
-        if labelmap is not None:
-            labelmap = labelmap.resize(tuple(self.configer.get('data', 'input_size')), Image.NEAREST)
-        if maskmap is not None:
-            maskmap = maskmap.resize(tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
+            img = img.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.BILINEAR)
+            if labelmap is not None:
+                labelmap = labelmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+            if maskmap is not None:
+                maskmap = maskmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+
+        if self.configer.get('trans_params', 'resize')['keep_scale']:
+            pad_width = target_width - int(width*w_scale_ratio)
+            pad_height = target_height - int(height*h_scale_ratio)
+            left_pad = random.randint(0, pad_width)  # pad_left
+            up_pad = random.randint(0, pad_height)  # pad_up
+            right_pad = pad_width - left_pad  # pad_right
+            down_pad = pad_height - up_pad  # pad_down
+
+            img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
+
+            if labelmap is not None:
+                labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
+
+            if maskmap is not None:
+                maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
+
+            if kpts is not None and len(kpts) > 0:
+                num_objects = len(kpts)
+                num_keypoints = len(kpts[0])
+
+                for i in range(num_objects):
+                    for j in range(num_keypoints):
+                        kpts[i][j][0] += left_pad
+                        kpts[i][j][1] += up_pad
+
+            if bboxes is not None and len(bboxes) > 0:
+                for i in range(len(bboxes)):
+                    bboxes[i][0] += left_pad
+                    bboxes[i][1] += up_pad
+                    bboxes[i][2] += left_pad
+                    bboxes[i][3] += up_pad
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
