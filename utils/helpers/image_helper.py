@@ -23,13 +23,34 @@ class ImageHelper(object):
         return img_bgr
 
     @staticmethod
-    def cv2_open_rgb(image_path):
+    def cv2_read_image(image_path, mode='RGB'):
         img_bgr = cv2.imread(image_path)
-        return ImageHelper.bgr2rgb(img_bgr)
+        if mode == 'RGB':
+            return ImageHelper.bgr2rgb(img_bgr)
+
+        elif mode == 'BGR':
+            return img_bgr
+
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
-    def pil_open_rgb(image_path):
-        return Image.open(image_path).convert('RGB')
+    def pil_read_image(image_path, mode='RGB'):
+        if mode == 'RGB':
+            return Image.open(image_path).convert('RGB')
+
+        elif mode == 'BGR':
+            img = Image.open(image_path).convert('RGB')
+            cv_img = ImageHelper.rgb2bgr(np.array(img))
+            return Image.fromarray(cv_img)
+
+        elif mode == 'P':
+            return Image.open(image_path).convert('P')
+
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
     def pil_open_p(image_path):
@@ -144,7 +165,7 @@ class ImageHelper(object):
 if __name__ == "__main__":
     target_size = (368, 368)
     image_path = '/home/donny/Projects/PytorchCV/val/samples/pose/coco/ski.jpg'
-    pil_img = ImageHelper.pil_open_rgb(image_path)
+    pil_img = ImageHelper.pil_read_image(image_path)
     cv2_img = ImageHelper.cv2_open_bgr(image_path)
 
     pil_img = ImageHelper.resize(pil_img, target_size, interpolation=Image.CUBIC)

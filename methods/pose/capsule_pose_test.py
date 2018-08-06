@@ -51,7 +51,7 @@ class CapsulePoseTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_open_rgb(image_path))
+        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
         cur_img_rgb = ImageHelper.resize(ori_img_rgb,
                                          self.configer.get('data', 'input_size'),
                                          interpolation=Image.CUBIC)

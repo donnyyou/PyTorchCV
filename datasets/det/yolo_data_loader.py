@@ -31,7 +31,7 @@ class YOLODataLoader(data.Dataset):
         self.det_data_utilizer = DetDataUtilizer(configer)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
+        img = ImageHelper.pil_read_image(self.img_list[index])
 
         labels, bboxes = self.__read_json_file(self.json_list[index])
 

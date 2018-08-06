@@ -33,7 +33,7 @@ class RPDataLoader(data.Dataset):
         self.pose_utilizer = PoseDataUtilizer(configer)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
+        img = ImageHelper.pil_read_image(self.img_list[index])
         if os.path.exists(self.mask_list[index]):
             maskmap = ImageHelper.pil_open_p(self.mask_list[index])
         else:

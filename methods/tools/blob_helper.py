@@ -15,7 +15,7 @@ class BlobHelper(object):
         self.configer = configer
 
     def make_input_list(self, image_path):
-        image = ImageHelper.pil_open_rgb(image_path)
+        image = ImageHelper.pil_read_image(image_path)
         if self.configer.is_empty('test', 'test_input_size'):
             in_width, in_height = image.size
         else:
@@ -29,7 +29,7 @@ class BlobHelper(object):
         return input_list
 
     def make_mirror_input(self, image_path):
-        image = ImageHelper.pil_open_rgb(image_path)
+        image = ImageHelper.pil_read_image(image_path)
         if self.configer.is_empty('test', 'test_input_size'):
             in_width, in_height = image.size
         else:

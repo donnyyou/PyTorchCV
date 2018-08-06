@@ -52,7 +52,7 @@ class OpenPoseTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_open_rgb(image_path))
+        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
         ori_img_bgr = ImageHelper.bgr2rgb(ori_img_rgb)
         paf_avg, heatmap_avg = self.__get_paf_and_heatmap(ori_img_rgb)
         all_peaks = self.__extract_heatmap_info(heatmap_avg)

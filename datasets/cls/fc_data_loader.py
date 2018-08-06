@@ -26,7 +26,7 @@ class FCDataLoader(data.Dataset):
         self.configer = configer
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
+        img = ImageHelper.pil_read_image(self.img_list[index])
         label = self.label_list[index]
 
         if self.aug_transform is not None:

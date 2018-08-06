@@ -46,7 +46,7 @@ class FCNSegmentorTest(object):
         self.module_utilizer.set_status(self.seg_net, status='test')
 
     def __test_img(self, image_path, label_path, vis_path, raw_path):
-        ori_image = ImageHelper.pil_open_rgb(image_path)
+        ori_image = ImageHelper.pil_read_image(image_path)
         ori_width, ori_height = ori_image.size
         if self.configer.is_empty('test', 'test_input_size'):
             in_width, in_height = ori_image.size

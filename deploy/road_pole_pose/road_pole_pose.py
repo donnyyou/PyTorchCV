@@ -44,7 +44,7 @@ class RoadPolePose(object):
             shotname, extension = os.path.splitext(img_file)
             json_file = os.path.join(json_save_dir, '{}.json'.format(shotname))
             image_path = os.path.join(img_dir, img_file)
-            ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_open_rgb(image_path))
+            ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
             cur_img_rgb = ImageHelper.resize(ori_img_rgb,
                                              self.road_pole_poser.configer.get('data', 'input_size'),
                                              interpolation=Image.CUBIC)

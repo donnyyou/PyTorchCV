@@ -29,7 +29,7 @@ class CPMDataLoader(data.Dataset):
         self.pose_data_utilizer = PoseDataUtilizer(configer)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
+        img = ImageHelper.pil_read_image(self.img_list[index])
         kpts, bboxes = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
