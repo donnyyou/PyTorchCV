@@ -5,7 +5,9 @@
     "data": {
       "train_batch_size": 1,
       "val_batch_size": 1,
-      "input_size": [1024, 512],
+      "train_input_size": [800, 800],
+      "val_input_size": [800, 800],
+      "input_mode": "RGB",
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -20,29 +22,29 @@
     },
     "train_trans": {
       "pad_ratio": 0.0,
-      "brightness_ratio": 0.0,
+      "brightness_ratio": 1.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "det_crop_ratio": 0.0,
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "val_trans": {
       "pad_ratio":0.0,
-      "brightness_ratio": 0.0,
+      "brightness_ratio": 1.0,
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_pad", "random_brightness", "random_gauss_blur",
-                    "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
+      "det_crop_ratio": 0.0,
+      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
     "trans_params": {
       "random_shift":{
@@ -52,7 +54,7 @@
         "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {
-        "shift_value": 30
+        "shift_value": 10
       },
       "random_gauss_blur": {
         "max_blur": 4
@@ -66,19 +68,23 @@
         "swap_pair": []
       },
       "random_resize": {
-        "scale_min": 0.75,
-        "scale_max": 1.25
+        "scale_min": 0.5,
+        "scale_max": 2.0
       },
       "random_rotate": {
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [1024, 512],
+        "crop_size": [864, 864],
         "method": "grid",
-        "grid":[3, 2]
+        "grid":[4, 2],
+        "center_jitter": 20
       },
-      "mean": [0.485, 0.456, 0.406],
-      "std": [0.229, 0.224, 0.225]
+      "resize": {
+        "keep_scale": false
+      },
+      "mean": [0.290101, 0.328081, 0.286964],
+      "std": [0.182954, 0.186566, 0.184475]
     },
     "details": {
       "label_list": [7, 8, 11, 12, 13, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33],
