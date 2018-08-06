@@ -27,6 +27,7 @@ model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-imagenet.pth',
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+    'caffe_resnet101': 'https://download.pytorch.org/models/resnet101-imagenet.pth'
 }
 
 
