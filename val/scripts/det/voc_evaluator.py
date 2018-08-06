@@ -195,7 +195,7 @@ class VOCEvaluator(object):
 
         cachefile = os.path.join(cachedir, 'annots.pkl')
         # read list of images
-        with open(image_set_file, 'r') as f:
+        with open(os.path.join(gt_dir, 'ImageSets/Main', 'test.txt'), 'r') as f:
             lines = f.readlines()
 
         imagenames = [x.strip() for x in lines]
@@ -203,7 +203,7 @@ class VOCEvaluator(object):
             # load annots
             recs = {}
             for i, imagename in enumerate(imagenames):
-                annopath = os.path.join(gt_dir, '%s.xml')
+                annopath = os.path.join(gt_dir, 'Annotations', '%s.xml')
                 recs[imagename] = VOCEvaluator.parse_rec(annopath % (imagename))
                 if i % 100 == 0:
                     print('Reading annotation for {:d}/{:d}'.format(i + 1, len(imagenames)))
@@ -303,22 +303,20 @@ if __name__ == "__main__":
     #                          --json_dir ../../../results/pose/coco/test_dir/coco/json/
     #                          --gt_dir /home/donny/DataSet/MSCOCO/annotations/person_keypoints_val2017.json
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes_file', default=None, type=str,
+    parser.add_argument('--hypes_file', default='../../../hypes/det/voc/ssd_vgg300_voc_det.json', type=str,
                         dest='hypes_file', help='The hypes file of pose.')
-    parser.add_argument('--gt_dir', default=None, type=str,
+    parser.add_argument('--gt_dir', default='/home/donny/DataSet/VOC/VOCdevkit/VOC2007', type=str,
                         dest='gt_dir', help='The groundtruth annotations file of voc dets.')
-    parser.add_argument('--json_dir', default=None, type=str,
+    parser.add_argument('--json_dir', default='../../../val/results/det/voc/test_dir/image/json', type=str,
                         dest='json_dir', help='The json dir of predict annotations.')
-    parser.add_argument('--image_set_file', default=None, type=str,
-                        dest='image_set_file', help='The image set file of annotations.')
     parser.add_argument('--dataset', default='VOC2007', type=str,
                         dest='dataset', help='The target dataset.')
     args = parser.parse_args()
 
     coco_evaluator = VOCEvaluator(Configer(hypes_file=args.hypes_file))
-    if args.gt_file is not None:
+    if args.gt_dir is not None:
         pred_dir = coco_evaluator.relabel(args.json_dir)
-        coco_evaluator.evaluate(pred_dir, args.gt_dir, args.image_set_file, args.dataset == 'VOC2007')
+        coco_evaluator.evaluate(pred_dir, args.gt_dir, use_07=(args.dataset == 'VOC2007'))
 
     else:
         submission_dir = coco_evaluator.relabel(args.json_dir)
