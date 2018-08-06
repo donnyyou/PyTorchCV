@@ -886,11 +886,12 @@ class Resize(object):
                 bboxes[i][2] *= w_scale_ratio
                 bboxes[i][3] *= h_scale_ratio
 
-            img = img.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.BILINEAR)
-            if labelmap is not None:
-                labelmap = labelmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
-            if maskmap is not None:
-                maskmap = maskmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+        img = img.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.BILINEAR)
+        if labelmap is not None:
+            labelmap = labelmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+
+        if maskmap is not None:
+            maskmap = maskmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
 
         if self.configer.get('trans_params', 'resize')['keep_scale']:
             pad_width = target_width - int(width*w_scale_ratio)

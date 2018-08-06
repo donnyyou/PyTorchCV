@@ -112,6 +112,55 @@ class DilatedResnetBackbone(nn.Module):
         return tuple_features
 
 
+class NormalCaffeResnetBackbone(nn.Module):
+    def __init__(self, orig_resnet):
+        super(NormalCaffeResnetBackbone, self).__init__()
+
+        self.num_features = 2048
+        # Take pretrained resnet, except AvgPool and FC
+        self.conv1 = orig_resnet.conv1
+        self.bn1 = orig_resnet.bn1
+        self.relu1 = orig_resnet.relu1
+        self.conv2 = orig_resnet.conv2
+        self.bn2 = orig_resnet.bn2
+        self.relu2 = orig_resnet.relu2
+        self.conv3 = orig_resnet.conv3
+        self.bn3 = orig_resnet.bn3
+        self.relu3 = orig_resnet.relu3
+        self.maxpool = orig_resnet.maxpool
+        self.layer1 = orig_resnet.layer1
+        self.layer2 = orig_resnet.layer2
+        self.layer3 = orig_resnet.layer3
+        self.layer4 = orig_resnet.layer4
+
+    def get_num_features(self):
+        return self.num_features
+
+    def forward(self, x):
+        tuple_features = list()
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu3(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        tuple_features.append(x)
+        x = self.layer2(x)
+        tuple_features.append(x)
+        x = self.layer3(x)
+        tuple_features.append(x)
+        x = self.layer4(x)
+        tuple_features.append(x)
+
+        return tuple_features
+
+
 class DilatedCaffeResnetBackbone(nn.Module):
     def __init__(self, orig_resnet, dilate_scale=8):
         super(DilatedCaffeResnetBackbone, self).__init__()
@@ -245,7 +294,7 @@ class ResNetBackbone(object):
 
         elif arch == 'caffe_resnet101':
             orig_resnet = self.resnet_models.caffe_resnet101()
-            arch_net = NormalResnetBackbone(orig_resnet)
+            arch_net = NormalCaffeResnetBackbone(orig_resnet)
 
         elif arch == 'caffe_resnet101_dilated8':
             orig_resnet = self.resnet_models.caffe_resnet101()
@@ -253,7 +302,7 @@ class ResNetBackbone(object):
 
         elif arch == 'caffe_resnet101_dilated16':
             orig_resnet = self.resnet_models.caffe_resnet101()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
+            arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=16)
 
         elif arch == 'syncbn_caffe_resnet101_dilated8':
             orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
@@ -261,7 +310,7 @@ class ResNetBackbone(object):
 
         elif arch == 'syncbn_caffe_resnet101_dilated16':
             orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
+            arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=16)
 
         else:
             raise Exception('Architecture undefined!')

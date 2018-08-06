@@ -88,11 +88,21 @@ class SyncBNPSPNet(nn.Sequential):
 
         num_features = self.backbone.get_num_features()
 
-        self.low_features = nn.Sequential(
-            self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
-            self.backbone.maxpool,
-            self.backbone.layer1,
-        )
+        if 'caffe' in self.configer.get('network', 'backbone'):
+            self.low_features = nn.Sequential(
+                self.backbone.conv1, self.backbone.bn1, self.backbone.relu1,
+                self.backbone.conv2, self.backbone.bn2, self.backbone.relu2,
+                self.backbone.conv3, self.backbone.bn3, self.backbone.relu3,
+                self.backbone.maxpool,
+                self.backbone.layer1,
+            )
+        else:
+            self.low_features = nn.Sequential(
+                self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
+                self.backbone.maxpool,
+                self.backbone.layer1,
+            )
+
         self.high_features1 = nn.Sequential(self.backbone.layer2, self.backbone.layer3)
         self.high_features2 = nn.Sequential(self.backbone.layer4)
         self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features)
