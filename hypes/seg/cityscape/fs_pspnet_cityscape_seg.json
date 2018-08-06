@@ -7,7 +7,7 @@
       "val_batch_size": 8,
       "train_input_size": [864, 864],
       "val_input_size": [864, 864],
-      "input_mode": "RGB",
+      "input_mode": "BGR",
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
