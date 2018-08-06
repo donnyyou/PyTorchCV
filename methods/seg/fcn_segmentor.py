@@ -70,7 +70,6 @@ class FCNSegmentor(object):
         lr_10 = []
         params_dict = dict(self.seg_net.named_parameters())
         for key, value in params_dict.items():
-            print('{}_{}'.format(key, value))
             if 'backbone.' not in key:
                 lr_10.append(value)
             else:
@@ -84,10 +83,13 @@ class FCNSegmentor(object):
         """
           Train function of every epoch during train phase.
         """
+        if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
+            self.__val()
+
         self.module_utilizer.set_status(self.seg_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
-        self.configer.plus_one('epoch')
+
         self.scheduler.step(self.configer.get('epoch'))
 
         for i, (inputs, targets) in enumerate(self.train_loader):
@@ -125,14 +127,22 @@ class FCNSegmentor(object):
                 self.data_time.reset()
                 self.train_losses.reset()
 
+            # Check to val the current model.
+            if self.val_loader is not None and \
+               self.configer.get('iters') % self.configer.get('solver', 'test_interval') == 0:
+                self.__val()
+
+        self.configer.plus_one('epoch')
+
     def __val(self):
         """
           Validation function during the train phase.
         """
         self.module_utilizer.set_status(self.seg_net, status='val')
         start_time = time.time()
-        with torch.no_grad():
-            for j, (inputs, targets) in enumerate(self.val_loader):
+
+        for j, (inputs, targets) in enumerate(self.val_loader):
+            with torch.no_grad():
                 # Change the data type.
                 inputs, targets = self.module_utilizer.to_device(inputs, targets)
                 # Forward pass.
@@ -151,42 +161,33 @@ class FCNSegmentor(object):
                 else:
                     pred = outputs[0]
 
-                self.val_losses.update(loss.item(), inputs.size(0))
-                self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
+            self.val_losses.update(loss.item(), inputs.size(0))
+            self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
 
-                # Update the vars of the val phase.
-                self.batch_time.update(time.time() - start_time)
-                start_time = time.time()
+            # Update the vars of the val phase.
+            self.batch_time.update(time.time() - start_time)
+            start_time = time.time()
 
-            self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
-            self.configer.update_value(['val_loss'], self.val_losses.avg)
-            self.module_utilizer.save_net(self.seg_net, metric='performance')
-            self.module_utilizer.save_net(self.seg_net, metric='val_loss')
+        self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
+        self.configer.update_value(['val_loss'], self.val_losses.avg)
+        self.module_utilizer.save_net(self.seg_net, metric='performance')
+        self.module_utilizer.save_net(self.seg_net, metric='val_loss')
 
-            # Print the log info & reset the states.
-            Log.info(
-                'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
-                'Loss {loss.avg:.8f}\n'.format(
-                    batch_time=self.batch_time, loss=self.val_losses))
-            Log.info('Mean IOU: {}'.format(self.seg_running_score.get_mean_iou()))
-            self.batch_time.reset()
-            self.val_losses.reset()
-            self.seg_running_score.reset()
-
+        # Print the log info & reset the states.
+        Log.info(
+            'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
+            'Loss {loss.avg:.8f}\n'.format(
+                batch_time=self.batch_time, loss=self.val_losses))
+        Log.info('Mean IOU: {}'.format(self.seg_running_score.get_mean_iou()))
+        self.batch_time.reset()
+        self.val_losses.reset()
+        self.seg_running_score.reset()
         self.module_utilizer.set_status(self.seg_net, status='train')
 
     def train(self):
         cudnn.benchmark = True
-        if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
-            self.__val()
-
         while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
             self.__train()
-            # Check to val the current model.
-            if self.val_loader is not None and \
-               self.configer.get('epoch') % self.configer.get('solver', 'test_interval') == 0:
-                self.__val()
-
             if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
                 break
 

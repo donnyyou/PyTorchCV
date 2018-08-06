@@ -69,11 +69,11 @@ if __name__ == "__main__":
                         dest='network:resume_level', help='The resume level of networks.')
 
     # ***********  Params for solver.  **********
-    parser.add_argument('--optim_method', default='sgd', type=str,
+    parser.add_argument('--optim_method', default=None, type=str,
                         dest='optim:optim_method', help='The optim method that used.')
     parser.add_argument('--base_lr', default=None, type=float,
                         dest='lr:base_lr', help='The learning rate.')
-    parser.add_argument('--lr_policy', default='step', type=str,
+    parser.add_argument('--lr_policy', default=None, type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
 
     # ***********  Params for display.  **********
