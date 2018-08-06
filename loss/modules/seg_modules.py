@@ -170,7 +170,12 @@ class FCNSegLoss(nn.Module):
                              fx=scaled_size[1] / targets.shape[0],
                              fy=scaled_size[0] / targets.shape[1],
                              interpolation=cv2.INTER_NEAREST)
-        targets = torch.from_numpy(targets.transpose(2, 0, 1)).long().to(targets_.device)
+
+        if len(targets.shape) == 2:
+            targets = torch.from_numpy(targets).unsqueeze(0).long().to(targets_.device)
+        else:
+            targets = torch.from_numpy(targets.transpose(2, 0, 1)).long().to(targets_.device)
+
         return targets
 
 
