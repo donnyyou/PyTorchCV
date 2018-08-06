@@ -60,10 +60,11 @@ class VocDetGenerator(object):
                     difficult = int(obj.find('difficult').contents[0])
                     if name in CAT_DICT:
                         bbox = obj.findChildren('bndbox')[0]
-                        xmin = int(float(bbox.findChildren('xmin')[0].contents[0]))
-                        ymin = int(float(bbox.findChildren('ymin')[0].contents[0]))
-                        xmax = int(float(bbox.findChildren('xmax')[0].contents[0]))
-                        ymax = int(float(bbox.findChildren('ymax')[0].contents[0]))
+                        # 1-indexing to 0-indexing.
+                        xmin = int(float(bbox.findChildren('xmin')[0].contents[0])) - 1
+                        ymin = int(float(bbox.findChildren('ymin')[0].contents[0])) - 1
+                        xmax = int(float(bbox.findChildren('xmax')[0].contents[0])) - 1
+                        ymax = int(float(bbox.findChildren('ymax')[0].contents[0])) - 1
                         object['bbox'] = [xmin, ymin, xmax, ymax]
                         object['label'] = CAT_DICT[name]
                         object['difficult'] = difficult

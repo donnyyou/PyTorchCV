@@ -9,7 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import fnmatch
-import os
+import argparse
 import platform
 import sys
 
@@ -35,7 +35,7 @@ if CSUPPORT:
 
 # A class to collect all bunch of data
 class CArgs(object):
-    def __init__(self, data_path="/nas/dataset/cityscape",out_path="/nas/dataset/cityscape/",predict_path="/nas/dataset/cityscape/results"):
+    def __init__(self, data_path=None, out_path=None, predict_path=None):
         # Where to look for Cityscapes, note that data path is equal to gt path
         if 'CITYSCAPES_DATASET' in os.environ:
             self.cityscapesPath = os.environ['CITYSCAPES_DATASET']
@@ -50,7 +50,7 @@ class CArgs(object):
         else:
             self.exportFile = os.path.join(out_path, "evaluationResults", "resultPixelLevelSemanticLabeling.json")
         # Parameters that should be modified by user
-        self.groundTruthSearch  = os.path.join( self.cityscapesPath , "gtFine" , "val" , "*", "*_gtFine_labelIds.png" )
+        self.groundTruthSearch  = os.path.join( self.cityscapesPath, "*", "*_gtFine_labelIds.png" )
 
         # Remaining params
         self.evalInstLevelScore = True
@@ -661,7 +661,7 @@ class EvalPixel():
 
 class CityScapeEvaluator(object):
 
-    def evaluate(self, pred_dir, gt_dir):
+    def evaluate(self, pred_dir=None, gt_dir=None):
         """
         :param pred_dir: directory of model output results(must be consistent with val directory)
         :param gt_dir: directory of  cityscape data(root)
@@ -676,7 +676,15 @@ class CityScapeEvaluator(object):
 
 
 if __name__ == '__main__':
-    evaluator = CityScapeEvaluator()
-    data_path = "/home/donny/DataSet/"
-    res_path = "/mnt/disk1/donny/DataSet/temp_crop/leftImg8bit/val/"
-    evaluator.evaluate(res_path,data_path)
+    # python cityscape_evaluator.py --gt_dir ~/DataSet/CityScape/gtFine/val
+    #                               --pred_dir ~/Projects/PyTorchCV/val/results/cityscape/test_dir/image/label
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gt_dir', default=None, type=str,
+                        dest='gt_dir', help='The directory of ground truth.')
+    parser.add_argument('--pred_dir', default=None, type=str,
+                        dest='pred_dir', help='The directory of predicted labels.')
+
+    args = parser.parse_args()
+
+    cityscape_evaluator = CityScapeEvaluator()
+    cityscape_evaluator.evaluate(pred_dir=args.pred_dir, gt_dir=args.gt_dir)

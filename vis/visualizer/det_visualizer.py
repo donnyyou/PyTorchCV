@@ -12,8 +12,10 @@ import os
 import numpy as np
 import cv2
 import torch
+from PIL import Image
 
 from datasets.tools.transforms import DeNormalize
+from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as log
 
 
@@ -32,7 +34,12 @@ class DetVisualizer(object):
         """
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
-        image = image_in.copy()
+        if isinstance(image_in, Image.Image):
+            image = ImageHelper.rgb2bgr(ImageHelper.img2np(image_in))
+
+        else:
+            image = image_in.copy()
+
         if not os.path.exists(base_dir):
             log.error('Dir:{} not exists!'.format(base_dir))
             os.makedirs(base_dir)

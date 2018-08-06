@@ -75,19 +75,6 @@ class ImageHelper(object):
         cv2.waitKey(time)
 
     @staticmethod
-    def draw_box(img, bbox, default_color=(255, 0, 255)):
-        if isinstance(img, Image.Image):
-            img = ImageHelper.rgb2bgr(ImageHelper.img2np(img))
-
-            cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                          color=default_color, thickness=3)
-            return ImageHelper.np2img(ImageHelper.bgr2rgb(img))
-
-        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                      color=default_color, thickness=3)
-        return img
-
-    @staticmethod
     def np2img(arr):
         if len(arr.shape) == 2:
             mode = 'P'
