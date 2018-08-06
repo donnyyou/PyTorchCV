@@ -886,16 +886,17 @@ class Resize(object):
                 bboxes[i][2] *= w_scale_ratio
                 bboxes[i][3] *= h_scale_ratio
 
-        img = img.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.BILINEAR)
+        scaled_size = (int(round(width*w_scale_ratio)), int(round(height*h_scale_ratio)))
+        img = img.resize(scaled_size, Image.BILINEAR)
         if labelmap is not None:
-            labelmap = labelmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+            labelmap = labelmap.resize(scaled_size, Image.NEAREST)
 
         if maskmap is not None:
-            maskmap = maskmap.resize((int(width*w_scale_ratio), int(height*h_scale_ratio)), Image.NEAREST)
+            maskmap = maskmap.resize(scaled_size, Image.NEAREST)
 
         if self.configer.get('trans_params', 'resize')['keep_scale']:
-            pad_width = target_width - int(width*w_scale_ratio)
-            pad_height = target_height - int(height*h_scale_ratio)
+            pad_width = target_width - scaled_size[0]
+            pad_height = target_height - scaled_size[1]
             left_pad = random.randint(0, pad_width)  # pad_left
             up_pad = random.randint(0, pad_height)  # pad_up
             right_pad = pad_width - left_pad  # pad_right
@@ -928,14 +929,14 @@ class Resize(object):
         return img, labelmap, maskmap, kpts, bboxes, labels
 
 
-class AugCompose(object):
+class PILAugCompose(object):
     """Composes several transforms together.
 
     Args:
         transforms (list of ``Transform`` objects): list of transforms to compose.
 
     Example:
-        >>> AugCompose([
+        >>> PILAugCompose([
         >>>     RandomCrop(),
         >>> ])
     """

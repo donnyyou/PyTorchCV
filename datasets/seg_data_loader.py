@@ -12,7 +12,7 @@ import os
 from torch.utils import data
 
 from datasets.seg.fs_data_loader import FSDataLoader
-import datasets.tools.aug_transforms as aug_trans
+import datasets.tools.pil_aug_transforms as aug_trans
 import datasets.tools.seg_transforms as seg_trans
 import datasets.tools.transforms as trans
 from utils.tools.logger import Logger as Log
@@ -23,9 +23,9 @@ class SegDataLoader(object):
     def __init__(self, configer):
         self.configer = configer
 
-        self.aug_train_transform = aug_trans.AugCompose(self.configer, split='train')
+        self.aug_train_transform = aug_trans.PILAugCompose(self.configer, split='train')
 
-        self.aug_val_transform = aug_trans.AugCompose(self.configer, split='val')
+        self.aug_val_transform = aug_trans.PILAugCompose(self.configer, split='val')
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),

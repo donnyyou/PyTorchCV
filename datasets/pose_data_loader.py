@@ -16,7 +16,7 @@ from datasets.pose.ae_data_loader import AEDataLoader
 from datasets.pose.op_data_loader import OPDataLoader
 from datasets.pose.rp_data_loader import RPDataLoader
 from datasets.pose.cp_data_loader import CPDataLoader
-import datasets.tools.aug_transforms as aug_trans
+import datasets.tools.pil_aug_transforms as aug_trans
 import datasets.tools.transforms as trans
 from utils.tools.logger import Logger as Log
 
@@ -26,9 +26,9 @@ class PoseDataLoader(object):
     def __init__(self, configer):
         self.configer = configer
 
-        self.aug_train_transform = aug_trans.AugCompose(self.configer, split='train')
+        self.aug_train_transform = aug_trans.PILAugCompose(self.configer, split='train')
 
-        self.aug_val_transform = aug_trans.AugCompose(self.configer, split='val')
+        self.aug_val_transform = aug_trans.PILAugCompose(self.configer, split='val')
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),
