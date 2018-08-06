@@ -70,22 +70,20 @@ class FCNSegmentor(object):
         lr_10 = []
         params_dict = dict(self.seg_net.named_parameters())
         for key, value in params_dict.items():
+            print('{}_{}'.format(key, value))
             if 'backbone.' not in key:
                 lr_10.append(value)
             else:
                 lr_1.append(value)
 
         params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
-                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 10.}]
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 1.}]
         return params
 
     def __train(self):
         """
           Train function of every epoch during train phase.
         """
-        if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
-            self.__val()
-
         self.module_utilizer.set_status(self.seg_net, status='train')
         start_time = time.time()
         # Adjust the learning rate after every epoch.
@@ -126,11 +124,6 @@ class FCNSegmentor(object):
                 self.batch_time.reset()
                 self.data_time.reset()
                 self.train_losses.reset()
-
-            # Check to val the current model.
-            if self.val_loader is not None and \
-               self.configer.get('iters') % self.configer.get('solver', 'test_interval') == 0:
-                self.__val()
 
     def __val(self):
         """
@@ -179,12 +172,21 @@ class FCNSegmentor(object):
             self.batch_time.reset()
             self.val_losses.reset()
             self.seg_running_score.reset()
-            self.module_utilizer.set_status(self.seg_net, status='train')
+
+        self.module_utilizer.set_status(self.seg_net, status='train')
 
     def train(self):
         cudnn.benchmark = True
+        if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
+            self.__val()
+
         while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
             self.__train()
+            # Check to val the current model.
+            if self.val_loader is not None and \
+               self.configer.get('epoch') % self.configer.get('solver', 'test_interval') == 0:
+                self.__val()
+
             if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
                 break
 
