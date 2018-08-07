@@ -22,8 +22,8 @@ class CocoEvaluator(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def relabel(self, json_dir, method='rpose'):
-        submission_file = os.path.join(json_dir, 'person_keypoints_val2017_{}_results.json'.format(method))
+    def relabel(self, json_dir, method='ssd'):
+        submission_file = os.path.join(json_dir, 'person_instances_val2017_{}_results.json'.format(method))
         img_id_list = list()
         object_list = list()
 
@@ -42,14 +42,11 @@ class CocoEvaluator(object):
                 for object in info_tree['objects']:
                     object_dict = dict()
                     object_dict['image_id'] = img_id
-                    object_dict['category_id'] = 1
+                    object_dict['category_id'] = int(self.configer.get('data', 'coco_cat_seq')[object['label']])
                     object_dict['score'] = object['score']
-                    object_dict['keypoints'] = list()
-                    for j in range(self.configer.get('data', 'num_keypoints') - 1):
-                        keypoint = object['keypoints'][self.configer.get('details', 'coco_to_ours')[j]]
-                        object_dict['keypoints'].append(keypoint[0])
-                        object_dict['keypoints'].append(keypoint[1])
-                        object_dict['keypoints'].append(keypoint[2])
+                    object_dict['bbox'] = [object['bbox'][0], object['bbox'][1],
+                                           object['bbox'][2] - object['bbox'][0],
+                                           object['bbox'][3] - object['bbox'][1]]
 
                     object_list.append(object_dict)
 
@@ -63,7 +60,7 @@ class CocoEvaluator(object):
         # Do Something.
         gt_coco = COCO(gt_file)
         res_coco = gt_coco.loadRes(pred_file)
-        coco_eval = COCOeval(gt_coco, res_coco, 'keypoints')
+        coco_eval = COCOeval(gt_coco, res_coco, 'bbox')
         coco_eval.params.imgIds = img_ids # res_coco.getImgIds()
         coco_eval.evaluate()
         coco_eval.accumulate()
@@ -74,7 +71,7 @@ if __name__ == "__main__":
     # Example:
     # python coco_evaluator.py --hypes ../../../../hypes/pose/coco/op_coco_pose.json
     #                          --json_dir ../../../results/pose/coco/test_dir/coco/json/
-    #                          --gt_file /home/donny/DataSet/MSCOCO/annotations/person_keypoints_val2017.json
+    #                          --gt_file /home/donny/DataSet/MSCOCO/annotations/person_instances_val2017.json
     parser = argparse.ArgumentParser()
     parser.add_argument('--hypes_file', default=None, type=str,
                         dest='hypes_file', help='The hypes file of pose.')
