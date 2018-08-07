@@ -140,16 +140,20 @@
     },
     "lr": {
       "base_lr": 0.001,
-      "lr_policy": "step",
+      "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
         "step_size": 500
+      },
+      "multistep": {
+        "gamma": 0.1,
+        "stepvalue": [156, 195, 234]
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 10000,
-      "max_epoch": 800
+      "test_interval": 5000,
+      "max_epoch": 235
     },
     "optim": {
       "optim_method": "sgd",
@@ -165,9 +169,9 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.45
+      "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.0
+      "conf_threshold": 0.05
     }
 }

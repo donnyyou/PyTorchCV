@@ -18,18 +18,16 @@ from  utils.tools.logger import Logger as Log
 class ImageHelper(object):
 
     @staticmethod
-    def cv2_open_bgr(image_path):
-        img_bgr = cv2.imread(image_path)
-        return img_bgr
-
-    @staticmethod
     def cv2_read_image(image_path, mode='RGB'):
-        img_bgr = cv2.imread(image_path)
+        img_bgr = cv2.imread(image_path, cv2.IMREAD_COLOR)
         if mode == 'RGB':
             return ImageHelper.bgr2rgb(img_bgr)
 
         elif mode == 'BGR':
             return img_bgr
+
+        elif mode == 'P':
+            return np.array(Image.open(image_path).convert('P'))
 
         else:
             Log.error('Not support mode {}'.format(mode))
@@ -53,16 +51,20 @@ class ImageHelper(object):
             exit(1)
 
     @staticmethod
-    def pil_open_p(image_path):
-        return Image.open(image_path).convert('P')
-
-    @staticmethod
     def rgb2bgr(img_rgb):
+        if isinstance(img_rgb, Image.Image):
+            img_bgr = ImageHelper.rgb2bgr(ImageHelper.img2np(img_rgb))
+            return ImageHelper.np2img(img_bgr)
+
         img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         return img_bgr
 
     @staticmethod
     def bgr2rgb(img_bgr):
+        if isinstance(img_bgr, Image.Image):
+            img_rgb = ImageHelper.bgr2rgb(ImageHelper.img2np(img_bgr))
+            return ImageHelper.np2img(img_rgb)
+
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         return img_rgb
 
@@ -153,7 +155,7 @@ if __name__ == "__main__":
     target_size = (368, 368)
     image_path = '/home/donny/Projects/PytorchCV/val/samples/pose/coco/ski.jpg'
     pil_img = ImageHelper.pil_read_image(image_path)
-    cv2_img = ImageHelper.cv2_open_bgr(image_path)
+    cv2_img = ImageHelper.cv2_read_image(image_path)
 
     pil_img = ImageHelper.resize(pil_img, target_size, interpolation=Image.CUBIC)
     cv2_img = ImageHelper.resize(cv2_img, target_size, interpolation=Image.CUBIC)

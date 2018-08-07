@@ -113,7 +113,7 @@ class SingleShotDetectorTest(object):
             keep = DetHelper.cls_nms(valid_preds[:, :4],
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
-                                     nms_threshold=configer.get('nms', 'overlap_threshold'),
+                                     nms_threshold=configer.get('nms', 'max_threshold'),
                                      mode=configer.get('nms', 'mode'))
 
             output[image_i] = valid_preds[keep]
