@@ -55,7 +55,7 @@ class SingleShotDetectorTest(object):
         Log.info('Image Path: {}'.format(image_path))
         ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
         ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
-        inputs = ImageHelper.resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
+        inputs = ImageHelper.pil_resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
         inputs = ToTensor()(inputs)
         inputs = Normalize(mean=self.configer.get('trans_params', 'mean'),
                            std=self.configer.get('trans_params', 'std'))(inputs)
