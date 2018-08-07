@@ -101,7 +101,15 @@ class SingleShotDetectorTest(object):
         cxcy = loc[:, :, :2] * variances[0] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        max_conf, labels = conf.max(2, keepdim=True)  # [b, 8732,1]
+        batch_size, num_priors, _ = boxes.size()
+        boxes = boxes.unsqueeze(2).repeat(1, 1, configer.get('data', 'num_classes'), 1)
+        boxes = boxes.contiguous().view(boxes.size(0), -1, 4)
+
+        labels = torch.Tensor([i for i in range(configer.get('data', 'num_classes'))]).to(boxes.device)
+        labels = labels.view(1, 1, -1, 1).repeat(batch_size, num_priors, 1, 1).contiguous().view(batch_size, -1, 1)
+        max_conf = conf.contiguous().view(batch_size, -1, 1)
+
+        # max_conf, labels = conf.max(2, keepdim=True)  # [b, 8732,1]
         predictions = torch.cat((boxes, max_conf.float(), labels.float()), 2)
         output = [None for _ in range(len(predictions))]
         for image_i, image_pred in enumerate(predictions):
@@ -110,6 +118,8 @@ class SingleShotDetectorTest(object):
                 continue
 
             valid_preds = image_pred[ids]
+            valid_preds = valid_preds[valid_preds[:, 4] > configer.get('vis', 'conf_threshold')]
+
             keep = DetHelper.cls_nms(valid_preds[:, :4],
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
