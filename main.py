@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import shutil
 import argparse
 
 from methods.method_selector import MethodSelector
@@ -107,6 +108,9 @@ if __name__ == "__main__":
 
     project_dir = os.path.dirname(os.path.realpath(__file__))
     configer.add_key_value(['project_dir'], project_dir)
+
+    if os.path.exists(configer.get('logging', 'log_file')):
+        shutil.move(configer.get('logging', 'log_file'), '{}_bk'.format(configer.get('logging', 'log_file')))
 
     Log.init(logfile_level=configer.get('logging', 'logfile_level'),
              stdout_level=configer.get('logging', 'stdout_level'),
