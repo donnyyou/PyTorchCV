@@ -119,6 +119,8 @@ class SingleShotDetectorTest(object):
 
             valid_preds = image_pred[ids]
             valid_preds = valid_preds[valid_preds[:, 4] > configer.get('vis', 'conf_threshold')]
+            if valid_preds.numel() == 0:
+                continue
 
             keep = DetHelper.cls_nms(valid_preds[:, :4],
                                      scores=valid_preds[:, 4],
