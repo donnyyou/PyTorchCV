@@ -27,7 +27,7 @@ class ImageHelper(object):
             return img_bgr
 
         elif mode == 'P':
-            return np.array(Image.open(image_path).convert('P'))
+            return ImageHelper.img2np(Image.open(image_path).convert('P'))
 
         else:
             Log.error('Not support mode {}'.format(mode))
@@ -90,22 +90,35 @@ class ImageHelper(object):
         return np.array(img)
 
     @staticmethod
-    def fig2np(fig):
-        fig.canvas.draw()
-        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        return data
-
-    @staticmethod
-    def resize(img, target_size, interpolation):
+    def pil_resize(img, target_size, interpolation):
         assert isinstance(target_size, (list, tuple))
+
+        target_size = tuple(target_size)
 
         if isinstance(img, Image.Image):
             return img.resize(target_size, interpolation)
 
         elif isinstance(img, np.ndarray):
-            pil_img = Image.fromarray(img, mode='P' if len(img.shape) == 2 else 'RGB')
-            return np.array(pil_img.resize(target_size, interpolation))
+            pil_img = ImageHelper.np2img(img)
+            return ImageHelper.img2np(pil_img.resize(target_size, interpolation))
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
+    def cv2_resize(img, target_size, interpolation):
+        assert isinstance(target_size, (list, tuple))
+
+        target_size = tuple(target_size)
+
+        if isinstance(img, Image.Image):
+            img = ImageHelper.img2np(img)
+            target_img = cv2.resize(img, target_size, interpolation)
+            return ImageHelper.np2img(target_img)
+
+        elif isinstance(img, np.ndarray):
+            return cv2.resize(img, target_size, interpolation)
 
         else:
             Log.error('Image type is invalid.')
@@ -122,6 +135,13 @@ class ImageHelper(object):
         buf = ImageHelper.fig2data(fig)
         h, w, d = buf.shape
         return Image.frombytes("RGBA", (w, h), buf.tostring())
+
+    @staticmethod
+    def fig2np(fig):
+        fig.canvas.draw()
+        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        return data
 
     @staticmethod
     def fig2data(fig):
@@ -153,13 +173,15 @@ class ImageHelper(object):
 
 if __name__ == "__main__":
     target_size = (368, 368)
-    image_path = '/home/donny/Projects/PytorchCV/val/samples/pose/coco/ski.jpg'
-    pil_img = ImageHelper.pil_read_image(image_path)
+    image_path = '/home/donny/Projects/PyTorchCV/val/samples/pose/coco/ski.jpg'
+    pil_img = ImageHelper.cv2_read_image(image_path)
+    pil_img = ImageHelper.np2img(pil_img)
     cv2_img = ImageHelper.cv2_read_image(image_path)
+    ImageHelper.imshow('main', np.array(pil_img) - cv2_img)
 
-    pil_img = ImageHelper.resize(pil_img, target_size, interpolation=Image.CUBIC)
-    cv2_img = ImageHelper.resize(cv2_img, target_size, interpolation=Image.CUBIC)
-    cv2_img = ImageHelper.bgr2rgb(cv2_img)
+    pil_img = ImageHelper.cv2_resize(pil_img, target_size, interpolation=cv2.INTER_CUBIC)
+    cv2_img = ImageHelper.cv2_resize(cv2_img, target_size, interpolation=cv2.INTER_CUBIC)
+    # cv2_img = ImageHelper.bgr2rgb(cv2_img)
     ImageHelper.imshow('main', np.array(pil_img) - cv2_img)
     ImageHelper.imshow('main', pil_img)
     ImageHelper.imshow('main', cv2_img)
