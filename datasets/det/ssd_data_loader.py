@@ -61,6 +61,9 @@ class SSDDataLoader(data.Dataset):
         bboxes = list()
 
         for object in json_dict['objects']:
+            if object['difficult'] and not self.configer.get('data', 'keep_difficult'):
+                continue
+
             labels.append(object['label'])
             bboxes.append(object['bbox'])
 

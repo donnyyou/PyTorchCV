@@ -9,6 +9,7 @@
       "val_input_size": [300, 300],
       "num_classes": 21,
       "data_dir": "/home/donny/DataSet/VOC07+12_DET",
+      "keep_difficult": false,
       "workers": 8
     },
     "test": {
@@ -93,6 +94,9 @@
         "method": "grid",
         "grid":[3, 2],
         "center_jitter": 20
+      },
+      "resize": {
+        "keep_scale": false
       },
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
