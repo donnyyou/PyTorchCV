@@ -113,7 +113,7 @@ class YOLOv3Test(object):
             keep_index = DetHelper.cls_nms(image_pred[:, :4],
                                            scores=image_pred[:, 4],
                                            labels=class_pred.squeeze(1),
-                                           nms_threshold=configer.get('nms', 'overlap_threshold'),
+                                           nms_threshold=configer.get('nms', 'max_threshold'),
                                            mode=configer.get('nms', 'mode'))
 
             output[image_i] = detections[keep_index]
