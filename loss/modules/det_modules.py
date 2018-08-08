@@ -200,8 +200,8 @@ class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss()
-        self.bce_loss = nn.BCELoss()
+        self.mse_loss = nn.MSELoss(size_average=False)
+        self.bce_loss = nn.BCELoss(size_average=False)
 
     def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
@@ -219,13 +219,16 @@ class YOLOv3Loss(nn.Module):
         th = targets[..., 3]  # Height
         tcls = targets[..., 5:]  # Cls pred.
 
+        obj_sum = objmask.sum() + 1e-9
+        noobj_sum = noobjmask.sum() + 1e-9
         #  losses.
-        loss_x = self.bce_loss(x * objmask, tx * objmask)
-        loss_y = self.bce_loss(y * objmask, ty * objmask)
-        loss_w = self.mse_loss(w * objmask, tw * objmask)
-        loss_h = self.mse_loss(h * objmask, th * objmask)
-        loss_conf = self.bce_loss(conf * objmask, objmask) + 0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
-        loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
+        loss_x = self.bce_loss(x * objmask, tx * objmask) / obj_sum
+        loss_y = self.bce_loss(y * objmask, ty * objmask) / obj_sum
+        loss_w = self.mse_loss(w * objmask, tw * objmask) / obj_sum
+        loss_h = self.mse_loss(h * objmask, th * objmask) / obj_sum
+        loss_conf = self.bce_loss(conf * objmask, objmask) / obj_sum + \
+                    0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0) / noobj_sum
+        loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1]) / obj_sum
 
         #  total loss = losses * weight
         loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
