@@ -228,8 +228,7 @@ class DetDataUtilizer(object):
             tcls = torch.zeros(batch_size, num_anchors, in_h, in_w, self.configer.get('data', 'num_classes'))
 
             for b in range(batch_size):
-                for t in range(batch_gt_bboxes[b].shape[0]):
-
+                for t in range(batch_gt_bboxes[b].size(0)):
                     # Convert to position relative to box
                     gx = (batch_gt_bboxes[b][t, 0] + batch_gt_bboxes[b][t, 2]) / 2.0 * in_w
                     gy = (batch_gt_bboxes[b][t, 1] + batch_gt_bboxes[b][t, 3]) / 2.0 * in_h
