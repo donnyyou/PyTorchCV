@@ -79,6 +79,13 @@ class Yolov3Head(nn.Module):
         )
         self.yolo_detection_layer = YOLODetectionLayer(self.configer)
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight.data)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
     def _make_cbl(self, _in, _out, ks):
         ''' cbl = conv + batch_norm + leaky_relu
         '''
