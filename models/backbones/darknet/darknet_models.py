@@ -13,8 +13,8 @@ from utils.tools.logger import Logger as Log
 
 
 model_urls = {
-    'darknet21': 'https://download.pytorch.org/models/densenet121-a639ec97.pth',
-    'darknet53': 'https://download.pytorch.org/models/densenet169-b2777c0a.pth',
+    'darknet21': 'https://download.pytorch.org/models/darknet53_weights_pytorch.pth',
+    'darknet53': 'https://download.pytorch.org/models/darknet53_weights_pytorch.pth',
 }
 
 

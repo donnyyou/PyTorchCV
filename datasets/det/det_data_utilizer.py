@@ -207,7 +207,6 @@ class DetDataUtilizer(object):
     def yolo_batch_encode(self, batch_gt_bboxes, batch_gt_labels):
         anchors_list = self.configer.get('gt', 'anchors_list')
         stride_list = self.configer.get('network', 'stride_list')
-        ignore_threshold = self.configer.get('gt', 'iou_threshold')
         img_size = self.configer.get('data', 'input_size')
 
         assert len(anchors_list) == len(stride_list)
@@ -215,7 +214,7 @@ class DetDataUtilizer(object):
         batch_objmask_list = list()
         batch_noobjmask_list = list()
         for fm_stride, ori_anchors in zip(stride_list, anchors_list):
-            in_w, in_h = img_size[0] // fm_stride, img_size[1] // fm_stride
+            in_w, in_h = int(round(img_size[0] / fm_stride)), int(round(img_size[1] / fm_stride))
             anchors = [(a_w / fm_stride, a_h / fm_stride) for a_w, a_h in ori_anchors]
             batch_size = len(batch_gt_bboxes)
             num_anchors = len(anchors)
@@ -230,14 +229,15 @@ class DetDataUtilizer(object):
 
             for b in range(batch_size):
                 for t in range(batch_gt_bboxes[b].shape[0]):
-                    if batch_gt_bboxes[b][t].sum() == 0:
-                        continue
 
                     # Convert to position relative to box
                     gx = (batch_gt_bboxes[b][t, 0] + batch_gt_bboxes[b][t, 2]) / 2.0 * in_w
                     gy = (batch_gt_bboxes[b][t, 1] + batch_gt_bboxes[b][t, 3]) / 2.0 * in_h
                     gw = (batch_gt_bboxes[b][t, 2] - batch_gt_bboxes[b][t, 0]) * in_w
                     gh = (batch_gt_bboxes[b][t, 3] - batch_gt_bboxes[b][t, 1]) * in_h
+                    if gw * gh == 0 or gx >= in_w or gy >= in_h:
+                        continue
+
                     # Get grid box indices
                     gi = int(gx)
                     gj = int(gy)
@@ -249,7 +249,7 @@ class DetDataUtilizer(object):
                     # Calculate iou between gt and anchor shapes
                     anch_ious = DetHelper.bbox_iou(gt_box, anchor_shapes)
                     # Where the overlap is larger than threshold set mask to zero (ignore)
-                    noobj_mask[b, anch_ious[0] > ignore_threshold] = 0
+                    noobj_mask[b, anch_ious[0] > self.configer.get('gt', 'iou_threshold')] = 0
                     # Find the best matching anchor box
                     best_n = np.argmax(anch_ious, axis=1)
 
