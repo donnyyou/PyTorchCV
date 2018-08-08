@@ -14,8 +14,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
-from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
 
@@ -122,13 +120,6 @@ class SSDMultiBoxLoss(nn.Module):
         log_sum_exp = torch.log(torch.sum(torch.exp(x - xmax), dim=1)) + xmax
         return log_sum_exp.view(-1, 1) - x.gather(1, y.view(-1, 1))
 
-    def test_cross_entropy_loss(self):
-        a = Variable(torch.randn(10, 4))
-        b = Variable(torch.ones(10).long())
-        loss = self.cross_entropy_loss(a, b)
-        print(loss.mean())
-        print(F.cross_entropy(a, b))
-
     def _hard_negative_mining(self, conf_loss, pos):
         """Return negative indices that is 3x the number as positive indices.
 
@@ -208,16 +199,7 @@ class SSDMultiBoxLoss(nn.Module):
 class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
-
         self.configer = configer
-        self.yolo_detection_layer = YOLODetectionLayer(self.configer)
-        self.num_classes = self.configer.get('data', 'num_classes')
-        self.img_size = self.configer.get('data', 'train_input_size')
-        self.lambda_xy = self.configer.get('network', 'loss_weights')['coord_loss']  # 2.5
-        self.lambda_wh = self.configer.get('network', 'loss_weights')['coord_loss']
-        self.lambda_conf = self.configer.get('network', 'loss_weights')['obj_loss']  # 1.0
-        self.lambda_cls = self.configer.get('network', 'loss_weights')['cls_loss']  # 1.0
-
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
 
@@ -246,10 +228,12 @@ class YOLOv3Loss(nn.Module):
         objmask = objmask.squeeze(2)
         loss_conf = self.bce_loss(conf * objmask, objmask) + 0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
         loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
+
         #  total loss = losses * weight
-        loss = loss_x * self.lambda_xy + loss_y * self.lambda_xy + \
-               loss_w * self.lambda_wh + loss_h * self.lambda_wh + \
-               loss_conf * self.lambda_conf + loss_cls * self.lambda_cls
+        loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               (loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+               loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
         return loss
 
