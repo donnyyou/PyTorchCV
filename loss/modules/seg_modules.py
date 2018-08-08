@@ -23,22 +23,15 @@ class CrossEntropyLoss(nn.Module):
             weight = self.configer.get('cross_entropy_loss', 'weight')
             weight = torch.FloatTensor(weight).cuda()
 
-        size_average = True
-        if not self.configer.is_empty('cross_entropy_loss', 'size_average'):
-            size_average = self.configer.get('cross_entropy_loss', 'size_average')
-
-        reduce = True
-        if not self.configer.is_empty('cross_entropy_loss', 'reduce'):
-            reduce = self.configer.get("cross_entropy_loss", "reduce")
+        reduction = 'elementwise_mean'
+        if not self.configer.is_empty('cross_entropy_loss', 'reduction'):
+            reduction = self.configer.get("cross_entropy_loss", "reduction")
 
         ignore_index = -100
         if not self.configer.is_empty('cross_entropy_loss', 'ignore_index'):
             ignore_index = self.configer.get('cross_entropy_loss', 'ignore_index')
 
-        self.nll_loss = nn.NLLLoss(weight=weight,
-                                   size_average=size_average,
-                                   ignore_index=ignore_index,
-                                   reduce=reduce)
+        self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction=reduction)
 
     def forward(self, inputs, targets, weights=None):
         loss = 0.0
@@ -48,12 +41,12 @@ class CrossEntropyLoss(nn.Module):
 
             for i in range(len(inputs)):
                 if isinstance(targets, list):
-                    loss += weights[i] * self.nll_loss(F.log_softmax(inputs[i], dim=1), targets[i])
+                    loss += weights[i] * self.ce_loss(inputs[i], targets[i])
                 else:
-                    loss += weights[i] * self.nll_loss(F.log_softmax(inputs[i], dim=1), targets)
+                    loss += weights[i] * self.ce_loss(inputs[i], targets)
 
         else:
-            loss = self.nll_loss(F.log_softmax(inputs, dim=1), targets)
+            loss = self.ce_loss(inputs, targets)
 
         return loss
 
