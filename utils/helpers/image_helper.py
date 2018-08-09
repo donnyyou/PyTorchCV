@@ -12,10 +12,24 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from  utils.tools.logger import Logger as Log
+from utils.tools.logger import Logger as Log
+
+
+PIL_INTER = [Image.CUBIC, Image.BILINEAR, Image.NEAREST]
+CV2_INTER = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_NEAREST]
 
 
 class ImageHelper(object):
+
+    @staticmethod
+    def read_image(image_path, tool='pil', mode='RGB'):
+        if tool == 'pil':
+            return ImageHelper.pil_read_image(image_path, mode=mode)
+        elif tool == 'cv2':
+            return ImageHelper.cv2_read_image(image_path, mode=mode)
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
     def cv2_read_image(image_path, mode='RGB'):
@@ -88,6 +102,21 @@ class ImageHelper(object):
     @staticmethod
     def img2np(img):
         return np.array(img)
+
+    @staticmethod
+    def resize(img, target_size, interpolation=1):
+        assert isinstance(target_size, (list, tuple))
+
+        target_size = tuple(target_size)
+        if isinstance(img, Image.Image):
+            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER[interpolation])
+
+        elif isinstance(img, np.ndarray):
+            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER[interpolation])
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
 
     @staticmethod
     def pil_resize(img, target_size, interpolation):

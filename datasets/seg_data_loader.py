@@ -12,7 +12,8 @@ import os
 from torch.utils import data
 
 from datasets.seg.fs_data_loader import FSDataLoader
-import datasets.tools.pil_aug_transforms as aug_trans
+import datasets.tools.pil_aug_transforms as pil_aug_trans
+import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.seg_transforms as seg_trans
 import datasets.tools.transforms as trans
 from utils.tools.logger import Logger as Log
@@ -23,9 +24,21 @@ class SegDataLoader(object):
     def __init__(self, configer):
         self.configer = configer
 
-        self.aug_train_transform = aug_trans.PILAugCompose(self.configer, split='train')
+        if self.configer.get('data', 'image_tool') == 'pil':
+            self.aug_train_transform = pil_aug_trans.PILAugCompose(self.configer, split='train')
+        elif self.configer.get('data', 'image_tool') == 'cv2':
+            self.aug_train_transform = cv2_aug_trans.CV2AugCompose(self.configer, split='train')
+        else:
+            Log.error('Not support {} image tool.'.format(self.configer.get('data', 'image_tool')))
+            exit(1)
 
-        self.aug_val_transform = aug_trans.PILAugCompose(self.configer, split='val')
+        if self.configer.get('data', 'image_tool') == 'pil':
+            self.aug_val_transform = pil_aug_trans.PILAugCompose(self.configer, split='val')
+        elif self.configer.get('data', 'image_tool') == 'cv2':
+            self.aug_val_transform = cv2_aug_trans.CV2AugCompose(self.configer, split='val')
+        else:
+            Log.error('Not support {} image tool.'.format(self.configer.get('data', 'image_tool')))
+            exit(1)
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),

@@ -28,9 +28,11 @@ class FSDataLoader(data.Dataset):
         return len(self.img_list)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_read_image(self.img_list[index], mode=self.configer.get('data', 'input_mode'))
-        labelmap = ImageHelper.pil_read_image(self.label_list[index], mode='P')
-
+        img = ImageHelper.read_image(self.img_list[index],
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        labelmap = ImageHelper.read_image(self.label_list[index],
+                                          tool=self.configer.get('data', 'image_tool'), mode='P')
         if self.aug_transform is not None:
             img, labelmap = self.aug_transform(img, labelmap=labelmap)
 
