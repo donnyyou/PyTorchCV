@@ -28,11 +28,12 @@ class RandomPad(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, up_scale_range=None, pad_ratio=0.5):
+    def __init__(self, up_scale_range=None, pad_ratio=0.5, mean=(104, 117, 123)):
         # do something
         assert isinstance(up_scale_range, (list, tuple))
         self.up_scale_range = up_scale_range
         self.ratio = pad_ratio
+        self.mean = mean
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
@@ -54,7 +55,7 @@ class RandomPad(object):
         right_pad = pad_width - left_pad  # pad_right
         down_pad = pad_height - up_pad  # pad_down
 
-        img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
+        img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=self.mean)
 
         if labelmap is not None:
             labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
@@ -90,10 +91,11 @@ class RandomShift(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, shift_pixel=None, shift_ratio=0.5):
+    def __init__(self, shift_pixel=None, shift_ratio=0.5, mean=(104, 117, 123)):
         assert isinstance(shift_pixel, int)
         self.shift_pixel = shift_pixel
         self.ratio = shift_ratio
+        self.mean = mean
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
@@ -109,7 +111,7 @@ class RandomShift(object):
         right_pad = -left_pad  # pad_right
         down_pad = -up_pad  # pad_down
 
-        img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
+        img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=self.mean)
 
         if labelmap is not None:
             labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
@@ -466,10 +468,11 @@ class RandomRotate(object):
         degree (number): Desired rotate degree.
     """
 
-    def __init__(self, max_degree, rotate_ratio=0.5):
+    def __init__(self, max_degree, rotate_ratio=0.5, mean=(104, 117, 123)):
         assert isinstance(max_degree, int)
         self.max_degree = max_degree
         self.ratio = rotate_ratio
+        self.mean = mean
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
@@ -505,7 +508,7 @@ class RandomRotate(object):
         new_height = int(height * cos_val + width * sin_val)
         rotate_mat[0, 2] += (new_width / 2.) - img_center[0]
         rotate_mat[1, 2] += (new_height / 2.) - img_center[1]
-        img = cv2.warpAffine(img, rotate_mat, (new_width, new_height), borderValue=(128, 128, 128))
+        img = cv2.warpAffine(img, rotate_mat, (new_width, new_height), borderValue=self.mean)
         img = Image.fromarray(img.astype(np.uint8))
         if labelmap is not None:
             labelmap = np.array(labelmap)
@@ -671,24 +674,13 @@ class RandomCrop(object):
                 bboxes[i][2] = min(max(0, bboxes[i][2]), self.size[0]-1)
                 bboxes[i][3] = min(max(0, bboxes[i][3]), self.size[1]-1)
 
-        w, h = img.size
-        img = ImageOps.expand(img,
-                              border=(-offset_left, -offset_up,
-                                      self.size[0] + offset_left - w, self.size[1] + offset_up - h),
-                              fill=(128, 128, 128))
-        img = img.crop((0, 0, self.size[0], self.size[1]))
+        img = img.crop((offset_left, offset_up, offset_left + self.size[0], offset_up + self.size[1]))
 
         if maskmap is not None:
-            maskmap = ImageOps.expand(maskmap,
-                                      border=(-offset_left, -offset_up,
-                                              self.size[0] + offset_left - w, self.size[1] + offset_up - h), fill=1)
-            maskmap = maskmap.crop((0, 0, self.size[0], self.size[1]))
+            maskmap = maskmap.crop((offset_left, offset_up, offset_left + self.size[0], offset_up + self.size[1]))
 
         if labelmap is not None:
-            labelmap = ImageOps.expand(labelmap, border=(-offset_left, -offset_up,
-                                                         self.size[0] + offset_left - w,
-                                                         self.size[1] + offset_up - h), fill=255)
-            labelmap = labelmap.crop((0, 0, self.size[0], self.size[1]))
+            labelmap = labelmap.crop((offset_left, offset_up, offset_left + self.size[0], offset_up + self.size[1]))
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -902,7 +894,8 @@ class Resize(object):
             right_pad = pad_width - left_pad  # pad_right
             down_pad = pad_height - up_pad  # pad_down
 
-            img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad), fill=(128, 128, 128))
+            img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad),
+                                  fill=self.configer.get('trans_params', 'mean_value'))
 
             if labelmap is not None:
                 labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
@@ -975,13 +968,15 @@ class PILAugCompose(object):
             if 'random_pad' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('train_trans', 'pad_ratio')
+                    pad_ratio=self.configer.get('train_trans', 'pad_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_shift' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('train_trans', 'shift_ratio')
+                    shift_ratio=self.configer.get('train_trans', 'shift_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_brightness' in self.configer.get('train_trans', 'trans_seq'):
@@ -1030,7 +1025,8 @@ class PILAugCompose(object):
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('train_trans', 'rotate_ratio')
+                    rotate_ratio=self.configer.get('train_trans', 'rotate_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_det_crop' in self.configer.get('train_trans', 'trans_seq'):
@@ -1070,13 +1066,15 @@ class PILAugCompose(object):
             if 'random_pad' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('val_trans', 'pad_ratio')
+                    pad_ratio=self.configer.get('val_trans', 'pad_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_shift' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('val_trans', 'shift_ratio')
+                    shift_ratio=self.configer.get('val_trans', 'shift_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_brightness' in self.configer.get('val_trans', 'trans_seq'):
@@ -1125,7 +1123,8 @@ class PILAugCompose(object):
             if 'random_rotate' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('val_trans', 'rotate_ratio')
+                    rotate_ratio=self.configer.get('val_trans', 'rotate_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_det_crop' in self.configer.get('val_trans', 'trans_seq'):

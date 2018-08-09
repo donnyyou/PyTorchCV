@@ -505,12 +505,11 @@ class RandomCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, center_jitter=None, mean=(104, 117, 123)):
+    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, center_jitter=None):
         self.ratio = crop_ratio
         self.method = method
         self.grid = grid
         self.center_jitter = center_jitter
-        self.mean = mean
 
         if isinstance(crop_size, float):
             self.size = (crop_size, crop_size)
@@ -618,26 +617,13 @@ class RandomCrop(object):
                 bboxes[i][2] = min(max(0, bboxes[i][2]), self.size[0] - 1)
                 bboxes[i][3] = min(max(0, bboxes[i][3]), self.size[1] - 1)
 
-        h, w, c = img.shape
-        new_img = np.zeros((max(offset_up + h, offset_up + self.size[1]),
-                            max(offset_left + w, offset_left + self.size[0]), c), dtype=img.dtype)
-        new_img[:, :, :] = self.mean
-        new_img[0:h, 0:w] = img
-        img = new_img[offset_up:offset_up+self.size[1], offset_left:offset_left+self.size[0]]
+        img = img[offset_up:offset_up+self.size[1], offset_left:offset_left+self.size[0]]
 
         if maskmap is not None:
-            new_maskmap = np.zeros((max(offset_up + h, offset_up + self.size[1]),
-                                    max(offset_left + w, offset_left + self.size[0])), dtype=maskmap.dtype)
-            new_maskmap[:, :] = 1
-            new_maskmap[0:h, 0:w] = maskmap
-            maskmap = new_maskmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
+            maskmap = maskmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
 
         if labelmap is not None:
-            new_labelmap = np.zeros((max(offset_up + h, offset_up + self.size[1]),
-                                     max(offset_left + w, offset_left + self.size[0])), dtype=labelmap.dtype)
-            new_labelmap[:, :] = 255
-            new_labelmap[0:h, 0:w] = labelmap
-            labelmap = new_labelmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
+            labelmap = labelmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -851,7 +837,7 @@ class Resize(object):
             up_pad = random.randint(0, pad_height)  # pad_up
 
             expand_image = np.zeros((target_height, target_width, img.shape[2]), dtype=img.dtype)
-            expand_image[:, :, :] = self.configer.get('trans_params', 'mean')
+            expand_image[:, :, :] = self.configer.get('trans_params', 'mean_value')
             expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = img
             img = expand_image
 
@@ -932,13 +918,15 @@ class CV2AugCompose(object):
             if 'random_pad' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('train_trans', 'pad_ratio')
+                    pad_ratio=self.configer.get('train_trans', 'pad_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_shift' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('train_trans', 'shift_ratio')
+                    shift_ratio=self.configer.get('train_trans', 'shift_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_brightness' in self.configer.get('train_trans', 'trans_seq'):
@@ -973,7 +961,8 @@ class CV2AugCompose(object):
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('train_trans', 'rotate_ratio')
+                    rotate_ratio=self.configer.get('train_trans', 'rotate_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_det_crop' in self.configer.get('train_trans', 'trans_seq'):
@@ -1013,13 +1002,15 @@ class CV2AugCompose(object):
             if 'random_pad' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('val_trans', 'pad_ratio')
+                    pad_ratio=self.configer.get('val_trans', 'pad_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_shift' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('val_trans', 'shift_ratio')
+                    shift_ratio=self.configer.get('val_trans', 'shift_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_brightness' in self.configer.get('val_trans', 'trans_seq'):
@@ -1054,7 +1045,8 @@ class CV2AugCompose(object):
             if 'random_rotate' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('val_trans', 'rotate_ratio')
+                    rotate_ratio=self.configer.get('val_trans', 'rotate_ratio'),
+                    mean=self.configer.get('trans_params', 'mean_value')
                 )
 
             if 'random_det_crop' in self.configer.get('val_trans', 'trans_seq'):
