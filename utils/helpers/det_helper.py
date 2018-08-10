@@ -170,7 +170,7 @@ class DetHelper(object):
             last_nearest = current_nearest
 
         result = clusters[np.lexsort(clusters.T[0, None])]
-        avg_iou = DetHelper.avg_iou(bboxes, result, cluster_number)
+        avg_iou = DetHelper.avg_iou(bboxes, result)
         return result, avg_iou
 
     @staticmethod

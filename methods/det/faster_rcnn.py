@@ -9,9 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
