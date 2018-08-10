@@ -8,7 +8,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import torch
 
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
@@ -97,10 +96,10 @@ class FRRoiGenerator(object):
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
         input_size = self.configer.get('data', 'input_size')
-        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0])
-        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0])
-        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1])
-        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1])
+        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
+        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
         rpn_fg_scores = score[:, :, 1]
 
@@ -114,7 +113,7 @@ class FRRoiGenerator(object):
             ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
             hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
             min_size = self.configer.get('rpn', 'min_size')
-            keep = (hs >= min_size) & (ws >= min_size).squeeze()
+            keep = (hs >= min_size) & (ws >= min_size)
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.

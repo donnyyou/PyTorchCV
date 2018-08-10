@@ -33,7 +33,7 @@ class RandomPad(object):
         assert isinstance(up_scale_range, (list, tuple))
         self.up_scale_range = up_scale_range
         self.ratio = pad_ratio
-        self.mean = mean
+        self.mean = tuple(mean)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
@@ -95,7 +95,7 @@ class RandomShift(object):
         assert isinstance(shift_pixel, int)
         self.shift_pixel = shift_pixel
         self.ratio = shift_ratio
-        self.mean = mean
+        self.mean = tuple(mean)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         assert isinstance(img, Image.Image)
@@ -472,7 +472,7 @@ class RandomRotate(object):
         assert isinstance(max_degree, int)
         self.max_degree = max_degree
         self.ratio = rotate_ratio
-        self.mean = mean
+        self.mean = tuple(mean)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
@@ -895,7 +895,7 @@ class Resize(object):
             down_pad = pad_height - up_pad  # pad_down
 
             img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad),
-                                  fill=self.configer.get('trans_params', 'mean_value'))
+                                  fill=tuple(self.configer.get('trans_params', 'mean_value')))
 
             if labelmap is not None:
                 labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)

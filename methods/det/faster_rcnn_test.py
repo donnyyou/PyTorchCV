@@ -156,10 +156,10 @@ class FastRCNNTest(object):
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = x1.cpu().item() * width
-                ymin = y1.cpu().item() * height
-                xmax = x2.cpu().item() * width
-                ymax = y2.cpu().item() * height
+                xmin = x1.cpu().item()
+                ymin = y1.cpu().item()
+                xmax = x2.cpu().item()
+                ymax = y2.cpu().item()
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item()) - 1
                 object_dict['score'] = float('%.2f' % conf.cpu().item())

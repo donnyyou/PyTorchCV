@@ -97,12 +97,23 @@ class DetDataUtilizer(object):
         pos_ratio = self.configer.get('roi', 'loss')['pos_ratio']
         loc_normalize_mean = self.configer.get('roi', 'loc_normalize_mean')
         loc_normalize_std = self.configer.get('roi', 'loc_normalize_std')
+
         sample_roi_list = list()
         gt_roi_loc_list = list()
         gt_roi_label_list= list()
 
         for i in range(len(gt_bboxes)):
-            rois = torch.cat((indices_and_rois[indices_and_rois[:, 0] == i][:, :4], gt_bboxes[i]), 0)
+            for j in range(len(gt_bboxes[i])):
+                gt_bboxes[i][j][0] *= self.configer.get('data', 'input_size')[0]
+                gt_bboxes[i][j][1] *= self.configer.get('data', 'input_size')[1]
+                gt_bboxes[i][j][2] *= self.configer.get('data', 'input_size')[0]
+                gt_bboxes[i][j][3] *= self.configer.get('data', 'input_size')[1]
+
+            if self.configer.get('phase') == 'debug':
+                rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
+            else:
+                rois = torch.cat((indices_and_rois[indices_and_rois[:, 0] == i][:, 1:], gt_bboxes[i]), 0)
+
             pos_roi_per_image = np.round(n_sample * pos_ratio)
             iou = DetHelper.bbox_iou(rois, gt_bboxes[i])
             max_iou, gt_assignment = iou.max(1, keepdim=False)

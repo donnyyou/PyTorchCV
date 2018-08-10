@@ -33,13 +33,6 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['network', 'parallel'], False)
         self.configer.add_key_value(['data', 'input_size'], None)
 
-        mean_value = [int(value * 255) for value in self.configer.get('trans_params', 'mean')]
-        self.configer.add_key_value(['trans_params', 'mean_value'], mean_value)
-
-        if self.configer.is_empty('data', 'train_input_size'):
-            self.configer.add_key_value(['data', 'train_input_size'], self.configer.get('data', 'input_size'))
-            self.configer.add_key_value(['data', 'val_input_size'], self.configer.get('data', 'input_size'))
-
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         return_list = list()
