@@ -96,9 +96,8 @@ class FastRCNNTest(object):
         mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).repeat(num_classes)
         std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).repeat(num_classes)
 
-        if roi_locs.is_cuda:
-            mean = mean.cuda()
-            std = std.cuda()
+        mean = mean.to(roi_locs.device)
+        std = std.to(roi_locs.device)
 
         roi_locs = (roi_locs * std + mean)
         roi_locs = roi_locs.contiguous().view(-1, num_classes, 4)
@@ -110,8 +109,8 @@ class FastRCNNTest(object):
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
         # clip bounding box
-        dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=configer.get('data', 'input_size')[0])
-        dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=configer.get('data', 'input_size')[1])
+        dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=configer.get('data', 'input_size')[0]-1)
+        dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=configer.get('data', 'input_size')[1]-1)
 
         if configer.get('phase') != 'debug':
             cls_prob = F.softmax(roi_scores, dim=1)

@@ -243,23 +243,22 @@ class FRLocLoss(nn.Module):
         self.configer = configer
 
     def forward(self, pred_locs, gt_locs, gt_labels, sigma):
-        in_weight = torch.zeros(gt_locs.shape).cuda()
+        in_weight = torch.zeros_like(gt_locs).to(gt_locs.device)
         # Localization loss is calculated only for positive rois.
         # NOTE:  unlike origin implementation,
         # we don't need inside_weight and outside_weight, they can calculate by gt_label
-        in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight).cuda()] = 1
+        in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight)] = 1
         loc_loss = self.smooth_l1_loss(pred_locs, gt_locs, in_weight, sigma)
         # Normalize by total number of negtive and positive rois.
-        loc_loss /= (gt_labels.cuda().float() >= 0).sum().float()  # ignore gt_label==-1 for rpn_loss
+        loc_loss /= (gt_labels.float() >= 0).sum().float()  # ignore gt_label==-1 for rpn_loss
         return loc_loss
 
     @staticmethod
     def smooth_l1_loss(x, t, in_weight, sigma):
         sigma2 = sigma ** 2
-        diff = in_weight * (x - t.cuda())
+        diff = in_weight * (x - t)
         abs_diff = diff.abs()
         flag = (abs_diff.data < (1. / sigma2)).float()
-        flag = Variable(flag)
         y = (flag * (sigma2 / 2.) * (diff ** 2) + (1 - flag) * (abs_diff - 0.5 / sigma2))
         return y.sum()
 
@@ -269,11 +268,6 @@ class FRLoss(nn.Module):
     def __init__(self, configer):
         super(FRLoss, self).__init__()
         self.configer = configer
-
-        self.lambda_rpn_loc = self.configer.get('network', 'loss_weights')['rpn_loss']  # 2.5
-        self.lambda_rpn_cls = self.configer.get('network', 'loss_weights')['rpn_loss']
-        self.lambda_roi_loc = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
-        self.lambda_roi_cls = self.configer.get('network', 'loss_weights')['roi_loss']  # 1.0
         self.fr_loc_loss = FRLocLoss(configer)
 
     def forward(self, output_list, target_list):
@@ -286,9 +280,10 @@ class FRLoss(nn.Module):
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
                                         gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
         # NOTE: default value of ignore_index is -100 ...
-        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels.cuda(), ignore_index=-1)
+        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
 
         roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
                                         gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
-        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels.cuda())
-        return rpn_loc_loss + rpn_cls_loss + roi_loc_loss + roi_cls_loss
+        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels)
+        return (rpn_loc_loss + rpn_cls_loss) * self.configer.get('network', 'loss_weights')['rpn_loss']\
+               + (roi_loc_loss + roi_cls_loss) * self.configer.get('network', 'loss_weights')['roi_loss']

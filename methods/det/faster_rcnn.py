@@ -99,14 +99,18 @@ class FasterRCNN(object):
 
             gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
                 batch_gt_bboxes, self.fr_priorbox_layer())
+            gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
+
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
                 batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+            sample_rois, gt_roi_bboxes, gt_roi_labels = self.module_utilizer.to_device(sample_rois,
+                                                                                       gt_roi_bboxes, gt_roi_labels)
 
             sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
-                torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().cuda(),
-                gt_roi_labels.cuda().long()].contiguous().view(-1, 4)
+                torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().to(sample_roi_locs.device),
+                gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
             # Compute the loss of the train batch & backward.
             loss = self.fr_loss([rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores],
@@ -167,10 +171,19 @@ class FasterRCNN(object):
 
                 gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(
                     batch_gt_bboxes, self.fr_priorbox_layer())
+                gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
+
                 sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
                     batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+                sample_rois, gt_roi_bboxes, gt_roi_labels = self.module_utilizer.to_device(sample_rois,
+                                                                                           gt_roi_bboxes,
+                                                                                           gt_roi_labels)
 
                 sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
+                sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
+                sample_roi_locs = sample_roi_locs[
+                    torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().to(sample_roi_locs.device),
+                    gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
                 test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
 
@@ -205,15 +218,16 @@ class FasterRCNN(object):
             self.module_utilizer.set_status(self.det_net, status='train')
 
     def __get_object_list(self, batch_detections):
+        width, height = self.configer.get('data', 'input_size')
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                    xmin = x1.cpu().item()
-                    ymin = y1.cpu().item()
-                    xmax = x2.cpu().item()
-                    ymax = y2.cpu().item()
+                    xmin = x1.cpu().item() / width
+                    ymin = y1.cpu().item() / height
+                    xmax = x2.cpu().item() / width
+                    ymax = y2.cpu().item() / height
                     cf = conf.cpu().item()
                     cls_pred = cls_pred.cpu().item()
                     object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
