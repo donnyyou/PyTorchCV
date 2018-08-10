@@ -9,6 +9,9 @@
       "val_input_size": [512, 512],
       "num_classes": 21,
       "data_dir": "/home/donny/DataSet/VOC2007_DET",
+      "image_tool": "pil",
+      "input_mode": "RGB",
+      "keep_difficult": false,
       "workers": 8
     },
     "test": {
@@ -80,6 +83,7 @@
         "grid":[3, 2],
         "center_jitter": 20
       },
+      "mean_value": [124, 116, 104],
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
     },
