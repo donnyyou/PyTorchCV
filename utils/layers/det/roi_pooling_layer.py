@@ -23,7 +23,7 @@ class ROIPoolingLayer(object):
         from extensions.layers.roi.roi_pool import _RoIPooling
         self.roi_pooling = _RoIPooling(self.pooled_height, self.pooled_width, self.spatial_scale)
 
-    def forward(self, features, rois):
+    def __call__(self, features, rois):
         return self.roi_pooling(features, rois)
 
 
