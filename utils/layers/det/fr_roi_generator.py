@@ -85,12 +85,9 @@ class FRRoiGenerator(object):
         # NOTE: when test, remember
         # faster_rcnn.eval()
         # to set self.traing = False
-        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
+        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1).to(loc.device)
 
         # Convert anchors into proposal via bbox transformations.
-
-        loc = loc.cpu()
-        score = score.cpu()
         wh = torch.exp(loc[:, :, 2:]) * default_boxes[:, :, 2:]
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
@@ -138,7 +135,7 @@ class FRRoiGenerator(object):
 
             rois = rois[keep]
 
-            batch_index = i * torch.ones((len(rois),))
+            batch_index = i * torch.ones((len(rois),)).to(loc.device)
             rois_list.append(rois)
             roi_indices_list.append(batch_index)
 

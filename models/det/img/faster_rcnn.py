@@ -114,7 +114,7 @@ class RoIHead(nn.Module):
         )
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
-        self.roi_layer = PyROIPoolingLayer(self.configer)
+        self.roi_layer = ROIPoolingLayer(self.configer)
 
     def forward(self, x, indices_and_rois):
         """Forward the chain.

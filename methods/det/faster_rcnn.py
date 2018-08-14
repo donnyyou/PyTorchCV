@@ -102,7 +102,7 @@ class FasterRCNN(object):
             gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
-                batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+                batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois.cpu())
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.module_utilizer.to_device(sample_rois,
                                                                                        gt_roi_bboxes, gt_roi_labels)
 
@@ -155,7 +155,6 @@ class FasterRCNN(object):
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Change the data type.
-                # Change the data type.
                 inputs = self.module_utilizer.to_device(inputs)
 
                 # Forward pass.
@@ -174,7 +173,7 @@ class FasterRCNN(object):
                 gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
 
                 sample_rois, gt_roi_bboxes, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
-                    batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois)
+                    batch_gt_bboxes, batch_gt_labels, indices_and_rois=train_indices_and_rois.cpu())
                 sample_rois, gt_roi_bboxes, gt_roi_labels = self.module_utilizer.to_device(sample_rois,
                                                                                            gt_roi_bboxes,
                                                                                            gt_roi_labels)
@@ -223,7 +222,7 @@ class FasterRCNN(object):
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
-                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                for x1, y1, x2, y2, conf, cls_pred in detections:
                     xmin = x1.cpu().item() / width
                     ymin = y1.cpu().item() / height
                     xmax = x2.cpu().item() / width
