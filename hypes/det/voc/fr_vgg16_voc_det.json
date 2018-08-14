@@ -4,7 +4,7 @@
     "method": "faster_rcnn",
     "data": {
       "train_batch_size": 16,
-      "val_batch_size": 2,
+      "val_batch_size": 16,
       "train_input_size": [720, 720],
       "val_input_size": [720, 720],
       "num_classes": 21,

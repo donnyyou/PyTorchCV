@@ -50,7 +50,7 @@ class OptimScheduler(object):
                                                  gamma=self.configer.get('lr', 'multistep')['gamma'])
 
         elif policy == 'lambda_poly':
-            lambda_poly = lambda epoch: pow((1.0 - (epoch - 1) / self.configer.get('solver', 'max_epoch')), 0.9)
+            lambda_poly = lambda epoch: pow((1.0 - epoch / self.configer.get('solver', 'max_epoch')), 0.9)
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_poly)
 
         else:
