@@ -40,8 +40,7 @@ class RandomPad(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
@@ -102,8 +101,7 @@ class RandomShift(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         left_pad = random.randint(-self.shift_pixel, self.shift_pixel)  # pad_left
@@ -148,9 +146,7 @@ class RandomHFlip(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
@@ -198,8 +194,7 @@ class RandomSaturation(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img).astype(np.float32)
@@ -222,8 +217,7 @@ class RandomHue(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img).astype(np.float32)
@@ -249,8 +243,7 @@ class RandomPerm(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         swap = self.perms[random.randint(0, len(self.perms)-1)]
@@ -272,8 +265,7 @@ class RandomContrast(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img).astype(np.float32)
@@ -293,8 +285,7 @@ class RandomBrightness(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         shift = np.random.uniform(-self.shift_value, self.shift_value, size=1)
@@ -318,8 +309,7 @@ class RandomGaussBlur(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         blur_value = np.random.uniform(0, self.max_blur)
@@ -356,8 +346,7 @@ class RandomHSV(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         img = np.array(img)
@@ -427,8 +416,7 @@ class RandomResize(object):
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
         width, height = img.size
-        rand_value = random.randint(1, 100)
-        if rand_value <= 100 * self.ratio:
+        if random.random() < self.ratio:
             scale = self.get_scale(self.size, bboxes)
             scale_ratio = random.uniform(self.scale_min, self.scale_max) * scale
         else:
@@ -490,8 +478,7 @@ class RandomRotate(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        rand_value = random.randint(1, 100)
-        if rand_value <= 100 * self.ratio:
+        if random.random() < self.ratio:
             rotate_degree = random.uniform(-self.max_degree, self.max_degree)
         else:
             return img, labelmap, maskmap, kpts, bboxes, labels
@@ -643,7 +630,7 @@ class RandomCrop(object):
         assert labelmap is None or isinstance(labelmap, Image.Image)
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
-        if random.randint(1, 100) > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
     
         self.size = (min(self.size[0], img.size[0]), min(self.size[1], img.size[1]))
@@ -743,7 +730,7 @@ class RandomDetCrop(object):
         assert labelmap is None and maskmap is None and kpts is None
         assert bboxes is not None and labels is not None
 
-        if random.randint(1, 100) > 100 * self.ratio:
+        if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         width, height = img.size
