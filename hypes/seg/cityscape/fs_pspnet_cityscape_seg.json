@@ -117,7 +117,7 @@
     },
     "lr": {
       "base_lr": 0.00003,
-      "lr_policy": "step",
+      "lr_policy": "lambda_poly",
       "step": {
         "gamma": 0.5,
         "step_size": 100
