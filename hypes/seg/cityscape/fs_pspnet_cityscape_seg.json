@@ -7,8 +7,8 @@
       "val_batch_size": 8,
       "train_input_size": [864, 864],
       "val_input_size": [2048, 1024],
-      "image_tool": "cv2",
-      "input_mode": "BGR",
+      "image_tool": "pil",
+      "input_mode": "RGB",
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
       "workers": 8
@@ -41,7 +41,7 @@
       "flip_ratio": 0.0,
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 1.0,
+      "crop_ratio": 0.0,
       "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
                     "random_crop", "random_brightness", "random_gauss_blur", "resize"]
     },
@@ -82,9 +82,9 @@
       "resize": {
         "keep_scale": false
       },
-      "mean_value": [73, 84, 74],
-      "mean": [0.2869, 0.328081, 0.290101],
-      "std": [0.184475, 0.186566, 0.182954]
+      "mean": [0.290101, 0.328081, 0.286964],
+      "std": [0.182954, 0.186566, 0.184475],
+      "mean_value": [74, 84, 73]
     },
     "details": {
       "label_list": [7, 8, 11, 12, 13, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33],
@@ -99,7 +99,7 @@
       "save_iters": 2000
     },
     "network":{
-      "backbone": "syncbn_caffe_resnet101_dilated8",
+      "backbone": "syncbn_resnet101_dilated8",
       "model_name": "syncbn_pspnet",
       "stride": 8,
       "loss_weights": {
@@ -111,7 +111,7 @@
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/seg/caffe_fs_pspnet_cityscape_seg.log",
+      "log_file": "./log/seg/fs_pspnet_cityscape_seg.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },

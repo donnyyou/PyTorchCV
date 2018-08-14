@@ -11,3 +11,7 @@
 /vis/results
 .ipynb_checkpoints
 /models/backbones/pretrained
+*.ninja_deps
+*.ninja_log
+*.ninja
+/extensions/apis/cocoapi/PythonAPI/build/lib.linux-x86_64-3.5
