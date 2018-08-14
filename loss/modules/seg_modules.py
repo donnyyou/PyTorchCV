@@ -172,49 +172,79 @@ class FCNSegLoss(nn.Module):
         return targets
 
 
-class Ege_loss(nn.Module):
-    def __init__(self):
-        super(Ege_loss, self).__init__()
+class EmbeddingLoss(nn.Module):
+    def __init__(self, num_classes):
+        super(EmbeddingLoss, self).__init__()
+        self.num_classes = num_classes
+        self.cosine_loss = nn.CosineEmbeddingLoss()
 
-    def forward(self, output, target):
-        target = self.transform_target(target)
-        return F.mse_loss(output,target)
+    def forward(self, inputs, targets):
+        inputs = inputs.transpose(0, 1)
+        center_array = torch.zeros((self.num_classes, inputs.size()[0]), requires_grad=True).cuda()
+        sim_loss = torch.Tensor([0.0]).cuda()
+        sim_loss.requires_grad = True
 
-    def make_kernel(self):
-        k1 = torch.FloatTensor([1, 0, 0, 0, -1, 0, 0, 0, 0]).view(3, 3)
-        k2 = torch.FloatTensor([0, 1, 0, 0, -1, 0, 0, 0, 0]).view(3, 3)
-        k3 = torch.FloatTensor([0, 0, 1, 0, -1, 0, 0, 0, 0]).view(3, 3)
-        k4 = torch.FloatTensor([0, 0, 0, 1, -1, 0, 0, 0, 0]).view(3, 3)
-        k5 = torch.FloatTensor([0, 0, 0, 0, 0, 0, 0, 0, 0]).view(3, 3)
-        k6 = torch.FloatTensor([0, 0, 0, 0, -1, 1, 0, 0, 0]).view(3, 3)
-        k7 = torch.FloatTensor([0, 0, 0, 0, -1, 0, 1, 0, 0]).view(3, 3)
-        k8 = torch.FloatTensor([0, 0, 0, 0, -1, 0, 0, 1, 0]).view(3, 3)
-        k9 = torch.FloatTensor([0, 0, 0, 0, -1, 0, 0, 0, 1]).view(3, 3)
-        kernel = torch.cat((k1, k2, k3, k4, k5, k6, k7, k8, k9), dim=0).view(-1, 3, 3).unsqueeze(1)
-        return kernel
+        mask_list = list()
+        for i in range(self.num_classes):
+            mask = self.get_mask(targets, i).unsqueeze(0)
+            sum_pixel = max(mask.sum(), 1)
+            # print sum_pixel
+            mask = mask.contiguous().repeat(inputs.size()[0], 1, 1, 1).byte().cuda()
+            sim_input = inputs[mask]
+            if sim_input.numel() == 0:
+                mask_list.append(i)
+                continue
 
-    def make_vector(self):
-        v1 = torch.FloatTensor([-1, 1])
-        v2 = torch.FloatTensor([0, 1])
-        v3 = torch.FloatTensor([1, 1])
-        v4 = torch.FloatTensor([-1, 0])
-        v5 = torch.FloatTensor([0, 0])
-        v6 = torch.FloatTensor([1, 0])
-        v7 = torch.FloatTensor([-1, -1])
-        v8 = torch.FloatTensor([0, -1])
-        v9 = torch.FloatTensor([1, -1])
-        vec = torch.cat((v1, v2, v3, v4, v5, v6, v7, v8, v9), dim=0).view(-1, 2).unsqueeze(2).unsqueeze(3)
-        return vec
+            sim_input = sim_input.contiguous().view(inputs.size()[0], -1)
+            center = torch.sum(sim_input, 1, keepdim=False)
+            center = center / sum_pixel
+            center_array[i, :] = center
 
-    def transform_target(self, target, dilation=1):
-        b, h, w = target.size()
-        kernel = self.make_kernel()
-        vec = self.make_vector()
-        target = target.unsqueeze(1)
-        out = F.conv2d(target, weight=kernel, padding=dilation, dilation=dilation)
-        mask1 = out != 0
-        mask2 = out == 0
-        out[mask1] = 0
-        out[mask2] = 1
-        out = out.repeat(1, 2, 1, 1).view(b, 9, 2, h, w) * vec
-        return out.sum(dim=1)
+            sim_input = sim_input.permute(1, 0)
+
+            sim_label = torch.ones(sim_input.size()[0], ).float().cuda()
+            sim_center = center.contiguous().view(1, -1).repeat(sim_input.size()[0], 1)
+            sim_loss = sim_loss + self.cosine_loss(sim_center, sim_input, sim_label)
+
+        diff_loss = torch.Tensor([0.0]).cuda()
+        diff_loss.requires_grad = True
+        for i in range(self.num_classes):
+            if i in mask_list:
+                continue
+
+            label = torch.zeros(self.num_classes, ).float().cuda()
+            center_dual = torch.zeros((self.num_classes, inputs.size()[0]), requires_grad=True).cuda()
+            for k in range(self.num_classes):
+                center_dual[k] = center_array[i]
+
+            for j in range(self.num_classes):
+                if j == i:
+                    label[j] = 1
+                else:
+                    label[j] = -1
+
+            diff_loss = diff_loss + self.cosine_loss(center_array, center_dual, label)
+
+        embedding_loss = diff_loss + sim_loss
+        # print embedding_loss.requires_grad
+        return embedding_loss
+
+    def get_mask(self, targets, i):
+        targets_cp = torch.cuda.FloatTensor(targets.size())
+        targets_cp.copy_(targets.data)
+        if i == 0:
+            targets_cp[targets_cp != 0] = 2
+            targets_cp[targets_cp == 0] = 1
+            targets_cp[targets_cp == 2] = 0
+        else:
+            targets_cp[targets_cp != i] = 0
+            targets_cp[targets_cp == i] = 1
+
+        return targets_cp
+
+
+if __name__ == "__main__":
+    inputs = torch.ones((3, 5, 6, 6)).cuda()
+    targets = torch.ones((3, 6, 6)).cuda()
+    embed_loss = EmbeddingLoss(2)
+    print(embed_loss(inputs, targets))
