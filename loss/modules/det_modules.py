@@ -243,6 +243,8 @@ class FRLocLoss(nn.Module):
         self.configer = configer
 
     def forward(self, pred_locs, gt_locs, gt_labels, sigma):
+        pred_locs = pred_locs.contiguous().view(-1, pred_locs.size()[-1])
+        gt_locs = gt_locs.contiguous().view(-1, gt_locs.size()[-1])
         in_weight = torch.zeros_like(gt_locs).to(gt_locs.device)
         # Localization loss is calculated only for positive rois.
         # NOTE:  unlike origin implementation,

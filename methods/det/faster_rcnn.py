@@ -109,7 +109,7 @@ class FasterRCNN(object):
             sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
-                torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().to(sample_roi_locs.device),
+                torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
                 gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
             # Compute the loss of the train batch & backward.
@@ -181,7 +181,7 @@ class FasterRCNN(object):
                 sample_roi_locs, sample_roi_scores = self.det_net.roi_head(feat, sample_rois)
                 sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
                 sample_roi_locs = sample_roi_locs[
-                    torch.arange(0, self.configer.get('roi', 'loss')['n_sample']).long().to(sample_roi_locs.device),
+                    torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
                     gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
                 test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
