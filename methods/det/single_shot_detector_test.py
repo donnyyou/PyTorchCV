@@ -105,6 +105,10 @@ class SingleShotDetectorTest(object):
         boxes = boxes.unsqueeze(2).repeat(1, 1, configer.get('data', 'num_classes'), 1)
         boxes = boxes.contiguous().view(boxes.size(0), -1, 4)
 
+        # clip bounding box
+        boxes[:, :, 0::2] = boxes[:, :, 0::2].clamp(min=0, max=1.0)
+        boxes[:, :, 1::2] = boxes[:, :, 1::2].clamp(min=0, max=1.0)
+
         labels = torch.Tensor([i for i in range(configer.get('data', 'num_classes'))]).to(boxes.device)
         labels = labels.view(1, 1, -1, 1).repeat(batch_size, num_priors, 1, 1).contiguous().view(batch_size, -1, 1)
         max_conf = conf.contiguous().view(batch_size, -1, 1)

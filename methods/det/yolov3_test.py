@@ -64,7 +64,7 @@ class YOLOv3Test(object):
             _, detections = self.det_net(inputs)
 
         batch_detections = self.decode(detections, self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)[0]
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -95,14 +95,17 @@ class YOLOv3Test(object):
         box_corner[:, :, 2] = batch_pred_bboxes[:, :, 0] + batch_pred_bboxes[:, :, 2] / 2
         box_corner[:, :, 3] = batch_pred_bboxes[:, :, 1] + batch_pred_bboxes[:, :, 3] / 2
         batch_pred_bboxes[:, :, :4] = box_corner[:, :, :4]
+        # clip bounding box
+        batch_pred_bboxes[:, :, 0::2] = batch_pred_bboxes[:, :, 0::2].clamp(min=0, max=1.0)
+        batch_pred_bboxes[:, :, 1::2] = batch_pred_bboxes[:, :, 1::2].clamp(min=0, max=1.0)
 
         output = [None for _ in range(len(batch_pred_bboxes))]
         for image_i, image_pred in enumerate(batch_pred_bboxes):
             # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] > configer.get('vis', 'obj_threshold')).squeeze()
+            conf_mask = (image_pred[:, 4] > configer.get('vis', 'conf_threshold')).squeeze()
             image_pred = image_pred[conf_mask]
             # If none are remaining => process next image
-            if not image_pred.size(0):
+            if image_pred.numel() == 0:
                 continue
 
             # Get score and class with highest confidence

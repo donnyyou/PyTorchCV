@@ -179,6 +179,6 @@
       "max_threshold": 0.4
     },
     "vis": {
-      "obj_threshold": 0.2
+      "conf_threshold": 0.2
     }
 }
