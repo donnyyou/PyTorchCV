@@ -66,7 +66,7 @@ class FastRCNNTest(object):
             inputs = inputs.unsqueeze(0).to(self.device)
             # Forward pass.
             feat = self.det_net.extractor(inputs)
-            rpn_locs, rpn_scores = self.det_net.rpn(inputs)
+            rpn_locs, rpn_scores = self.det_net.rpn(feat)
 
             test_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
                                                           self.configer.get('rpn', 'n_test_pre_nms'),
@@ -158,10 +158,10 @@ class FastRCNNTest(object):
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = x1.cpu().item()
-                ymin = y1.cpu().item()
-                xmax = x2.cpu().item()
-                ymax = y2.cpu().item()
+                xmin = x1.cpu().item() / self.configer.get('data', 'input_size')[0] * width
+                ymin = y1.cpu().item() / self.configer.get('data', 'input_size')[1] * height
+                xmax = x2.cpu().item() / self.configer.get('data', 'input_size')[0] * width
+                ymax = y2.cpu().item() / self.configer.get('data', 'input_size')[1] * height
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item()) - 1
                 object_dict['score'] = float('%.2f' % conf.cpu().item())

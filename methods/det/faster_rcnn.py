@@ -210,26 +210,25 @@ class FasterRCNN(object):
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
                 'Loss {loss.avg:.8f}\n'.format(
                     batch_time=self.batch_time, loss=self.val_losses))
-            Log.info('Val mAP: {}'.format(self.det_running_score.get_mAP()))
+            Log.info('Val mAP: {}\n'.format(self.det_running_score.get_mAP()))
             self.det_running_score.reset()
             self.batch_time.reset()
             self.val_losses.reset()
             self.module_utilizer.set_status(self.det_net, status='train')
 
     def __get_object_list(self, batch_detections):
-        width, height = self.configer.get('data', 'input_size')
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_pred in detections:
-                    xmin = x1.cpu().item() / width
-                    ymin = y1.cpu().item() / height
-                    xmax = x2.cpu().item() / width
-                    ymax = y2.cpu().item() / height
+                    xmin = x1.cpu().item()
+                    ymin = y1.cpu().item()
+                    xmax = x2.cpu().item()
+                    ymax = y2.cpu().item()
                     cf = conf.cpu().item()
-                    cls_pred = cls_pred.cpu().item()
-                    object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])
+                    cls_pred = int(cls_pred.cpu().item()) - 1
+                    object_list.append([xmin, ymin, xmax, ymax, cls_pred, float('%.2f' % cf)])
 
             batch_pred_bboxes.append(object_list)
 

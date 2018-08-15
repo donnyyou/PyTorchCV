@@ -198,10 +198,10 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.3
+      "overlap_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.02
+      "conf_threshold": 0.2
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

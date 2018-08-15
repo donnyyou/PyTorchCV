@@ -141,5 +141,5 @@ class FRRoiGenerator(object):
 
         rois = torch.cat(rois_list, 0)
         roi_indices = torch.cat(roi_indices_list, 0)
-        indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1).contiguous()
+        indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
         return indices_and_rois
