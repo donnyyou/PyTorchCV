@@ -181,7 +181,7 @@
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 1000,
+      "test_interval": 3000,
       "max_epoch": 100
     },
     "optim": {
