@@ -18,6 +18,7 @@ from datasets.seg_data_loader import SegDataLoader
 from datasets.tools.seg_transforms import Scale
 from datasets.tools.transforms import ToTensor, Normalize, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.seg_model_manager import SegModelManager
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
@@ -29,7 +30,7 @@ from vis.visualizer.seg_visualizer import SegVisualizer
 class FCNSegmentorTest(object):
     def __init__(self, configer):
         self.configer = configer
-
+        self.blob_helper = BlobHelper(configer)
         self.seg_visualizer = SegVisualizer(configer)
         self.seg_parser = SegParser(configer)
         self.seg_model_manager = SegModelManager(configer)
@@ -229,11 +230,7 @@ class FCNSegmentorTest(object):
                 if count > 20:
                     exit(1)
 
-                ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                      std=self.configer.get('trans_params', 'std'))(inputs[j])
-                ori_img = ori_img.numpy().transpose(1, 2, 0).astype(np.uint8)
-
-                image_bgr = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+                image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 label_map = targets[j].numpy()
                 image_canvas = self.seg_parser.colorize(label_map, image_canvas=image_bgr)
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)

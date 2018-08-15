@@ -4,8 +4,11 @@
 # Generate the inputs.
 
 
+import cv2
+import numpy as np
 from PIL import Image
 
+from datasets.tools.transforms import DeNormalize
 from datasets.tools.transforms import Scale
 from utils.helpers.image_helper import ImageHelper
 
@@ -40,5 +43,15 @@ class BlobHelper(object):
 
         return image
 
-    def make_crop_inputs(self):
-        pass
+    def tensor2bgr(self, tensor):
+        assert len(tensor.size()) == 3
+
+        ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
+                              std=self.configer.get('trans_params', 'std'))(tensor.cpu())
+        ori_img = ori_img.numpy().transpose(1, 2, 0).astype(np.uint8)
+
+        if self.configer.get('data', 'input_mode') == 'BGR':
+            return ori_img
+        else:
+            image_bgr = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+            return image_bgr
