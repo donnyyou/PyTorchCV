@@ -43,27 +43,27 @@ class RandomPad(object):
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         height, width, channels = img.shape
-        pad_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
-        pad_ratio = pad_ratio - 1.0
+        expand_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+        pad_ratio = expand_ratio - 1.0
         pad_width = int(pad_ratio * width)
         pad_height = int(pad_ratio * height)
 
         left_pad = random.randint(0, pad_width)  # pad_left
         up_pad = random.randint(0, pad_height)  # pad_up
 
-        expand_image = np.zeros((int(height * pad_ratio), int(width * pad_ratio), channels), dtype=img.dtype)
+        expand_image = np.zeros((int(height * expand_ratio), int(width * expand_ratio), channels), dtype=img.dtype)
         expand_image[:, :, :] = self.mean
         expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = img
         img = expand_image
 
         if labelmap is not None:
-            expand_labelmap = np.zeros((int(height * pad_ratio), int(width * pad_ratio)), dtype=labelmap.dtype)
+            expand_labelmap = np.zeros((int(height * expand_ratio), int(width * expand_ratio)), dtype=labelmap.dtype)
             expand_labelmap[:, :] = 255
             expand_labelmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = labelmap
             labelmap = expand_labelmap
 
         if maskmap is not None:
-            expand_maskmap = np.zeros((int(height * pad_ratio), int(width * pad_ratio)), dtype=maskmap.dtype)
+            expand_maskmap = np.zeros((int(height * expand_ratio), int(width * expand_ratio)), dtype=maskmap.dtype)
             expand_maskmap[:, :] = 1
             expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = maskmap
             maskmap = expand_maskmap
@@ -169,7 +169,7 @@ class RandomHFlip(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
-        width, height = img.size
+        height, width, _ = img.shape
         img = cv2.flip(img, 1)
         if labelmap is not None:
             labelmap = cv2.flip(labelmap, 1)
@@ -304,7 +304,8 @@ class RandomBrightness(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels
 
-        shift = np.random.uniform(-self.shift_value, self.shift_value, size=1)
+        img = img.astype(np.float32)
+        shift = random.randint(-self.shift_value, self.shift_value)
         img[:, :, :] += shift
         img = np.around(img)
         img = np.clip(img, 0, 255).astype(np.uint8)
@@ -514,9 +515,9 @@ class RandomCrop(object):
             return max_center, -1
 
         elif bboxes is None or len(bboxes) == 0 or self.method == 'random':
-            x = random.randint(min(self.size[0] // 2, img_size[0] // 2 - 1),
+            x = random.randint(min(self.size[0] // 2, img_size[0] // 2),
                                max(img_size[0] - self.size[0] // 2, img_size[0] // 2))
-            y = random.randint(min(self.size[1] // 2, img_size[1] // 2 - 1),
+            y = random.randint(min(self.size[1] // 2, img_size[1] // 2),
                                max(img_size[1] - self.size[1] // 2, img_size[1] // 2))
             return [x, y], -1
 
@@ -786,7 +787,7 @@ class Resize(object):
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
-        width, height = img.size
+        height, width, _ = img.shape
         target_width, target_height = self.configer.get('data', 'input_size')
 
         w_scale_ratio = target_width / width
