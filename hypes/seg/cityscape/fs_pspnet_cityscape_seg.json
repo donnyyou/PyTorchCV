@@ -7,7 +7,7 @@
       "val_batch_size": 8,
       "train_input_size": [864, 864],
       "val_input_size": [2048, 1024],
-      "image_tool": "pil",
+      "image_tool": "cv2",
       "input_mode": "RGB",
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
@@ -30,8 +30,8 @@
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
+      "trans_seq": ["random_pad", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "resize"]
     },
     "val_trans": {
       "pad_ratio":0.0,
@@ -42,8 +42,8 @@
       "resize_ratio": 0.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
-      "trans_seq": ["random_pad", "random_hsv", "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "random_brightness", "random_gauss_blur", "resize"]
+      "trans_seq": ["random_pad", "random_hflip", "random_resize", "random_rotate",
+                    "random_crop", "random_brightness", "resize"]
     },
     "trans_params": {
       "random_shift":{
