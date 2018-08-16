@@ -31,10 +31,7 @@ class BlobHelper(object):
                                            mode=self.configer.get('data', 'input_mode'))
 
         if self.configer.is_empty('test', 'test_input_size'):
-            if self.configer.get('data', 'image_tool') == 'cv2':
-                in_height, in_width, _ = image.shape
-            else:
-                in_width, in_height = image.size
+            in_width, in_height = ImageHelper.get_size(image)
         else:
             in_width, in_height = self.configer.get('test', 'test_input_size')
 
@@ -58,10 +55,7 @@ class BlobHelper(object):
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
 
         if self.configer.is_empty('test', 'test_input_size'):
-            if self.configer.get('data', 'image_tool') == 'cv2':
-                in_height, in_width, _ = image.shape
-            else:
-                in_width, in_height = image.size
+            in_width, in_height = ImageHelper.get_size(image)
         else:
             in_width, in_height = self.configer.get('test', 'test_input_size')
 
