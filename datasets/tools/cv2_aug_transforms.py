@@ -495,11 +495,10 @@ class RandomCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, center_jitter=None):
+    def __init__(self, crop_size, crop_ratio=0.5, method='random', grid=None):
         self.ratio = crop_ratio
         self.method = method
         self.grid = grid
-        self.center_jitter = center_jitter
 
         if isinstance(crop_size, float):
             self.size = (crop_size, crop_size)
@@ -509,34 +508,23 @@ class RandomCrop(object):
             raise TypeError('Got inappropriate size arg: {}'.format(crop_size))
 
     def get_center(self, img_size, bboxes):
-        max_center = [img_size[0] / 2, img_size[1] / 2]
+        max_center = [img_size[0] // 2, img_size[1] // 2]
 
         if self.method == 'center':
             return max_center, -1
 
         elif bboxes is None or len(bboxes) == 0 or self.method == 'random':
-            x = random.randint(min(self.size[0] // 2, img_size[0] // 2),
-                               max(img_size[0] - self.size[0] // 2, img_size[0] // 2))
-            y = random.randint(min(self.size[1] // 2, img_size[1] // 2),
-                               max(img_size[1] - self.size[1] // 2, img_size[1] // 2))
+            if img_size[0] > self.size[0]:
+                x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
+            else:
+                x = img_size[0] // 2
+
+            if img_size[1] > self.size[1]:
+                y = random.randint(self.size[1] // 2, img_size[1] - self.size[1] // 2)
+            else:
+                y = img_size[1] // 2
+
             return [x, y], -1
-
-        elif self.method == 'focus':
-            max_index = 0
-            bboxes = np.array(bboxes)
-            border = bboxes[:, 2:] - bboxes[:, 0:2]
-            for i in range(len(border)):
-                if border[i][0] * border[i][1] >= border[max_index][0] * border[max_index][1]:
-                    max_index = i
-                    max_center = [(bboxes[i][0] + bboxes[i][2]) / 2, (bboxes[i][1] + bboxes[i][3]) / 2]
-
-            if self.center_jitter is not None:
-                jitter = random.randint(-self.center_jitter, self.center_jitter)
-                max_center[0] += jitter
-                jitter = random.randint(-self.center_jitter, self.center_jitter)
-                max_center[1] += jitter
-
-            return max_center, max_index
 
         elif self.method == 'grid':
             grid_x = random.randint(0, self.grid[0] - 1)
@@ -579,13 +567,125 @@ class RandomCrop(object):
             return img, labelmap, maskmap, kpts, bboxes, labels
 
         height, width, _ = img.shape
-        self.size = (min(self.size[0], width), min(self.size[1], height))
+        target_size = [min(self.size[0], width), min(self.size[1], height)]
 
         center, index = self.get_center([width, height], bboxes)
 
         # img = ImageHelper.draw_box(img, bboxes[index])
-        offset_left = int(center[0] - self.size[0] / 2)
-        offset_up = int(center[1] - self.size[1] / 2)
+        offset_left = center[0] - target_size[0] // 2
+        offset_up = center[1] - target_size[1] // 2
+
+        if kpts is not None and len(kpts) > 0:
+            num_objects = len(kpts)
+            num_keypoints = len(kpts[0])
+
+            for i in range(num_objects):
+                for j in range(num_keypoints):
+                    kpts[i][j][0] -= offset_left
+                    kpts[i][j][1] -= offset_up
+
+        if bboxes is not None and len(bboxes) > 0:
+            for i in range(len(bboxes)):
+                bboxes[i][0] -= offset_left
+                bboxes[i][1] -= offset_up
+                bboxes[i][2] -= offset_left
+                bboxes[i][3] -= offset_up
+                bboxes[i][0] = min(max(0, bboxes[i][0]), target_size[0] - 1)
+                bboxes[i][1] = min(max(0, bboxes[i][1]), target_size[1] - 1)
+                bboxes[i][2] = min(max(0, bboxes[i][2]), target_size[0] - 1)
+                bboxes[i][3] = min(max(0, bboxes[i][3]), target_size[1] - 1)
+
+        img = img[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
+
+        if maskmap is not None:
+            maskmap = maskmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
+
+        if labelmap is not None:
+            labelmap = labelmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
+
+        return img, labelmap, maskmap, kpts, bboxes, labels
+
+
+class RandomFocusCrop(object):
+    """Crop the given numpy.ndarray and  at a random location.
+
+    Args:
+        size (int or tuple): Desired output size of the crop.(w, h)
+    """
+
+    def __init__(self, crop_size, crop_ratio=0.5, center_jitter=None, mean=(104, 117, 123)):
+        self.ratio = crop_ratio
+        self.center_jitter = center_jitter
+        self.mean = mean
+
+        if isinstance(crop_size, float):
+            self.size = (crop_size, crop_size)
+        elif isinstance(crop_size, collections.Iterable) and len(crop_size) == 2:
+            self.size = crop_size
+        else:
+            raise TypeError('Got inappropriate size arg: {}'.format(crop_size))
+
+    def get_center(self, img_size, bboxes):
+        max_center = [img_size[0] // 2, img_size[1] // 2]
+
+        if bboxes is None or len(bboxes) == 0:
+            if img_size[0] > self.size[0]:
+                x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
+            else:
+                x = img_size[0] // 2
+
+            if img_size[1] > self.size[1]:
+                y = random.randint(self.size[1] // 2, img_size[1] - self.size[1] // 2)
+            else:
+                y = img_size[1] // 2
+
+            return [x, y], -1
+
+        else:
+            max_index = 0
+            bboxes = np.array(bboxes)
+            border = bboxes[:, 2:] - bboxes[:, 0:2]
+            for i in range(len(border)):
+                if border[i][0] * border[i][1] >= border[max_index][0] * border[max_index][1]:
+                    max_index = i
+                    max_center = [(bboxes[i][0] + bboxes[i][2]) / 2, (bboxes[i][1] + bboxes[i][3]) / 2]
+
+            if self.center_jitter is not None:
+                jitter = random.randint(-self.center_jitter, self.center_jitter)
+                max_center[0] += jitter
+                jitter = random.randint(-self.center_jitter, self.center_jitter)
+                max_center[1] += jitter
+
+            return max_center, max_index
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+        """
+        Args:
+            img (Image):   Image to be cropped.
+            maskmap (Image):  Mask to be cropped.
+            kpts (list):    keypoints to be cropped.
+            bboxes (list): bounding boxes.
+
+        Returns:
+            Image:  Cropped image.
+            Image:  Cropped maskmap.
+            list:   Cropped keypoints.
+            list:   Cropped center points.
+        """
+        assert isinstance(img, np.ndarray)
+        assert labelmap is None or isinstance(labelmap, np.ndarray)
+        assert maskmap is None or isinstance(maskmap, np.ndarray)
+
+        if random.random() > self.ratio:
+            return img, labelmap, maskmap, kpts, bboxes, labels
+
+        height, width, channels = img.shape
+
+        center, index = self.get_center([width, height], bboxes)
+
+        # img = ImageHelper.draw_box(img, bboxes[index])
+        offset_left = int(center[0] - self.size[0] // 2)
+        offset_up = int(center[1] - self.size[1] // 2)
 
         if kpts is not None and len(kpts) > 0:
             num_objects = len(kpts)
@@ -607,13 +707,31 @@ class RandomCrop(object):
                 bboxes[i][2] = min(max(0, bboxes[i][2]), self.size[0] - 1)
                 bboxes[i][3] = min(max(0, bboxes[i][3]), self.size[1] - 1)
 
-        img = img[offset_up:offset_up+self.size[1], offset_left:offset_left+self.size[0]]
+        expand_image = np.zeros((max(height, self.size[1]) + abs(offset_up),
+                                 max(width, self.size[0]) + abs(offset_left), channels), dtype=img.dtype)
+        expand_image[:, :, :] = self.mean
+        expand_image[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+                     abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = img
+        img = expand_image[max(offset_up, 0):max(offset_up, 0) + self.size[1],
+                           max(offset_left, 0):max(offset_left, 0) + self.size[0]]
 
         if maskmap is not None:
-            maskmap = maskmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
+            expand_maskmap = np.zeros((max(height, self.size[1]) + abs(offset_up),
+                                       max(width, self.size[0]) + abs(offset_left)), dtype=maskmap.dtype)
+            expand_maskmap[:, :, :] = 1
+            expand_maskmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+                           abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = maskmap
+            maskmap = expand_maskmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
+                                     max(offset_left, 0):max(offset_left, 0) + self.size[0]]
 
         if labelmap is not None:
-            labelmap = labelmap[offset_up:offset_up + self.size[1], offset_left:offset_left + self.size[0]]
+            expand_labelmap = np.zeros((max(height, self.size[1]) + abs(offset_up),
+                                        max(width, self.size[0]) + abs(offset_left)), dtype=labelmap.dtype)
+            expand_labelmap[:, :, :] = 255
+            expand_labelmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+                            abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = labelmap
+            labelmap = expand_labelmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
+                                       max(offset_left, 0):max(offset_left, 0) + self.size[0]]
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -940,24 +1058,50 @@ class CV2AugCompose(object):
                 )
 
             if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['random_crop'] = RandomCrop(
-                    crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
-                    method=self.configer.get('trans_params', 'random_crop')['method'],
-                    grid=self.configer.get('trans_params', 'random_crop')['grid'],
-                    center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
-                    crop_ratio=self.configer.get('train_trans', 'crop_ratio')
-                )
+                if self.configer.get('trans_params', 'random_crop')['method'] == 'random':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'center':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'grid':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        grid=self.configer.get('trans_params', 'random_grid_crop')['grid'],
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'focus':
+                    self.transforms['random_crop'] = RandomFocusCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
+                        mean=self.configer.get('trans_params', 'mean_value')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'det':
+                    self.transforms['random_crop'] = RandomDetCrop(
+                        det_crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                    )
+
+                else:
+                    Log.error('Not Support Crop Method!')
+                    exit(1)
 
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('train_trans', 'rotate_ratio'),
                     mean=self.configer.get('trans_params', 'mean_value')
-                )
-
-            if 'random_det_crop' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['random_det_crop'] = RandomDetCrop(
-                    det_crop_ratio=self.configer.get('train_trans', 'det_crop_ratio')
                 )
 
             if 'resize' in self.configer.get('train_trans', 'trans_seq'):
@@ -1023,25 +1167,51 @@ class CV2AugCompose(object):
                     resize_ratio=self.configer.get('val_trans', 'resize_ratio')
                 )
 
-            if 'random_crop' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_crop'] = RandomCrop(
-                    crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
-                    method=self.configer.get('trans_params', 'random_crop')['method'],
-                    grid=self.configer.get('trans_params', 'random_crop')['grid'],
-                    center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
-                    crop_ratio=self.configer.get('val_trans', 'crop_ratio')
-                )
+            if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
+                if self.configer.get('trans_params', 'random_crop')['method'] == 'random':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'center':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'grid':
+                    self.transforms['random_crop'] = RandomCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        method=self.configer.get('trans_params', 'random_crop')['method'],
+                        grid=self.configer.get('trans_params', 'random_grid_crop')['grid'],
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'focus':
+                    self.transforms['random_crop'] = RandomFocusCrop(
+                        crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
+                        center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
+                        mean=self.configer.get('trans_params', 'mean_value')
+                    )
+
+                elif self.configer.get('trans_params', 'random_crop')['method'] == 'det':
+                    self.transforms['random_crop'] = RandomDetCrop(
+                        det_crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                    )
+
+                else:
+                    Log.error('Not Support Crop Method!')
+                    exit(1)
 
             if 'random_rotate' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('val_trans', 'rotate_ratio'),
                     mean=self.configer.get('trans_params', 'mean_value')
-                )
-
-            if 'random_det_crop' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_det_crop'] = RandomDetCrop(
-                    det_crop_ratio=self.configer.get('val_trans', 'det_crop_ratio')
                 )
 
             if 'resize' in self.configer.get('val_trans', 'trans_seq'):
