@@ -9,9 +9,6 @@ from __future__ import print_function
 
 import numpy as np
 import torch
-from PIL import Image
-
-from datasets.tools.transforms import Scale
 
 
 class ToLabel(object):
@@ -32,42 +29,3 @@ class ReLabel(object):
 
         inputs[inputs == self.olabel] = self.nlabel
         return inputs
-
-
-class ToSP(object):
-    def __init__(self, size):
-        self.scale2 = Scale(size/2, Image.NEAREST)
-        self.scale4 = Scale(size/4, Image.NEAREST)
-        self.scale8 = Scale(size/8, Image.NEAREST)
-        self.scale16 = Scale(size/16, Image.NEAREST)
-        self.scale32 = Scale(size/32, Image.NEAREST)
-
-    def __call__(self, input):
-        input2 = self.scale2(input)
-        input4 = self.scale4(input)
-        input8 = self.scale8(input)
-        input16 = self.scale16(input)
-        input32 = self.scale32(input)
-        inputs = [input, input2, input4, input8, input16, input32]
-        # inputs = input
-
-        return inputs
-
-
-class Colorize(object):
-    def __init__(self, color_list=None):
-        self.cmap = color_list(22)
-        self.cmap = torch.from_numpy(self.cmap[:n])
-
-    def __call__(self, gray_image):
-        size = gray_image.size()
-        # print size
-        color_image = torch.ByteTensor(3, size[1], size[2]).fill_(0)
-
-        for label in range(0, len(self.cmap)):
-            mask = (label == gray_image[0]).cpu()
-            color_image[0][mask] = self.cmap[label][0]
-            color_image[1][mask] = self.cmap[label][1]
-            color_image[2][mask] = self.cmap[label][2]
-
-        return color_image
