@@ -19,6 +19,7 @@ from datasets.pose_data_loader import PoseDataLoader
 from datasets.tools.pose_transforms import PadImage
 from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.pose_model_manager import PoseModelManager
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
@@ -29,6 +30,7 @@ from vis.visualizer.pose_visualizer import PoseVisualizer
 class ConvPoseMachineTest(object):
     def __init__(self, configer):
         self.configer = configer
+        self.blob_helper = BlobHelper(configer)
         self.pose_vis = PoseVisualizer(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
@@ -44,7 +46,9 @@ class ConvPoseMachineTest(object):
         self.module_utilizer.set_status(self.pose_net, status='test')
 
     def __test_img(self, image_path, save_path):
-        image_raw = ImageHelper.cv2_open_bgr(image_path)
+        image_raw = ImageHelper.read_image(image_path,
+                                           tool=self.configer.get('data', 'image_tool'),
+                                           mode=self.configer.get('data', 'input_mode'))
         inputs = ImageHelper.bgr2rgb(image_raw)
         heatmap_avg = self.__get_heatmap(inputs)
         all_peaks = self.__extract_heatmap_info(heatmap_avg)
@@ -130,15 +134,12 @@ class ConvPoseMachineTest(object):
 
         for i, (inputs, heatmap) in enumerate(val_data_loader):
             for j in range(inputs.size(0)):
-                ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                      std=self.configer.get('trans_params', 'std'))(inputs[j])
-                image_raw = ori_img.numpy().transpose(1, 2, 0)
-                image_raw = cv2.cvtColor(image_raw, cv2.COLOR_RGB2BGR)
+                image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 heatmap_avg = heatmap[j].numpy().transpose(1, 2, 0)
                 heatmap_avg = cv2.resize(heatmap_avg, (0, 0), fx=self.configer.get('network', 'stride'),
                                      fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
                 all_peaks = self.__extract_heatmap_info(heatmap_avg)
-                image_save = self.__draw_key_point(all_peaks, image_raw)
+                image_save = self.__draw_key_point(all_peaks, image_bgr)
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_result.jpg'.format(i, j)), image_save)
 
     def test(self):

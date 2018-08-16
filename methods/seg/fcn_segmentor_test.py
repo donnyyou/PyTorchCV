@@ -181,35 +181,24 @@ class FCNSegmentorTest(object):
             label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
             raw_path = os.path.join(base_dir, 'raw', filename)
             vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            if not os.path.exists(os.path.dirname(label_path)):
-                os.makedirs(os.path.dirname(label_path))
-
-            if not os.path.exists(os.path.dirname(raw_path)):
-                os.makedirs(os.path.dirname(raw_path))
-
-            if not os.path.exists(os.path.dirname(vis_path)):
-                os.makedirs(os.path.dirname(vis_path))
+            FileHelper.make_dirs(label_path, is_file=True)
+            FileHelper.make_dirs(raw_path, is_file=True)
+            FileHelper.make_dirs(vis_path, is_file=True)
 
             self.__test_img(test_img, label_path, vis_path, raw_path)
 
         else:
             base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            if not os.path.exists(base_dir):
-                os.makedirs(base_dir)
+            FileHelper.make_dirs(base_dir)
 
             for filename in FileHelper.list_dir(test_dir):
                 image_path = os.path.join(test_dir, filename)
                 label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
                 vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                if not os.path.exists(os.path.dirname(label_path)):
-                    os.makedirs(os.path.dirname(label_path))
-
-                if not os.path.exists(os.path.dirname(raw_path)):
-                    os.makedirs(os.path.dirname(raw_path))
-
-                if not os.path.exists(os.path.dirname(vis_path)):
-                    os.makedirs(os.path.dirname(vis_path))
+                FileHelper.make_dirs(label_path, is_file=True)
+                FileHelper.make_dirs(raw_path, is_file=True)
+                FileHelper.make_dirs(vis_path, is_file=True)
 
                 self.__test_img(image_path, label_path, vis_path, raw_path)
 

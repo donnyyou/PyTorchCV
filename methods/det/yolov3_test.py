@@ -18,6 +18,7 @@ from datasets.det_data_loader import DetDataLoader
 from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
 from utils.helpers.image_helper import ImageHelper
@@ -32,7 +33,7 @@ from vis.visualizer.det_visualizer import DetVisualizer
 class YOLOv3Test(object):
     def __init__(self, configer):
         self.configer = configer
-
+        self.blob_helper = BlobHelper(configer)
         self.det_visualizer = DetVisualizer(configer)
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
@@ -164,14 +165,9 @@ class YOLOv3Test(object):
             json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
             raw_path = os.path.join(base_dir, 'raw', filename)
             vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            if not os.path.exists(os.path.dirname(json_path)):
-                os.makedirs(os.path.dirname(json_path))
-
-            if not os.path.exists(os.path.dirname(raw_path)):
-                os.makedirs(os.path.dirname(raw_path))
-
-            if not os.path.exists(os.path.dirname(vis_path)):
-                os.makedirs(os.path.dirname(vis_path))
+            FileHelper.make_dirs(json_path, is_file=True)
+            FileHelper.make_dirs(raw_path, is_file=True)
+            FileHelper.make_dirs(vis_path, is_file=True)
 
             self.__test_img(test_img, json_path, raw_path, vis_path)
 
@@ -185,14 +181,9 @@ class YOLOv3Test(object):
                 json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
                 vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                if not os.path.exists(os.path.dirname(json_path)):
-                    os.makedirs(os.path.dirname(json_path))
-
-                if not os.path.exists(os.path.dirname(raw_path)):
-                    os.makedirs(os.path.dirname(raw_path))
-
-                if not os.path.exists(os.path.dirname(vis_path)):
-                    os.makedirs(os.path.dirname(vis_path))
+                FileHelper.make_dirs(json_path, is_file=True)
+                FileHelper.make_dirs(raw_path, is_file=True)
+                FileHelper.make_dirs(vis_path, is_file=True)
 
                 self.__test_img(image_path, json_path, raw_path, vis_path)
 
@@ -232,12 +223,9 @@ class YOLOv3Test(object):
                 if count > 20:
                     exit(1)
 
-                ori_img_rgb = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                          std=self.configer.get('trans_params', 'std'))(inputs[j])
-                ori_img_rgb = ori_img_rgb.numpy().transpose(1, 2, 0).astype(np.uint8)
-                ori_img_bgr = cv2.cvtColor(ori_img_rgb, cv2.COLOR_RGB2BGR)
+                ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
-                json_dict = self.__get_info_tree(batch_detections[j], ori_img_rgb)
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
 
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,

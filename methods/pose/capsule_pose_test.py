@@ -22,6 +22,7 @@ from datasets.pose_data_loader import PoseDataLoader
 from datasets.tools.pose_transforms import PadImage
 from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.pose_model_manager import PoseModelManager
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
@@ -33,7 +34,7 @@ from vis.visualizer.pose_visualizer import PoseVisualizer
 class CapsulePoseTest(object):
     def __init__(self, configer):
         self.configer = configer
-
+        self.blob_helper = BlobHelper(configer)
         self.pose_visualizer = PoseVisualizer(configer)
         self.pose_parser = PoseParser(configer)
         self.pose_model_manager = PoseModelManager(configer)
@@ -337,35 +338,24 @@ class CapsulePoseTest(object):
             json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
             raw_path = os.path.join(base_dir, 'raw', filename)
             vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            if not os.path.exists(os.path.dirname(json_path)):
-                os.makedirs(os.path.dirname(json_path))
-
-            if not os.path.exists(os.path.dirname(raw_path)):
-                os.makedirs(os.path.dirname(raw_path))
-
-            if not os.path.exists(os.path.dirname(vis_path)):
-                os.makedirs(os.path.dirname(vis_path))
+            FileHelper.make_dirs(json_path, is_file=True)
+            FileHelper.make_dirs(raw_path, is_file=True)
+            FileHelper.make_dirs(vis_path, is_file=True)
 
             self.__test_img(test_img, json_path, raw_path, vis_path)
 
         else:
             base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            if not os.path.exists(base_dir):
-                os.makedirs(base_dir)
+            FileHelper.make_dirs(base_dir)
 
             for filename in FileHelper.list_dir(test_dir):
                 image_path = os.path.join(test_dir, filename)
                 json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
                 vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                if not os.path.exists(os.path.dirname(json_path)):
-                    os.makedirs(os.path.dirname(json_path))
-
-                if not os.path.exists(os.path.dirname(raw_path)):
-                    os.makedirs(os.path.dirname(raw_path))
-
-                if not os.path.exists(os.path.dirname(vis_path)):
-                    os.makedirs(os.path.dirname(vis_path))
+                FileHelper.make_dirs(json_path, is_file=True)
+                FileHelper.make_dirs(raw_path, is_file=True)
+                FileHelper.make_dirs(vis_path, is_file=True)
 
                 self.__test_img(image_path, json_path, raw_path, vis_path)
 
@@ -387,10 +377,7 @@ class CapsulePoseTest(object):
                     exit(1)
 
                 Log.info(partmap.size())
-                ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                      std=self.configer.get('trans_params', 'std'))(inputs[j])
-                ori_img = ori_img.numpy().transpose(1, 2, 0).astype(np.uint8)
-                image_bgr = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+                image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 partmap_avg = partmap[j].numpy().transpose(1, 2, 0)
 
                 heatmap_avg = np.zeros(
