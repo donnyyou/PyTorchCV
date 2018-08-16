@@ -1128,7 +1128,7 @@ class PILAugCompose(object):
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        grid=self.configer.get('trans_params', 'random_grid_crop')['grid'],
+                        grid=self.configer.get('trans_params', 'random_crop')['grid'],
                         crop_ratio=self.configer.get('train_trans', 'crop_ratio')
                     )
 
@@ -1252,7 +1252,7 @@ class PILAugCompose(object):
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        grid=self.configer.get('trans_params', 'random_grid_crop')['grid'],
+                        grid=self.configer.get('trans_params', 'random_crop')['grid'],
                         crop_ratio=self.configer.get('val_trans', 'crop_ratio')
                     )
 
