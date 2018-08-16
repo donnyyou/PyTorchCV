@@ -104,6 +104,19 @@ class ImageHelper(object):
         return np.array(img)
 
     @staticmethod
+    def get_size(img):
+        if isinstance(img, Image.Image):
+            return img.size
+
+        elif isinstance(img, np.ndarray):
+            height, width, _ = img.shape
+            return [width, height]
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
     def resize(img, target_size, interpolation=1):
         assert isinstance(target_size, (list, tuple))
 

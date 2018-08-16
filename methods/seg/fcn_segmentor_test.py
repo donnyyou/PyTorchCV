@@ -15,7 +15,6 @@ import torch
 from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
-from datasets.tools.seg_transforms import Scale
 from datasets.tools.transforms import ToTensor, Normalize, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
@@ -47,20 +46,18 @@ class FCNSegmentorTest(object):
         self.module_utilizer.set_status(self.seg_net, status='test')
 
     def __test_img(self, image_path, label_path, vis_path, raw_path):
-        ori_image = ImageHelper.pil_read_image(image_path)
-        ori_width, ori_height = ori_image.size
-        if self.configer.is_empty('test', 'test_input_size'):
-            in_width, in_height = ori_image.size
-        else:
-            in_width, in_height = self.configer.get('test', 'test_input_size')
+        ori_image = ImageHelper.read_image(image_path,
+                                           tool=self.configer.get('data', 'image_tool'),
+                                           mode=self.configer.get('data', 'input_mode'))
+
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
 
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
         for scale in self.configer.get('test', 'scale_search'):
-            image = Scale(size=(int(in_width * scale), int(in_height * scale)))(ori_image)
-
+            image = self.blob_helper.make_input(image=ori_image, scale=scale)
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
-                if in_width > crop_size[0] and in_height > crop_size[1]:
+                if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
                     results = self._crop_predict(image, crop_size)
                 else:
                     results = self._predict(image)
@@ -71,11 +68,10 @@ class FCNSegmentorTest(object):
             total_logits += results
 
         if self.configer.get('test', 'mirror'):
-            image = Scale(size=(in_width, in_height))(ori_image)
-            image = image.transpose(Image.FLIP_LEFT_RIGHT)
+            image = self.blob_helper.make_mirror_input(image=ori_image)
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
-                if in_width > crop_size[0] and in_height > crop_size[1]:
+                if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
                     results = self._crop_predict(image, crop_size)
                 else:
                     results = self._predict(image)
@@ -99,11 +95,8 @@ class FCNSegmentorTest(object):
         label_img.save(label_path)
 
     def _crop_predict(self, image, crop_size):
-        width, height = image.size
-        image = ToTensor()(image)
-        image = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                          std=self.configer.get('trans_params', 'std'))(image)
-        np_image = image.permute(1, 2, 0).cpu().numpy()
+        height, width = image.size()[2:]
+        np_image = image.squeeze(0).permute(1, 2, 0).cpu().numpy()
         height_starts = self._decide_intersection(height, crop_size[1])
         width_starts = self._decide_intersection(width, crop_size[0])
         split_crops = []
