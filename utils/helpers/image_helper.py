@@ -156,11 +156,11 @@ class ImageHelper(object):
 
         if isinstance(img, Image.Image):
             img = ImageHelper.img2np(img)
-            target_img = cv2.resize(img, target_size, interpolation)
+            target_img = cv2.resize(img, target_size, interpolation=interpolation)
             return ImageHelper.np2img(target_img)
 
         elif isinstance(img, np.ndarray):
-            return cv2.resize(img, target_size, interpolation)
+            return cv2.resize(img, target_size, interpolation=interpolation)
 
         else:
             Log.error('Image type is invalid.')

@@ -389,11 +389,12 @@ class RandomResize(object):
 
         converted_size = (int(width * scale_ratio), int(height * scale_ratio))
 
-        img = cv2.resize(img, converted_size, cv2.INTER_CUBIC).astype(np.uint8)
+        img = cv2.resize(img, converted_size, interpolation=cv2.INTER_CUBIC).astype(np.uint8)
         if labelmap is not None:
-            labelmap = cv2.resize(labelmap, converted_size, cv2.INTER_NEAREST)
+            labelmap = cv2.resize(labelmap, converted_size, interpolation=cv2.INTER_NEAREST)
+
         if maskmap is not None:
-            maskmap = cv2.resize(maskmap, converted_size, cv2.INTER_NEAREST)
+            maskmap = cv2.resize(maskmap, converted_size, interpolation=cv2.INTER_NEAREST)
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -931,12 +932,12 @@ class Resize(object):
                 bboxes[i][3] *= h_scale_ratio
 
         scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
-        img = cv2.resize(img, scaled_size, cv2.INTER_CUBIC)
+        img = cv2.resize(img, scaled_size, interpolation=cv2.INTER_CUBIC)
         if labelmap is not None:
-            labelmap = cv2.resize(labelmap, scaled_size, cv2.INTER_NEAREST)
+            labelmap = cv2.resize(labelmap, scaled_size, interpolation=cv2.INTER_NEAREST)
 
         if maskmap is not None:
-            maskmap = cv2.resize(maskmap, scaled_size, cv2.INTER_NEAREST)
+            maskmap = cv2.resize(maskmap, scaled_size, interpolation=cv2.INTER_NEAREST)
 
         if self.configer.get('trans_params', 'resize')['keep_scale']:
             pad_width = target_width - scaled_size[0]

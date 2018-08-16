@@ -7,7 +7,7 @@
       "val_batch_size": 1,
       "train_input_size": [832, 832],
       "val_input_size": [832, 832],
-      "image_tool": "pil",
+      "image_tool": "cv2",
       "input_mode": "RGB",
       "num_classes": 19,
       "data_dir": "/home/donny/DataSet/CityScape",
