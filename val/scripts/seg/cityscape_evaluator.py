@@ -677,7 +677,7 @@ class CityScapeEvaluator(object):
 
 if __name__ == '__main__':
     # python cityscape_evaluator.py --gt_dir ~/DataSet/CityScape/gtFine/val
-    #                               --pred_dir ~/Projects/PyTorchCV/val/results/cityscape/test_dir/image/label
+    #                               --pred_dir ~/Projects/PyTorchCV/val/results/seg/cityscape/test_dir/image/label
     parser = argparse.ArgumentParser()
     parser.add_argument('--gt_dir', default=None, type=str,
                         dest='gt_dir', help='The directory of ground truth.')
