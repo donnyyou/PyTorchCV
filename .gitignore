@@ -15,3 +15,5 @@
 *.ninja_log
 *.ninja
 /extensions/apis/cocoapi/PythonAPI/build/lib.linux-x86_64-3.5
+*.png
+*.jpg
