@@ -167,6 +167,18 @@ class ImageHelper(object):
             exit(1)
 
     @staticmethod
+    def save(img, save_path):
+        if isinstance(img, Image.Image):
+            img.save(save_path)
+
+        elif isinstance(img, np.ndarray):
+            cv2.imwrite(save_path, img)
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
     def fig2img(fig):
         """
         @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it

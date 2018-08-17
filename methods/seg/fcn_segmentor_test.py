@@ -15,7 +15,6 @@ import torch
 from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
-from datasets.tools.transforms import ToTensor, Normalize, DeNormalize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.seg_model_manager import SegModelManager
@@ -85,14 +84,14 @@ class FCNSegmentorTest(object):
         label_img = np.array(label_map, dtype=np.uint8)
         image_bgr = cv2.cvtColor(np.array(ori_image), cv2.COLOR_RGB2BGR)
         image_canvas = self.seg_parser.colorize(label_img, image_canvas=image_bgr)
-        cv2.imwrite(vis_path, image_canvas)
-        ori_image.save(raw_path)
+        ImageHelper.save(image_canvas, save_path=vis_path)
+        ImageHelper.save(ori_image, save_path=raw_path)
 
         if not self.configer.is_empty('details', 'label_list'):
             label_img = self.__relabel(label_img)
 
         label_img = Image.fromarray(label_img, 'P')
-        label_img.save(label_path)
+        ImageHelper.save(label_img, label_path)
 
     def _crop_predict(self, image, crop_size):
         height, width = image.size()[2:]
@@ -108,7 +107,6 @@ class FCNSegmentorTest(object):
         split_crops = np.concatenate(split_crops, axis=0)  # (n, crop_image_size, crop_image_size, 3)
         inputs = torch.from_numpy(split_crops).permute(0, 3, 1, 2)
         with torch.no_grad():
-            inputs = inputs.to(self.device)
             results = self.seg_net.forward(inputs)
             results = results[0].permute(0, 2, 3, 1).cpu().numpy()
 
@@ -133,12 +131,8 @@ class FCNSegmentorTest(object):
 
         return cropped_starting
 
-    def _predict(self, image):
-        image = ToTensor()(image)
-        image = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                          std=self.configer.get('trans_params', 'std'))(image)
+    def _predict(self, inputs):
         with torch.no_grad():
-            inputs = image.unsqueeze(0).to(self.device)
             results = self.seg_net.forward(inputs)
             results = results[0].squeeze().permute(1, 2, 0).cpu().numpy()
 

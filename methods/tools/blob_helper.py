@@ -58,6 +58,10 @@ class BlobHelper(object):
             in_width, in_height = ImageHelper.get_size(image)
         else:
             in_width, in_height = self.configer.get('test', 'test_input_size')
+            if not self.configer.is_empty('test', 'keep_scale') and self.configer.get('test', 'keep_scale'):
+                img_width, img_height = ImageHelper.get_size(image)
+                short_scale = max(in_width / img_width, in_height / img_height)
+                in_width, in_height = int(round(in_width * short_scale)), int(round(in_height * short_scale))
 
         image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
         img_tensor = ToTensor()(image)
