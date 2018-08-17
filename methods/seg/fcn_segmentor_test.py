@@ -45,6 +45,7 @@ class FCNSegmentorTest(object):
         self.module_utilizer.set_status(self.seg_net, status='test')
 
     def __test_img(self, image_path, label_path, vis_path, raw_path):
+        Log.info('Image Path: {}'.format(image_path))
         ori_image = ImageHelper.read_image(image_path,
                                            tool=self.configer.get('data', 'image_tool'),
                                            mode=self.configer.get('data', 'input_mode'))
@@ -91,6 +92,7 @@ class FCNSegmentorTest(object):
             label_img = self.__relabel(label_img)
 
         label_img = Image.fromarray(label_img, 'P')
+        Log.info('Label Path: {}'.format(label_path))
         ImageHelper.save(label_img, label_path)
 
     def _crop_predict(self, image, crop_size):
