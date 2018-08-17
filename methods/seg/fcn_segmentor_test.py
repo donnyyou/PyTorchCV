@@ -107,7 +107,7 @@ class FCNSegmentorTest(object):
                 split_crops.append(image_crop[np.newaxis, :])
 
         split_crops = np.concatenate(split_crops, axis=0)  # (n, crop_image_size, crop_image_size, 3)
-        inputs = torch.from_numpy(split_crops).permute(0, 3, 1, 2)
+        inputs = torch.from_numpy(split_crops).permute(0, 3, 1, 2).to(self.device)
         with torch.no_grad():
             results = self.seg_net.forward(inputs)
             results = results[0].permute(0, 2, 3, 1).cpu().numpy()

@@ -17,8 +17,8 @@
       "test_input_size": [2048, 1024],
       "scale_search": [1.0],
       "mirror": false,
-      "crop_test": false,
-      "crop_size": [832, 832],
+      "crop_test": true,
+      "crop_size": [864, 864],
       "crop_stride_ratio": 0.667
     },
     "train_trans": {
