@@ -80,13 +80,27 @@ class PPMBilinearDeepsup(nn.Module):
 
 
 class EmbedModule(nn.Module):
-    def __init__(self):
+    def __init__(self, inchannels):
         super(EmbedModule, self).__init__()
+        from extensions.layers.encoding.syncbn import BatchNorm2d
+        inter_channels = inchannels // 4
+        self.conv = nn.Sequential(
+            nn.Conv2d(inchannels, inter_channels, kernel_size=1, padding=0, bias=False),
+            BatchNorm2d(inter_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(inter_channels, inter_channels, kernel_size=7, padding=1, stride=1, bias=False),
+            BatchNorm2d(inter_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(inter_channels, inchannels, kernel_size=1, padding=0, bias=False),
+            BatchNorm2d(inchannels),
+            nn.ReLU(inplace=True),
+        )
         # downsample & conv to get embedding.
 
     def forward(self, x):
         # return incremental for features & embedding for loss function.
-        pass
+        x = self.conv(x)
+        return x
 
 
 class SyncBNEmbedNet(nn.Sequential):
@@ -115,16 +129,18 @@ class SyncBNEmbedNet(nn.Sequential):
 
         self.high_features1 = nn.Sequential(self.backbone.layer2, self.backbone.layer3)
         self.high_features2 = nn.Sequential(self.backbone.layer4)
+        self.embed_conv = EmbedModule(1024)
         self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features)
 
     def forward(self, x):
         low = self.low_features(x)
         aux = self.high_features1(low)
-        x = self.high_features2(aux)
+        incr = self.embed_conv(aux)
+        x = self.high_features2(aux+incr)
         x, aux = self.decoder([x, aux])
         x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
 
-        return tuple([x, aux])
+        return tuple([x, aux, incr])
 
 
 if __name__ == '__main__':
