@@ -88,28 +88,29 @@ class SegEncodeLoss(nn.Module):
 
         self.bce_loss = nn.BCELoss(weight, size_average, reduce=reduce)
 
-    def forward(self, preds, targets, grid_scale=None):
+    def forward(self, preds, targets, grid_size=None):
         if len(targets.size()) == 2:
             return self.bce_loss(F.sigmoid(preds), targets)
 
         se_target = self._get_batch_label_vector(targets,
                                                  self.configer.get('data', 'num_classes'),
-                                                 grid_scale).type_as(preds)
+                                                 grid_size).type_as(preds)
         return self.bceloss(F.sigmoid(preds), se_target)
 
     @staticmethod
-    def _get_batch_label_vector(target_, num_classes, grid_scale=None):
+    def _get_batch_label_vector(target_, num_classes, grid_size=None):
         # target is a 3D Variable BxHxW, output is 2D BxnClass
         b, h, w = target_.size()
-        pad_h = 0 if (h % 6 == 0) else 6 - (h % 6)
-        pad_w = 0 if (w % 6 == 0) else 6 - (w % 6)
+        pad_h = 0 if (h % grid_size == 0) else grid_size - (h % grid_size)
+        pad_w = 0 if (w % grid_size == 0) else grid_size - (w % grid_size)
         target = target_.clone()
         target = F.pad(target, (0, pad_w, 0, pad_h), "constant", num_classes)
 
-        if grid_scale is not None:
-            target = target.contiguous().view(b, h // grid_scale, grid_scale, w // grid_scale, grid_scale)
-            target = target.permute(0, 2, 4, 1, 3).contiguous().view(b * grid_scale * grid_scale,
-                                                                        h // grid_scale, w // grid_scale)
+        b, h, w = target.size()
+        if grid_size is not None:
+            target = target.contiguous().view(b, h // grid_size, grid_size, w // grid_size, grid_size)
+            target = target.permute(0, 1, 3, 2, 4).contiguous().view(b * h * w // (grid_size ** 2),
+                                                                     grid_size, grid_size)
 
         batch = target.size(0)
         tvect = torch.zeros(batch, num_classes)
@@ -131,7 +132,7 @@ class FCNSegLoss(nn.Module):
         self.focal_loss = FocalLoss(self.configer)
 
     def forward(self, *outputs):
-        if self.configer.get('network', 'model_name') == 'pyramid_encnet':
+        if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
             seg_out, se_out_list, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
@@ -158,18 +159,9 @@ class FCNSegLoss(nn.Module):
 
     @staticmethod
     def _scale_target(targets_, scaled_size):
-        targets = targets_.clone().permute(1, 2, 0).cpu().numpy()
-        targets = cv2.resize(targets, (0, 0),
-                             fx=scaled_size[1] / targets.shape[0],
-                             fy=scaled_size[0] / targets.shape[1],
-                             interpolation=cv2.INTER_NEAREST)
-
-        if len(targets.shape) == 2:
-            targets = torch.from_numpy(targets).unsqueeze(0).long().to(targets_.device)
-        else:
-            targets = torch.from_numpy(targets.transpose(2, 0, 1)).long().to(targets_.device)
-
-        return targets
+        targets = targets_.clone().unsqueeze(1)
+        targets = F.interpolate(targets, size=scaled_size, mode='nearest')
+        return targets.squeeze(1)
 
 
 class EmbeddingLoss(nn.Module):

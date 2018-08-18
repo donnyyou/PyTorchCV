@@ -13,15 +13,15 @@ from models.tools.module_helper import Mean
 from models.backbones.backbone_selector import BackboneSelector
 
 
-class PyramidEncNet(nn.Module):
+class SyncBNGridEncNet(nn.Module):
     def __init__(self, configer):
-        super(PyramidEncNet, self).__init__()
+        super(SyncBNGridEncNet, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
         self.aux_loss = 'aux_loss' in self.configer.get('network', 'loss_weights')
         self.se_loss = 'se_loss' in self.configer.get('network', 'loss_weights')
         self.head = PyramidEncHead(self.backbone.num_features, self.configer.get('data', 'num_classes'),
-                                   pyramid=self.configer.get('network', 'pyramid'), se_loss=self.se_loss,
+                                   enc_size=self.configer.get('network', 'enc_size'), se_loss=self.se_loss,
                                    lateral=self.configer.get('network', 'lateral'))
         if self.aux_loss:
             self.auxlayer = FCNHead(1024, self.configer.get('data', 'num_classes'))
@@ -116,15 +116,16 @@ class EncModule(nn.Module):
 
 class PyramidEncHead(nn.Module):
     def __init__(self, in_channels, out_channels,
-                 pyramid=(1, 2, 3), pool_scales=(1, 2, 3, 6), se_loss=True, lateral=True):
+                 enc_size=4, pool_scales=(1, 2, 3, 6), se_loss=True, lateral=True):
         super(PyramidEncHead, self).__init__()
-        self.pyramid = pyramid
+        self.enc_size = enc_size
         self.se_loss = se_loss
         self.lateral = lateral
         self.conv5 = nn.Sequential(
             nn.Conv2d(in_channels, 512, 3, padding=1, bias=False),
             BatchNorm2d(512),
             nn.ReLU(inplace=True))
+
         if lateral:
             self.connect = nn.ModuleList([
                 nn.Sequential(
@@ -141,9 +142,7 @@ class PyramidEncHead(nn.Module):
                     BatchNorm2d(512),
                     nn.ReLU(inplace=True))
 
-        self.encmodule_list = nn.ModuleList()
-        for _ in self.pyramid:
-            self.encmodule_list.append(EncModule(512, out_channels, ncodes=48, se_loss=se_loss))
+        self.enc_module = EncModule(512, out_channels, ncodes=48, se_loss=se_loss)
 
         self.psp_module = PPMBilinearDeepsup(fc_dim=1024)
         self.conv6 = nn.Sequential(nn.Dropout2d(0.1, False),
@@ -157,27 +156,22 @@ class PyramidEncHead(nn.Module):
             feat = self.fusion(torch.cat([feat, c2, c3], 1))
 
         b, c, h, w = feat.size()
-        pad_h = 0 if (h % 6 == 0) else 6 - (h % 6)
-        pad_w = 0 if (w % 6 == 0) else 6 - (w % 6)
+        pad_h = 0 if (h % self.enc_size == 0) else self.enc_size - (h % self.enc_size)
+        pad_w = 0 if (w % self.enc_size == 0) else self.enc_size - (w % self.enc_size)
         feat = F.pad(feat, (0, pad_w, 0, pad_h), "constant", 0)
         b, c, h, w = feat.size()
-        feat_list = list()
-        se_list = list()
-        for i, scale in enumerate(self.pyramid):
-            feat_temp = feat.contiguous().view(b, c, h // scale, scale, w // scale, scale)
-            feat_temp = feat_temp.permute(0, 3, 5, 1, 2, 4).contiguous().view(b*scale*scale, c, h // scale, w // scale)
-            outs = list(self.encmodule_list[i](feat_temp))
-            feat_temp = outs[0].contiguous().view(b, scale, scale, c, h // scale, w // scale)
-            feat_temp = feat_temp.permute(0, 3, 4, 1, 5, 2).contiguous().view(b, c, h, w)
-            feat_list.append(feat_temp[:, :, :-pad_h, :-pad_w].contiguous())
-            se_list.append(outs[1])
+        feat_temp = feat.contiguous().view(b, c, h // self.enc_size, self.enc_size, w // self.enc_size, self.enc_size)
+        feat_temp = feat_temp.permute(0, 2, 4, 1, 3, 5).contiguous().view(b * h * w // (self.enc_size ** 2),
+                                                                          c, self.enc_size, self.enc_size)
+        se_outs = list(self.enc_module(feat_temp))
+        feat_temp = se_outs[0].contiguous().view(b, h // self.enc_size,
+                                                 w // self.enc_size, c, self.enc_size, self.enc_size)
+        feat_temp = feat_temp.permute(0, 3, 1, 4, 2, 5).contiguous().view(b, c, h, w)
 
-        enc_features = torch.stack(feat_list, 0).sum(dim=0, keepdim=False).div(len(self.pyramid))
+        enc_out = feat_temp[:, :, :-pad_h, :-pad_w].contiguous()
         psp_out = self.psp_module(inputs[-1])
-
-        out = self.conv6(torch.cat((enc_features, psp_out), 1))
-
-        return out, se_list
+        out = self.conv6(torch.cat((enc_out, psp_out), 1))
+        return out, se_outs[1]
 
 
 if __name__ == "__main__":
@@ -187,7 +181,7 @@ if __name__ == "__main__":
     configer = Configer(
         hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_pyramidencnet_cityscape_seg.json')
     configer.add_key_value(['project_dir'], '/home/donny/Projects/PyTorchCV')
-    model = PyramidEncNet(configer).cuda()
+    model = SyncBNGridEncNet(configer).cuda()
     model.eval()
     image = torch.randn(1, 3, 96, 96).cuda()
     out = model(image)
