@@ -179,7 +179,7 @@ if __name__ == "__main__":
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     configer = Configer(
-        hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_pyramidencnet_cityscape_seg.json')
+        hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_gridencnet_cityscape_seg.json')
     configer.add_key_value(['project_dir'], '/home/donny/Projects/PyTorchCV')
     model = SyncBNGridEncNet(configer).cuda()
     model.eval()

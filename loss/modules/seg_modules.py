@@ -133,15 +133,14 @@ class FCNSegLoss(nn.Module):
 
     def forward(self, *outputs):
         if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
-            seg_out, se_out_list, aux_out, targets = outputs
+            seg_out, se_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
             loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
-            se_weight = self.configer.get('network', 'loss_weights')['se_loss']
-            for i, scale in enumerate(self.configer.get('network', 'pyramid')):
-                loss = loss + se_weight * self.se_loss(se_out_list[i], aux_targets, scale)
+            se_loss = self.se_loss(se_out, aux_targets, self.configer.get('network', 'enc_size'))
+            loss = loss + self.configer.get('network', 'loss_weights')['se_loss'] * se_loss
 
             return loss
 
