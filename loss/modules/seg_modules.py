@@ -147,7 +147,7 @@ class FCNSegLoss(nn.Module):
         elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
             seg_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
-            aux_targets = self._scale_target(targets, (aux_out.size(3), aux_out.size(2)))
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
             loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
