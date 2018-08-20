@@ -17,7 +17,7 @@ from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
 from datasets.det.det_data_utilizer import DetDataUtilizer
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from datasets.tools.transforms import Normalize, ToTensor
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.det_model_manager import DetModelManager
@@ -27,6 +27,7 @@ from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
+from utils.layers.det.roi_sample_layer import RoiSampleLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -41,6 +42,7 @@ class FastRCNNTest(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
+        self.roi_sampler = RoiSampleLayer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRRoiGenerator(configer)
@@ -66,13 +68,9 @@ class FastRCNNTest(object):
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
             # Forward pass.
-            feat = self.det_net.extractor(inputs)
-            rpn_locs, rpn_scores = self.det_net.rpn(feat)
+            test_group = self.det_net(inputs)
 
-            test_indices_and_rois = self.fr_roi_generator(rpn_locs, rpn_scores,
-                                                          self.configer.get('rpn', 'n_test_pre_nms'),
-                                                          self.configer.get('rpn', 'n_test_post_nms'))
-            test_roi_locs, test_roi_scores = self.det_net.roi_head(feat, test_indices_and_rois)
+            test_indices_and_rois, test_roi_locs, test_roi_scores = test_group
 
         batch_detections = self.decode(test_roi_locs,
                                        test_roi_scores,
@@ -151,6 +149,18 @@ class FastRCNNTest(object):
             output[i] = valid_preds[keep]
 
         return output
+
+    def __make_tensor(self, gt_bboxes, gt_labels):
+        len_arr = [gt_bboxes[i].size()[0] for i in range(len(gt_bboxes))]
+        batch_maxlen = max(len_arr)
+        target_bboxes = torch.zeros((len(gt_bboxes), batch_maxlen, 4)).float()
+        target_labels = torch.zeros((len(gt_bboxes), batch_maxlen)).long()
+        for i in range(len(gt_bboxes)):
+            target_bboxes[i, :len_arr[i], :] = gt_bboxes[i]
+            target_labels[i, :len_arr[i]] = gt_labels[i]
+
+        target_bboxes_num = torch.Tensor(len_arr).long()
+        return target_bboxes, target_bboxes_num, target_labels
 
     def __get_info_tree(self, detections, image_raw):
         height, width, _ = image_raw.shape
@@ -234,8 +244,9 @@ class FastRCNNTest(object):
                                                           self.configer.get('rpn', 'n_test_post_nms'))
 
             self.det_visualizer.vis_rois(inputs, test_indices_and_rois)
-            sample_rois, gt_roi_locs, gt_roi_labels = self.det_data_utilizer.roi_batch_encode(
-                batch_gt_bboxes, batch_gt_labels, indices_and_rois=test_indices_and_rois)
+            gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
+            sample_rois, gt_roi_locs, gt_roi_labels = self.roi_sampler(test_indices_and_rois,
+                                                                       gt_bboxes, gt_nums, gt_labels)
 
             gt_cls_roi_locs = torch.zeros((gt_roi_locs.size(0), self.configer.get('data', 'num_classes'), 4))
             gt_cls_roi_locs[torch.arange(0, sample_rois.size(0)).long(), gt_roi_labels.long()] = gt_roi_locs

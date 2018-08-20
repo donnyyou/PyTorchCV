@@ -35,7 +35,7 @@
       "det_crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_pad",
-                    "random_det_crop", "resize"]
+                    "random_crop", "resize"]
     },
     "val_trans": {
       "saturation_ratio": 0.0,
@@ -53,7 +53,7 @@
       "det_crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_pad",
-                    "random_det_crop", "resize"]
+                    "random_crop", "resize"]
     },
     "trans_params": {
       "random_saturation": {
@@ -93,7 +93,7 @@
       },
       "random_crop":{
         "crop_size": [1024, 512],
-        "method": "grid",
+        "method": "det",
         "grid":[3, 2],
         "center_jitter": 20
       },

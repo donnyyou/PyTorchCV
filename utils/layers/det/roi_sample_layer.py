@@ -36,10 +36,10 @@ class RoiSampleLayer(object):
             temp_gt_bboxes = gt_bboxes[i, :gt_bboxes_num[i]]
             temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]]
             for j in range(gt_bboxes_num[i]):
-                temp_gt_bboxes[i, j, 0] *= self.configer.get('data', 'input_size')[0]
-                temp_gt_bboxes[i, j, 1] *= self.configer.get('data', 'input_size')[1]
-                temp_gt_bboxes[i, j, 2] *= self.configer.get('data', 'input_size')[0]
-                temp_gt_bboxes[i, j, 3] *= self.configer.get('data', 'input_size')[1]
+                temp_gt_bboxes[j, 0] *= self.configer.get('data', 'input_size')[0]
+                temp_gt_bboxes[j, 1] *= self.configer.get('data', 'input_size')[1]
+                temp_gt_bboxes[j, 2] *= self.configer.get('data', 'input_size')[0]
+                temp_gt_bboxes[j, 3] *= self.configer.get('data', 'input_size')[1]
 
             if self.configer.get('phase') == 'debug':
                 rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
@@ -51,7 +51,7 @@ class RoiSampleLayer(object):
             max_iou, gt_assignment = iou.max(1, keepdim=False)
             # Offset range of classes from [0, n_fg_class - 1] to [1, n_fg_class].
             # The label with value 0 is the background.
-            gt_roi_label = temp_gt_labels[i][gt_assignment] + 1
+            gt_roi_label = temp_gt_labels[gt_assignment] + 1
 
             max_iou = max_iou.cpu().detach().numpy()
             # Select foreground RoIs as those with >= pos_iou_thresh IoU.
@@ -75,15 +75,17 @@ class RoiSampleLayer(object):
             sample_roi = rois[keep_index]
 
             # Compute offsets and scales to match sampled RoIs to the GTs.
-            boxes = gt_bboxes[i][gt_assignment][keep_index]
+            boxes = temp_gt_bboxes[gt_assignment][keep_index]
             cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (sample_roi[:, :2] + sample_roi[:, 2:]) / 2  # [8732,2]
             cxcy /= (sample_roi[:, 2:] - sample_roi[:, :2])
             wh = (boxes[:, 2:] - boxes[:, :2]) / (sample_roi[:, 2:] - sample_roi[:, :2])  # [8732,2]
             wh = torch.log(wh)
             loc = torch.cat([cxcy, wh], 1)  # [8732,4]
-            gt_roi_loc = ((loc - torch.Tensor(loc_normalize_mean)) / torch.Tensor(loc_normalize_std))
+            normalize_mean = torch.Tensor(loc_normalize_mean).to(loc.device)
+            normalize_std = torch.Tensor(loc_normalize_std).to(loc.device)
+            gt_roi_loc = (loc - normalize_mean) / normalize_std
 
-            batch_index = i * torch.ones((len(sample_roi),))
+            batch_index = i * torch.ones((len(sample_roi),)).to(loc.device)
             sample_roi = torch.cat([batch_index[:, None], sample_roi], dim=1).contiguous()
             sample_roi_list.append(sample_roi)
             gt_roi_loc_list.append(gt_roi_loc)

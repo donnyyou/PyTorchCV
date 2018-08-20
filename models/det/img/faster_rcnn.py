@@ -14,6 +14,7 @@ from torch import nn
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.layers.det.roi_pooling_layer import ROIPoolingLayer, PyROIPoolingLayer
+from utils.layers.det.roi_sample_layer import RoiSampleLayer
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -30,9 +31,10 @@ class FasterRCNN(nn.Module):
         self.extractor = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
         self.rpn = NaiveRPN(configer)
         self.roi = FRRoiGenerator(configer)
+        self.roi_sampler = RoiSampleLayer(configer)
         self.roi_head = RoIHead(configer)
 
-    def forward(self, x):
+    def forward(self, *inputs):
         """Forward Faster R-CNN.
         Scaling paramter :obj:`scale` is used by RPN to determine the
         threshold to select small objects, which are going to be
@@ -61,13 +63,61 @@ class FasterRCNN(nn.Module):
             * **roi_indices**: Batch indices of RoIs. Its shape is \
                 :math:`(R',)`.
         """
-        x = self.extractor(x)
-        rpn_locs, rpn_scores = self.rpn(x)
-        indices_and_rois = self.roi(rpn_locs, rpn_scores,
-                                    self.configer.get('rpn', 'n_test_pre_nms'),
-                                    self.configer.get('rpn', 'n_test_post_nms'))
-        roi_cls_locs, roi_scores = self.roi_head(x, indices_and_rois)
-        return rpn_locs, rpn_scores, indices_and_rois, roi_cls_locs, roi_scores
+        if self.configer.get('phase') == 'test' and not self.training:
+            x = self.extractor(inputs[0])
+            rpn_locs, rpn_scores = self.rpn(x)
+
+            indices_and_rois = self.roi(rpn_locs, rpn_scores,
+                                        self.configer.get('rpn', 'n_test_pre_nms'),
+                                        self.configer.get('rpn', 'n_test_post_nms'))
+            roi_cls_locs, roi_scores = self.roi_head(x, indices_and_rois)
+            return indices_and_rois, roi_cls_locs, roi_scores
+
+        elif self.configer.get('phase') == 'train' and not self.training:
+            x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
+            x = self.extractor(x)
+            rpn_locs, rpn_scores = self.rpn(x)
+            test_indices_and_rois = self.roi(rpn_locs, rpn_scores,
+                                             self.configer.get('rpn', 'n_test_pre_nms'),
+                                             self.configer.get('rpn', 'n_test_post_nms'))
+            test_roi_cls_locs, test_roi_scores = self.roi_head(x, test_indices_and_rois)
+
+            test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores]
+            train_indices_and_rois = self.roi(rpn_locs, rpn_scores,
+                                             self.configer.get('rpn', 'n_train_pre_nms'),
+                                             self.configer.get('rpn', 'n_train_post_nms'))
+
+            sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
+                                                                         gt_bboxes, gt_bboxes_num, gt_labels)
+
+            sample_roi_locs, sample_roi_scores = self.roi_head(x, sample_rois)
+            sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
+            sample_roi_locs = sample_roi_locs[
+                torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
+                gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
+
+            train_group = [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
+            return train_group, test_group
+
+        elif self.configer.get('phase') == 'train' and self.training:
+            x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
+            x = self.extractor(x)
+            rpn_locs, rpn_scores = self.rpn(x)
+
+            train_indices_and_rois = self.roi(rpn_locs, rpn_scores,
+                                              self.configer.get('rpn', 'n_train_pre_nms'),
+                                              self.configer.get('rpn', 'n_train_post_nms'))
+
+            sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
+                                                                         gt_bboxes, gt_bboxes_num, gt_labels)
+
+            sample_roi_locs, sample_roi_scores = self.roi_head(x, sample_rois)
+            sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
+            sample_roi_locs = sample_roi_locs[
+                torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
+                gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
+
+            return [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
 
 
 class NaiveRPN(nn.Module):
