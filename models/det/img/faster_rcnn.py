@@ -33,9 +33,11 @@ class VGGModel(object):
         model = vgg16(pretrained=False)
         if self.configer.get('network', 'pretrained'):
             if self.configer.is_empty('network', 'caffe_pretrained'):
+                Log.info('Loading pretrained model: {}'.format(self.configer.get('network', 'pytorch_pretrained')))
                 model.load_state_dict(torch.load(self.configer.get('network', 'pytorch_pretrained')))
 
             else:
+                Log.info('Loading pretrained model: {}'.format(self.configer.get('network', 'caffe_pretrained')))
                 model.load_state_dict(torch.load(self.configer.get('network', 'caffe_pretrained')))
 
         features = list(model.features)[:30]

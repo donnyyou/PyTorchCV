@@ -66,8 +66,19 @@ class FasterRCNN(object):
         self.fr_loss = self.det_loss_manager.get_det_loss('fr_loss')
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_2 = []
+        params_dict = dict(self.det_net.named_parameters())
+        for key, value in params_dict.items():
+            if value.requires_grad:
+                if 'bias' in key:
+                    lr_2.append(value)
+                else:
+                    lr_1.append(value)
 
-        return self.det_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr') * 2., 'weight_decay': 0}]
+        return params
 
     def __train(self):
         """
