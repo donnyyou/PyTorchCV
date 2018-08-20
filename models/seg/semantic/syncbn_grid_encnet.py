@@ -28,13 +28,12 @@ class SyncBNGridEncNet(nn.Module):
 
     def forward(self, x):
         imsize = x.size()[2:]
-        features = self.backbone(x, is_tuple=True)
+        features = self.backbone(x)
 
         x = list(self.head(*features))
         x[0] = F.upsample(x[0], imsize)
         if self.aux_loss:
             auxout = self.auxlayer(features[2])
-            auxout = F.upsample(auxout, imsize)
             x.append(auxout)
 
         return tuple(x)
@@ -144,7 +143,7 @@ class PyramidEncHead(nn.Module):
 
         self.enc_module = EncModule(512, out_channels, ncodes=48, se_loss=se_loss)
 
-        self.psp_module = PPMBilinearDeepsup(fc_dim=1024)
+        self.psp_module = PPMBilinearDeepsup(fc_dim=2048)
         self.conv6 = nn.Sequential(nn.Dropout2d(0.1, False),
                                    nn.Conv2d(512 + 256 * len(pool_scales), out_channels, 1))
 
@@ -168,7 +167,7 @@ class PyramidEncHead(nn.Module):
                                                  w // self.enc_size, c, self.enc_size, self.enc_size)
         feat_temp = feat_temp.permute(0, 3, 1, 4, 2, 5).contiguous().view(b, c, h, w)
 
-        enc_out = feat_temp[:, :, :-pad_h, :-pad_w].contiguous()
+        enc_out = feat_temp[:, :, :h-pad_h, :w-pad_w].contiguous()
         psp_out = self.psp_module(inputs[-1])
         out = self.conv6(torch.cat((enc_out, psp_out), 1))
         return out, se_outs[1]

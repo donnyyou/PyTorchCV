@@ -95,7 +95,7 @@ class SegEncodeLoss(nn.Module):
         se_target = self._get_batch_label_vector(targets,
                                                  self.configer.get('data', 'num_classes'),
                                                  grid_size).type_as(preds)
-        return self.bceloss(F.sigmoid(preds), se_target)
+        return self.bce_loss(F.sigmoid(preds), se_target)
 
     @staticmethod
     def _get_batch_label_vector(target_, num_classes, grid_size=None):
@@ -135,7 +135,7 @@ class FCNSegLoss(nn.Module):
         if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
             seg_out, se_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
-            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(1)))
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
             loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
@@ -158,9 +158,9 @@ class FCNSegLoss(nn.Module):
 
     @staticmethod
     def _scale_target(targets_, scaled_size):
-        targets = targets_.clone().unsqueeze(1)
+        targets = targets_.clone().unsqueeze(1).float()
         targets = F.interpolate(targets, size=scaled_size, mode='nearest')
-        return targets.squeeze(1)
+        return targets.squeeze(1).long()
 
 
 class EmbeddingLoss(nn.Module):
