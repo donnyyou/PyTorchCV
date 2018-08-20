@@ -11,11 +11,12 @@ from __future__ import print_function
 import torch
 from torch.nn import functional as F
 from torch import nn
+from torchvision.models import vgg16
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.layers.det.roi_pooling_layer import ROIPoolingLayer, PyROIPoolingLayer
 from utils.layers.det.roi_sample_layer import RoiSampleLayer
-from models.backbones.backbone_selector import BackboneSelector
+from utils.tools.logger import Logger as Log
 
 
 DETECTOR_CONFIG = {
@@ -23,16 +24,49 @@ DETECTOR_CONFIG = {
 }
 
 
+class VGGModel(object):
+    def __init__(self, configer):
+        self.configer = configer
+
+    def __call__(self):
+        # the 30th layer of features is relu of conv5_3
+        model = vgg16(pretrained=False)
+        if self.configer.get('network', 'pretrained'):
+            if self.configer.is_empty('network', 'caffe_pretrained'):
+                model.load_state_dict(torch.load(self.configer.get('network', 'pytorch_pretrained')))
+
+            else:
+                model.load_state_dict(torch.load(self.configer.get('network', 'caffe_pretrained')))
+
+        features = list(model.features)[:30]
+        classifier = model.classifier
+
+        classifier = list(classifier)
+        del classifier[6]
+        if not self.configer.get('network', 'use_drop'):
+            del classifier[5]
+            del classifier[2]
+
+        classifier = nn.Sequential(*classifier)
+
+        # freeze top4 conv
+        for layer in features[:10]:
+            for p in layer.parameters():
+                p.requires_grad = False
+
+        return nn.Sequential(*features), classifier
+
+
 class FasterRCNN(nn.Module):
 
     def __init__(self, configer):
         super(FasterRCNN, self).__init__()
         self.configer = configer
-        self.extractor = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
+        self.extractor, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
         self.roi = FRRoiGenerator(configer)
         self.roi_sampler = RoiSampleLayer(configer)
-        self.roi_head = RoIHead(configer)
+        self.roi_head = RoIHead(configer, self.classifier)
 
     def forward(self, *inputs):
         """Forward Faster R-CNN.
@@ -119,6 +153,10 @@ class FasterRCNN(nn.Module):
 
             return [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
 
+        else:
+            Log.error('Invalid Status.')
+            exit(1)
+
 
 class NaiveRPN(nn.Module):
     def __init__(self, configer):
@@ -152,16 +190,11 @@ class RoIHead(nn.Module):
         classifier (nn.Module): Two layer Linear ported from vgg16
     """
 
-    def __init__(self, configer):
+    def __init__(self, configer, classifier):
         # n_class includes the background
         super(RoIHead, self).__init__()
         self.configer = configer
-        self.classifier = self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
-            nn.ReLU(True),
-            nn.Linear(4096, 4096),
-            nn.ReLU(True)
-        )
+        self.classifier = classifier
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
         self.roi_layer = ROIPoolingLayer(self.configer)
