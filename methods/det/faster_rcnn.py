@@ -149,9 +149,6 @@ class FasterRCNN(object):
         start_time = time.time()
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
-                if j == 10:
-                    break
-
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
                 gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
