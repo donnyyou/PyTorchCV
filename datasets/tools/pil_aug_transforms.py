@@ -951,9 +951,17 @@ class Resize(object):
 
         width, height = img.size
         target_width, target_height = self.configer.get('data', 'input_size')
+        if 'resize_bound' in self.configer.get('trans_params', 'resize'):
+            min_size, max_size = self.configer.get('trans_params', 'resize')['resize_bound']
+            scale1 = min_size / min(height, width)
+            scale2 = max_size / max(height, width)
+            scale = min(scale1, scale2)
+            w_scale_ratio = scale
+            h_scale_ratio = scale
+        else:
+            w_scale_ratio = target_width / width
+            h_scale_ratio = target_height / height
 
-        w_scale_ratio = target_width / width
-        h_scale_ratio = target_height / height
         if self.configer.get('trans_params', 'resize')['keep_scale']:
             w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
             h_scale_ratio = w_scale_ratio
