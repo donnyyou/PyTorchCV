@@ -102,6 +102,7 @@ class FRRoiGenerator(object):
 
         rois_list = list()
         roi_indices_list = list()
+        batch_rois_num = torch.zeros((loc.size(0),)).to(loc.device)
 
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
@@ -138,8 +139,9 @@ class FRRoiGenerator(object):
             batch_index = i * torch.ones((len(rois),)).to(loc.device)
             rois_list.append(rois)
             roi_indices_list.append(batch_index)
+            batch_rois_num[i] = len(rois)
 
         rois = torch.cat(rois_list, 0)
         roi_indices = torch.cat(roi_indices_list, 0)
         indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
-        return indices_and_rois
+        return indices_and_rois, batch_rois_num.long()

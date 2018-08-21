@@ -166,12 +166,12 @@ class FasterRCNN(object):
                                     [gt_rpn_locs, gt_rpn_labels,  gt_roi_bboxes, gt_roi_labels])
 
                 self.val_losses.update(loss.item(), inputs.size(0))
-                test_indices_and_rois, test_roi_locs, test_roi_scores = test_group
+                test_indices_and_rois, test_roi_locs, test_roi_scores, test_rois_num = test_group
                 batch_detections = FastRCNNTest.decode(test_roi_locs,
                                                        test_roi_scores,
                                                        test_indices_and_rois,
-                                                       self.configer,
-                                                       inputs.size(0))
+                                                       test_rois_num,
+                                                       self.configer)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 

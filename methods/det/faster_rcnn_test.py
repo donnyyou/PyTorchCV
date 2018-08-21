@@ -70,13 +70,13 @@ class FastRCNNTest(object):
             # Forward pass.
             test_group = self.det_net(inputs)
 
-            test_indices_and_rois, test_roi_locs, test_roi_scores = test_group
+            test_indices_and_rois, test_roi_locs, test_roi_scores, test_rois_num = test_group
 
         batch_detections = self.decode(test_roi_locs,
                                        test_roi_scores,
                                        test_indices_and_rois,
-                                       self.configer,
-                                       inputs.size(0))
+                                       test_rois_num,
+                                       self.configer)
         json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
@@ -90,7 +90,7 @@ class FastRCNNTest(object):
         return json_dict
 
     @staticmethod
-    def decode(roi_locs, roi_scores, indices_and_rois, configer, batch_size):
+    def decode(roi_locs, roi_scores, indices_and_rois, test_rois_num, configer):
         roi_locs = roi_locs.cpu()
         roi_scores = roi_scores.cpu()
         indices_and_rois = indices_and_rois.cpu()
@@ -122,12 +122,17 @@ class FastRCNNTest(object):
         cls_label = torch.LongTensor([i for i in range(num_classes)])\
             .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
 
-        output = [None for _ in range(batch_size)]
-        for i in range(batch_size):
-            batch_index = (indices_and_rois[:, 0] == i).nonzero().contiguous().view(-1,)
-            tmp_dst_bbox = dst_bbox[batch_index]
-            tmp_cls_prob = cls_prob[batch_index]
-            tmp_cls_label = cls_label[batch_index]
+        output = [None for _ in range(test_rois_num.size(0))]
+        start_index = 0
+        for i in range(test_rois_num.size(0)):
+            # batch_index = (indices_and_rois[:, 0] == i).nonzero().contiguous().view(-1,)
+            # tmp_dst_bbox = dst_bbox[batch_index]
+            # tmp_cls_prob = cls_prob[batch_index]
+            # tmp_cls_label = cls_label[batch_index]
+            tmp_dst_bbox = dst_bbox[start_index:start_index+test_rois_num[i]]
+            tmp_cls_prob = cls_prob[start_index:start_index+test_rois_num[i]]
+            tmp_cls_label = cls_label[start_index:start_index+test_rois_num[i]]
+            start_index += test_rois_num[i]
 
             mask = (tmp_cls_prob > configer.get('vis', 'conf_threshold')) & (tmp_cls_label > 0)
 
@@ -239,9 +244,9 @@ class FastRCNNTest(object):
             eye_matrix = torch.eye(2)
             gt_rpn_labels[gt_rpn_labels == -1] = 0
             gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
-            test_indices_and_rois = self.fr_roi_generator(gt_rpn_locs, gt_rpn_scores,
-                                                          self.configer.get('rpn', 'n_test_pre_nms'),
-                                                          self.configer.get('rpn', 'n_test_post_nms'))
+            test_indices_and_rois, _ = self.fr_roi_generator(gt_rpn_locs, gt_rpn_scores,
+                                                             self.configer.get('rpn', 'n_test_pre_nms'),
+                                                             self.configer.get('rpn', 'n_test_post_nms'))
 
             self.det_visualizer.vis_rois(inputs, test_indices_and_rois)
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
@@ -255,8 +260,13 @@ class FastRCNNTest(object):
 
             gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(gt_roi_labels.size(0),
                                                                     self.configer.get('data', 'num_classes'))
+            test_rois_num = torch.zeros((len(gt_bboxes), )).long()
+            for batch_id in range(len(gt_bboxes)):
+                batch_index = (sample_rois[:, 0] == batch_id).nonzero().contiguous().view(-1,)
+                test_rois_num[batch_id] = batch_index.numel()
+
             batch_detections = FastRCNNTest.decode(gt_cls_roi_locs, gt_roi_scores,
-                                                   sample_rois, self.configer, inputs.size(0))
+                                                   sample_rois, test_rois_num, self.configer)
 
             for j in range(inputs.size(0)):
                 count = count + 1

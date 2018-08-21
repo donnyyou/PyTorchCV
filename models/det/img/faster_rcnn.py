@@ -103,25 +103,25 @@ class FasterRCNN(nn.Module):
             x = self.extractor(inputs[0])
             rpn_locs, rpn_scores = self.rpn(x)
 
-            indices_and_rois = self.roi(rpn_locs, rpn_scores,
-                                        self.configer.get('rpn', 'n_test_pre_nms'),
-                                        self.configer.get('rpn', 'n_test_post_nms'))
+            indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
+                                                       self.configer.get('rpn', 'n_test_pre_nms'),
+                                                       self.configer.get('rpn', 'n_test_post_nms'))
             roi_cls_locs, roi_scores = self.roi_head(x, indices_and_rois)
-            return indices_and_rois, roi_cls_locs, roi_scores
+            return indices_and_rois, roi_cls_locs, roi_scores, test_rois_num
 
         elif self.configer.get('phase') == 'train' and not self.training:
             x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
             x = self.extractor(x)
             rpn_locs, rpn_scores = self.rpn(x)
-            test_indices_and_rois = self.roi(rpn_locs, rpn_scores,
-                                             self.configer.get('rpn', 'n_test_pre_nms'),
-                                             self.configer.get('rpn', 'n_test_post_nms'))
+            test_indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
+                                                            self.configer.get('rpn', 'n_test_pre_nms'),
+                                                            self.configer.get('rpn', 'n_test_post_nms'))
             test_roi_cls_locs, test_roi_scores = self.roi_head(x, test_indices_and_rois)
 
-            test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores]
-            train_indices_and_rois = self.roi(rpn_locs, rpn_scores,
-                                             self.configer.get('rpn', 'n_train_pre_nms'),
-                                             self.configer.get('rpn', 'n_train_post_nms'))
+            test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
+            train_indices_and_rois, _ = self.roi(rpn_locs, rpn_scores,
+                                                 self.configer.get('rpn', 'n_train_pre_nms'),
+                                                 self.configer.get('rpn', 'n_train_post_nms'))
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)
@@ -140,9 +140,9 @@ class FasterRCNN(nn.Module):
             x = self.extractor(x)
             rpn_locs, rpn_scores = self.rpn(x)
 
-            train_indices_and_rois = self.roi(rpn_locs, rpn_scores,
-                                              self.configer.get('rpn', 'n_train_pre_nms'),
-                                              self.configer.get('rpn', 'n_train_post_nms'))
+            train_indices_and_rois, _ = self.roi(rpn_locs, rpn_scores,
+                                                 self.configer.get('rpn', 'n_train_pre_nms'),
+                                                 self.configer.get('rpn', 'n_train_post_nms'))
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)

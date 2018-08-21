@@ -179,8 +179,8 @@ class ModuleUtilizer(object):
                 if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
                     m.eval()
 
-    def clip_grad(self, net):
-        nn.utils.clip_grad_norm_(net.parameters(), 1000)
+    def clip_grad(self, net, max_grad=1000):
+        nn.utils.clip_grad_norm_(net.parameters(), max_grad)
 
 
 
