@@ -183,7 +183,7 @@ class SSDMultiBoxLoss(nn.Module):
         pos_and_neg = (pos + neg).gt(0)
         preds = conf_preds[mask].view(-1, self.num_classes)  # [pos + neg,21]
         targets = conf_targets[pos_and_neg]                  # [pos + neg,]
-        conf_loss = F.cross_entropy(preds, targets, size_average=False)
+        conf_loss = F.cross_entropy(preds, targets, size_average=False, ignore_index=-1)
 
         if num_matched_boxes > 0:
             loc_loss = loc_loss / num_matched_boxes
