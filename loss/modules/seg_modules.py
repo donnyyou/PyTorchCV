@@ -123,50 +123,10 @@ class SegEncodeLoss(nn.Module):
         return tvect
 
 
-class FCNSegLoss(nn.Module):
-    def __init__(self, configer):
-        super(FCNSegLoss, self).__init__()
-        self.configer = configer
-        self.ce_loss = CrossEntropyLoss(self.configer)
-        self.se_loss = SegEncodeLoss(self.configer)
-        self.focal_loss = FocalLoss(self.configer)
-
-    def forward(self, *outputs):
-        if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
-            seg_out, se_out, aux_out, targets = outputs
-            seg_loss = self.ce_loss(seg_out, targets)
-            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
-            aux_loss = self.ce_loss(aux_out, aux_targets)
-            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
-            se_loss = self.se_loss(se_out, aux_targets, self.configer.get('network', 'enc_size'))
-            loss = loss + self.configer.get('network', 'loss_weights')['se_loss'] * se_loss
-
-            return loss
-
-        elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
-            seg_out, aux_out, targets = outputs
-            seg_loss = self.ce_loss(seg_out, targets)
-            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
-            aux_loss = self.ce_loss(aux_out, aux_targets)
-            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
-            return loss
-
-        seg_out, targets = outputs
-        return self.ce_loss(seg_out, targets)
-
-    @staticmethod
-    def _scale_target(targets_, scaled_size):
-        targets = targets_.clone().unsqueeze(1).float()
-        targets = F.interpolate(targets, size=scaled_size, mode='nearest')
-        return targets.squeeze(1).long()
-
-
 class EmbeddingLoss(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, configer):
         super(EmbeddingLoss, self).__init__()
-        self.num_classes = num_classes
+        self.num_classes = configer.get('data', 'num_classes')
         self.cosine_loss = nn.CosineEmbeddingLoss()
 
     def forward(self, inputs, targets):
@@ -232,6 +192,62 @@ class EmbeddingLoss(nn.Module):
             targets_cp[targets_cp == i] = 1
 
         return targets_cp
+
+
+class FCNSegLoss(nn.Module):
+    def __init__(self, configer):
+        super(FCNSegLoss, self).__init__()
+        self.configer = configer
+        self.ce_loss = CrossEntropyLoss(self.configer)
+        self.se_loss = SegEncodeLoss(self.configer)
+        self.focal_loss = FocalLoss(self.configer)
+        self.embed_loss = EmbeddingLoss(self.configer)
+
+    def forward(self, *outputs):
+        if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
+            seg_out, se_out, aux_out, targets = outputs
+            seg_loss = self.ce_loss(seg_out, targets)
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
+            aux_loss = self.ce_loss(aux_out, aux_targets)
+            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
+            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+            se_loss = self.se_loss(se_out, aux_targets, self.configer.get('network', 'enc_size'))
+            loss = loss + self.configer.get('network', 'loss_weights')['se_loss'] * se_loss
+
+            return loss
+
+        elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
+            seg_out, aux_out, targets = outputs
+            seg_loss = self.ce_loss(seg_out, targets)
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
+            aux_loss = self.ce_loss(aux_out, aux_targets)
+            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
+            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+            return loss
+
+        elif self.configer.get('network', 'model_name') == 'syncbn_embednet':
+            seg_out, aux_out, embed_out, targets = outputs
+            seg_loss = self.ce_loss(seg_out, targets)
+            aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
+            aux_loss = self.ce_loss(aux_out, aux_targets)
+            loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
+            loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+            embed_loss = self.embed_loss(embed_out, aux_targets)
+            loss = loss + self.configer.get('network', 'loss_weights')['embed_loss'] * embed_loss
+            return loss
+        
+        else:
+            seg_out, targets = outputs
+            return self.ce_loss(seg_out, targets)
+
+    @staticmethod
+    def _scale_target(targets_, scaled_size):
+        targets = targets_.clone().unsqueeze(1).float()
+        targets = F.interpolate(targets, size=scaled_size, mode='nearest')
+        return targets.squeeze(1).long()
+
+
+
 
 
 if __name__ == "__main__":

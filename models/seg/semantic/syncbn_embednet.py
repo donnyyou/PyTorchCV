@@ -88,7 +88,7 @@ class EmbedModule(nn.Module):
             nn.Conv2d(inchannels, inter_channels, kernel_size=1, padding=0, bias=False),
             BatchNorm2d(inter_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(inter_channels, inter_channels, kernel_size=7, padding=1, stride=1, bias=False),
+            nn.Conv2d(inter_channels, inter_channels, kernel_size=7, padding=3, stride=1, bias=False),
             BatchNorm2d(inter_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(inter_channels, inchannels, kernel_size=1, padding=0, bias=False),

@@ -11,6 +11,7 @@ from __future__ import print_function
 from models.seg.semantic.deeplabv3 import DeepLabV3
 from models.seg.semantic.syncbn_pspnet import SyncBNPSPNet
 from models.seg.semantic.syncbn_grid_encnet import SyncBNGridEncNet
+from models.seg.semantic.syncbn_embednet import SyncBNEmbedNet
 from models.seg.semantic.erf_net import ERFNet
 from utils.tools.logger import Logger as Log
 
@@ -19,7 +20,8 @@ SEG_MODEL_DICT = {
     'erf_net': ERFNet,
     'deeplabv3': DeepLabV3,
     'syncbn_pspnet': SyncBNPSPNet,
-    'syncbn_grid_encnet': SyncBNGridEncNet
+    'syncbn_grid_encnet': SyncBNGridEncNet,
+    'syncbn_embednet': SyncBNEmbedNet
 }
 
 
