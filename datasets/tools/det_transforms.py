@@ -18,14 +18,11 @@ class ResizeBoxes(object):
 
     def __call__(self, img, bboxes, labels):
         assert isinstance(img, Image.Image)
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] /= img.size[0]
-                bboxes[i][1] /= img.size[1]
-                bboxes[i][2] /= img.size[0]
-                bboxes[i][3] /= img.size[1]
+        if bboxes is not None:
+            bboxes[:, 0::2] /= img.size[0]
+            bboxes[:, 1::2] /= img.size[1]
 
-            labels = torch.from_numpy(labels).long()
-            bboxes = torch.from_numpy(bboxes).float()
+        labels = torch.from_numpy(labels).long()
+        bboxes = torch.from_numpy(bboxes).float()
 
         return img, bboxes, labels

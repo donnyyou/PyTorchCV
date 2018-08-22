@@ -48,7 +48,7 @@
       "flip_ratio": 0.0,
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
+      "crop_ratio": 1.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
                     "random_crop", "resize"]
@@ -90,10 +90,11 @@
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [1024, 512],
-        "method": "det",
+        "crop_size": [600, 600],
+        "method": "random",
         "grid":[3, 2],
-        "center_jitter": 20
+        "center_jitter": 20,
+        "allow_outside_center": true
       },
       "resize": {
         "scale_resize": false,

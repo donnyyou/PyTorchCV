@@ -481,10 +481,11 @@ class RandomCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, method='random', grid=None):
+    def __init__(self, crop_size, crop_ratio=0.5, method='random', grid=None, allow_outside_center=True):
         self.ratio = crop_ratio
         self.method = method
         self.grid = grid
+        self.allow_outside_center = allow_outside_center
 
         if isinstance(crop_size, float):
             self.size = (crop_size, crop_size)
@@ -564,13 +565,24 @@ class RandomCrop(object):
             kpts[:, :, 1] -= offset_up
 
         if bboxes is not None and bboxes.size > 0:
+            if self.allow_outside_center:
+                mask = np.ones(bboxes.shape[0], dtype=bool)
+            else:
+                crop_bb = np.array([offset_left, offset_up, offset_left + target_size[0], offset_up + target_size[1]])
+                center = (bboxes[:, :2] + bboxes[:, 2:]) / 2
+                mask = np.logical_and(crop_bb[:2] <= center, center < crop_bb[2:]).all(axis=1)
+
             bboxes[:, 0::2] -= offset_left
             bboxes[:, 1::2] -= offset_up
             bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, target_size[0] - 1)
             bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, target_size[1] - 1)
 
-        img = img[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
+            mask = np.logical_and(mask, (bboxes[:, :2] < bboxes[:, 2:]).all(axis=1))
+            bboxes = bboxes[mask]
+            if labels is not None:
+                labels = labels[mask]
 
+        img = img[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
         if maskmap is not None:
             maskmap = maskmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
 
@@ -587,10 +599,11 @@ class RandomFocusCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, center_jitter=None, mean=(104, 117, 123)):
+    def __init__(self, crop_size, crop_ratio=0.5, center_jitter=None, mean=(104, 117, 123), allow_outside_center=True):
         self.ratio = crop_ratio
         self.center_jitter = center_jitter
         self.mean = mean
+        self.allow_outside_center = allow_outside_center
 
         if isinstance(crop_size, float):
             self.size = (crop_size, crop_size)
@@ -664,10 +677,22 @@ class RandomFocusCrop(object):
             kpts[:, :, 1] -= offset_up
 
         if bboxes is not None and bboxes.size > 0:
+            if self.allow_outside_center:
+                mask = np.ones(bboxes.shape[0], dtype=bool)
+            else:
+                crop_bb = np.array([offset_left, offset_up, offset_left + self.size[0], offset_up + self.size[1]])
+                center = (bboxes[:, :2] + bboxes[:, 2:]) / 2
+                mask = np.logical_and(crop_bb[:2] <= center, center < crop_bb[2:]).all(axis=1)
+
             bboxes[:, 0::2] -= offset_left
             bboxes[:, 1::2] -= offset_up
             bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, self.size[0] - 1)
             bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, self.size[1] - 1)
+
+            mask = np.logical_and(mask, (bboxes[:, :2] < bboxes[:, 2:]).all(axis=1))
+            bboxes = bboxes[mask]
+            if labels is not None:
+                labels = labels[mask]
 
         expand_image = np.zeros((max(height, self.size[1]) + abs(offset_up),
                                  max(width, self.size[0]) + abs(offset_left), channels), dtype=img.dtype)
@@ -824,13 +849,11 @@ class RandomDetCrop(object):
                 current_labels = labels[mask]
 
                 # should we use the box left and top corner or the crop's
-                current_boxes[:, :2] = np.maximum(current_boxes[:, :2],
-                                                  rect[:2])
+                current_boxes[:, :2] = np.maximum(current_boxes[:, :2], rect[:2])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, :2] -= rect[:2]
 
-                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:],
-                                                  rect[2:])
+                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:], rect[2:])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
 
@@ -1028,14 +1051,16 @@ class CV2AugCompose(object):
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'center':
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'grid':
@@ -1043,7 +1068,8 @@ class CV2AugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
                         grid=self.configer.get('trans_params', 'random_crop')['grid'],
-                        crop_ratio=self.configer.get('train_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'focus':
@@ -1051,7 +1077,8 @@ class CV2AugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                         crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
-                        mean=self.configer.get('trans_params', 'mean_value')
+                        mean=self.configer.get('trans_params', 'mean_value'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'det':
@@ -1157,14 +1184,16 @@ class CV2AugCompose(object):
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'center':
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'grid':
@@ -1172,7 +1201,8 @@ class CV2AugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         method=self.configer.get('trans_params', 'random_crop')['method'],
                         grid=self.configer.get('trans_params', 'random_crop')['grid'],
-                        crop_ratio=self.configer.get('val_trans', 'crop_ratio')
+                        crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'focus':
@@ -1180,7 +1210,8 @@ class CV2AugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                         crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
-                        mean=self.configer.get('trans_params', 'mean_value')
+                        mean=self.configer.get('trans_params', 'mean_value'),
+                        allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
                 elif self.configer.get('trans_params', 'random_crop')['method'] == 'det':
