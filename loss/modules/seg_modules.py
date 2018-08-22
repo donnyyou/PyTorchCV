@@ -235,7 +235,7 @@ class FCNSegLoss(nn.Module):
             embed_loss = self.embed_loss(embed_out, aux_targets)
             loss = loss + self.configer.get('network', 'loss_weights')['embed_loss'] * embed_loss
             return loss
-        
+
         else:
             seg_out, targets = outputs
             return self.ce_loss(seg_out, targets)
