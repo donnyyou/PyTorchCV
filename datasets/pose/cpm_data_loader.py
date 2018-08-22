@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
-
+import numpy as np
 import torch.utils.data as data
 from utils.helpers.json_helper import JsonHelper
 
@@ -67,7 +67,7 @@ class CPMDataLoader(data.Dataset):
             if 'bbox' in object:
                 bboxes.append(object['bbox'])
 
-        return kpts, bboxes
+        return np.array(kpts).astype(np.float32), np.array(bboxes).astype(np.float32)
 
     def __list_dirs(self, root_dir):
         img_list = list()

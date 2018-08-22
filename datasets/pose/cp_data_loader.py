@@ -92,7 +92,7 @@ class CPDataLoader(data.Dataset):
             if 'bbox' in object:
                 bboxes.append(object['bbox'])
 
-        return kpts, bboxes
+        return np.array(kpts).astype(np.float32), np.array(bboxes).astype(np.float32)
 
     def __list_dirs(self, root_dir):
         img_list = list()

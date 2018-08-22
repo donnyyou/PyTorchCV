@@ -9,7 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
+import numpy as np
 import torch.utils.data as data
 from utils.helpers.json_helper import JsonHelper
 
@@ -69,7 +69,7 @@ class YOLODataLoader(data.Dataset):
             labels.append(object['label'])
             bboxes.append(object['bbox'])
 
-        return labels, bboxes
+        return np.array(labels), np.array(bboxes).astype(np.float32)
 
     def __list_dirs(self, root_dir):
         img_list = list()

@@ -62,21 +62,13 @@ class RandomPad(object):
         if maskmap is not None:
             maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] += left_pad
+            kpts[:, :, 1] += up_pad
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] += left_pad
-                    kpts[i][j][1] += up_pad
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] += left_pad
-                bboxes[i][1] += up_pad
-                bboxes[i][2] += left_pad
-                bboxes[i][3] += up_pad
+        if bboxes is not None and bboxes.size > 0:
+            bboxes[:, 0::2] += left_pad
+            bboxes[:, 1::2] += up_pad
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -117,21 +109,13 @@ class RandomShift(object):
         if maskmap is not None:
             maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] += left_pad
+            kpts[:, :, 1] += up_pad
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] += left_pad
-                    kpts[i][j][1] += up_pad
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] += left_pad
-                bboxes[i][1] += up_pad
-                bboxes[i][2] += left_pad
-                bboxes[i][3] += up_pad
+        if bboxes is not None and bboxes.size > 0:
+            bboxes[:, 0::2] += left_pad
+            bboxes[:, 1::2] += up_pad
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -157,26 +141,19 @@ class RandomHFlip(object):
         if maskmap is not None:
             maskmap = maskmap.transpose(Image.FLIP_LEFT_RIGHT)
 
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                xmin = width - 1 - bboxes[i][2]
-                xmax = width - 1 - bboxes[i][0]
-                bboxes[i][0] = xmin
-                bboxes[i][2] = xmax
+        if bboxes is not None and bboxes.size > 0:
+            xmin = width - 1 - bboxes[:, 2]
+            xmax = width - 1 - bboxes[:, 0]
+            bboxes[:, 0] = xmin
+            bboxes[:, 2] = xmax
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
-
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] = width - 1 - kpts[i][j][0]
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] = width - 1 - kpts[:, :, 0]
 
             for pair in self.swap_pair:
-                for i in range(num_objects):
-                    temp_point = kpts[i][pair[0] - 1]
-                    kpts[i][pair[0] - 1] = kpts[i][pair[1] - 1]
-                    kpts[i][pair[1] - 1] = temp_point
+                temp_point = kpts[:, pair[0] - 1]
+                kpts[:, pair[0] - 1] = kpts[:, pair[1] - 1]
+                kpts[:, pair[1] - 1] = temp_point
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 
@@ -440,21 +417,11 @@ class RandomResize(object):
         else:
             scale_ratio = 1.0
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+        if kpts is not None and kpts.size > 0:
+            kpts *= scale_ratio
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] *= scale_ratio
-                    kpts[i][j][1] *= scale_ratio
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] *= scale_ratio
-                bboxes[i][1] *= scale_ratio
-                bboxes[i][2] *= scale_ratio
-                bboxes[i][3] *= scale_ratio
+        if bboxes is not None and bboxes.size > 0:
+            bboxes *= scale_ratio
 
         converted_size = (int(width*scale_ratio), int(height*scale_ratio))
 
@@ -485,7 +452,7 @@ class RandomRotate(object):
         Args:
             img    (Image):     Image to be rotated.
             maskmap   (Image):     Mask to be rotated.
-            kpt    (list):      Keypoints to be rotated.
+            kpt    (np.array):      Keypoints to be rotated.
             center (list):      Center points to be rotated.
 
         Returns:
@@ -527,7 +494,7 @@ class RandomRotate(object):
                                      borderValue=(1, 1, 1), flags=cv2.INTER_NEAREST)
             maskmap = Image.fromarray(maskmap.astype(np.uint8))
 
-        if kpts is not None and len(kpts) > 0:
+        if kpts is not None and kpts.size > 0:
             num_objects = len(kpts)
             num_keypoints = len(kpts[0])
             for i in range(num_objects):
@@ -540,7 +507,7 @@ class RandomRotate(object):
                     kpts[i][j][1] = p[1]
 
         # It is not right for object detection tasks.
-        if bboxes is not None and len(bboxes) > 0:
+        if bboxes is not None and bboxes.size > 0:
             for i in range(len(bboxes)):
                 bbox_temp = [bboxes[i][0], bboxes[i][1], bboxes[i][2], bboxes[i][1],
                              bboxes[i][0], bboxes[i][3], bboxes[i][2], bboxes[i][3]]
@@ -623,14 +590,14 @@ class RandomCrop(object):
         Args:
             img (Image):   Image to be cropped.
             maskmap (Image):  Mask to be cropped.
-            kpts (list):    keypoints to be cropped.
-            bboxes (list): bounding boxes.
+            kpts (np.array):    keypoints to be cropped.
+            bboxes (np.array): bounding boxes.
 
         Returns:
             Image:  Cropped image.
             Image:  Cropped maskmap.
-            list:   Cropped keypoints.
-            list:   Cropped center points.
+            np.array:   Cropped keypoints.
+            np.ndarray:   Cropped center points.
         """
         assert isinstance(img, Image.Image)
         assert labelmap is None or isinstance(labelmap, Image.Image)
@@ -647,25 +614,15 @@ class RandomCrop(object):
         offset_left = int(center[0] - target_size[0] / 2)
         offset_up = int(center[1] - target_size[1] / 2)
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] -= offset_left
+            kpts[:, :, 1] -= offset_up
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] -= offset_left
-                    kpts[i][j][1] -= offset_up
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] -= offset_left
-                bboxes[i][1] -= offset_up
-                bboxes[i][2] -= offset_left
-                bboxes[i][3] -= offset_up
-                bboxes[i][0] = min(max(0, bboxes[i][0]), target_size[0]-1)
-                bboxes[i][1] = min(max(0, bboxes[i][1]), target_size[1]-1)
-                bboxes[i][2] = min(max(0, bboxes[i][2]), target_size[0]-1)
-                bboxes[i][3] = min(max(0, bboxes[i][3]), target_size[1]-1)
+        if bboxes is not None and bboxes.size > 0:
+            bboxes[:, 0::2] -= offset_left
+            bboxes[:, 1::2] -= offset_up
+            bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, target_size[0] - 1)
+            bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, target_size[1] - 1)
 
         img = img.crop((offset_left, offset_up, offset_left + target_size[0], offset_up + target_size[1]))
 
@@ -715,7 +672,6 @@ class RandomFocusCrop(object):
 
         else:
             max_index = 0
-            bboxes = np.array(bboxes)
             border = bboxes[:, 2:] - bboxes[:, 0:2]
             for i in range(len(border)):
                 if border[i][0] * border[i][1] >= border[max_index][0] * border[max_index][1]:
@@ -735,8 +691,8 @@ class RandomFocusCrop(object):
         Args:
             img (Image):   Image to be cropped.
             maskmap (Image):  Mask to be cropped.
-            kpts (list):    keypoints to be cropped.
-            bboxes (list): bounding boxes.
+            kpts (np.array):    keypoints to be cropped.
+            bboxes (np.array): bounding boxes.
 
         Returns:
             Image:  Cropped image.
@@ -757,25 +713,15 @@ class RandomFocusCrop(object):
         offset_left = int(center[0] - self.size[0] // 2)
         offset_up = int(center[1] - self.size[1] // 2)
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] -= offset_left
+            kpts[:, :, 1] -= offset_up
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] -= offset_left
-                    kpts[i][j][1] -= offset_up
-
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] -= offset_left
-                bboxes[i][1] -= offset_up
-                bboxes[i][2] -= offset_left
-                bboxes[i][3] -= offset_up
-                bboxes[i][0] = min(max(0, bboxes[i][0]), self.size[0] - 1)
-                bboxes[i][1] = min(max(0, bboxes[i][1]), self.size[1] - 1)
-                bboxes[i][2] = min(max(0, bboxes[i][2]), self.size[0] - 1)
-                bboxes[i][3] = min(max(0, bboxes[i][3]), self.size[1] - 1)
+        if bboxes is not None and bboxes.size > 0:
+            bboxes[:, 0::2] -= offset_left
+            bboxes[:, 1::2] -= offset_up
+            bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, self.size[0] - 1)
+            bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, self.size[1] - 1)
 
         w, h = img.size
         img = ImageOps.expand(img,
@@ -862,13 +808,11 @@ class RandomDetCrop(object):
 
         width, height = img.size
 
-        bboxes = np.array(bboxes)
-        labels = np.array(labels)
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
             if mode is None:
-                return img, labelmap, maskmap, kpts, bboxes.tolist(), labels.tolist()
+                return img, labelmap, maskmap, kpts, bboxes, labels
 
             min_iou, max_iou = mode
             if min_iou is None:
@@ -935,7 +879,7 @@ class RandomDetCrop(object):
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
 
-                return current_img, labelmap, maskmap, kpts, current_boxes.tolist(), current_labels.tolist()
+                return current_img, labelmap, maskmap, kpts, current_boxes, current_labels
 
 
 class Resize(object):
@@ -978,21 +922,13 @@ class Resize(object):
                 w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
                 h_scale_ratio = w_scale_ratio
 
-            if kpts is not None and len(kpts) > 0:
-                num_objects = len(kpts)
-                num_keypoints = len(kpts[0])
+            if kpts is not None and kpts.size > 0:
+                kpts[:, :, 0] *= w_scale_ratio
+                kpts[:, :, 1] *= h_scale_ratio
 
-                for i in range(num_objects):
-                    for j in range(num_keypoints):
-                        kpts[i][j][0] *= w_scale_ratio
-                        kpts[i][j][1] *= h_scale_ratio
-
-            if bboxes is not None and len(bboxes) > 0:
-                for i in range(len(bboxes)):
-                    bboxes[i][0] *= w_scale_ratio
-                    bboxes[i][1] *= h_scale_ratio
-                    bboxes[i][2] *= w_scale_ratio
-                    bboxes[i][3] *= h_scale_ratio
+            if bboxes is not None and bboxes.size > 0:
+                bboxes[:, 0::2] *= w_scale_ratio
+                bboxes[:, 1::2] *= h_scale_ratio
 
             scaled_size = (int(round(width*w_scale_ratio)), int(round(height*h_scale_ratio)))
             img = img.resize(scaled_size, Image.BILINEAR)
@@ -1019,21 +955,13 @@ class Resize(object):
             if maskmap is not None:
                 maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
 
-            if kpts is not None and len(kpts) > 0:
-                num_objects = len(kpts)
-                num_keypoints = len(kpts[0])
+            if kpts is not None and kpts.size > 0:
+                kpts[:, :, 0] += left_pad
+                kpts[:, :, 1] += up_pad
 
-                for i in range(num_objects):
-                    for j in range(num_keypoints):
-                        kpts[i][j][0] += left_pad
-                        kpts[i][j][1] += up_pad
-
-            if bboxes is not None and len(bboxes) > 0:
-                for i in range(len(bboxes)):
-                    bboxes[i][0] += left_pad
-                    bboxes[i][1] += up_pad
-                    bboxes[i][2] += left_pad
-                    bboxes[i][3] += up_pad
+            if bboxes is not None and bboxes.size > 0:
+                bboxes[:, 0::2] += left_pad
+                bboxes[:, 1::2] += up_pad
 
         return img, labelmap, maskmap, kpts, bboxes, labels
 

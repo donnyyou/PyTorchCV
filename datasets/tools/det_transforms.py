@@ -25,7 +25,7 @@ class ResizeBoxes(object):
                 bboxes[i][2] /= img.size[0]
                 bboxes[i][3] /= img.size[1]
 
-            labels = torch.from_numpy(np.array(labels)).long()
-            bboxes = torch.from_numpy(np.array(bboxes)).float()
+            labels = torch.from_numpy(labels).long()
+            bboxes = torch.from_numpy(bboxes).float()
 
         return img, bboxes, labels
