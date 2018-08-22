@@ -321,30 +321,49 @@ class RandomResize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_min=0.75, scale_max=1.25, size=None, resize_ratio=0.5):
-        self.scale_min = scale_min
-        self.scale_max = scale_max
+    def __init__(self, scale_range=(0.75, 1.25), input_size=None,
+                 resize_bound=None, method='random', resize_ratio=0.5):
+        self.scale_range = scale_range
+        self.resize_bound = resize_bound
+        self.method = method
         self.ratio = resize_ratio
 
-        if size is not None:
-            if isinstance(size, int):
-                self.size = (size, size)
-            elif isinstance(size, collections.Iterable) and len(size) == 2:
-                self.size = size
+        if input_size is not None:
+            if isinstance(input_size, int):
+                self.input_size = (input_size, input_size)
+            elif isinstance(input_size, (list, tuple)) and len(input_size) == 2:
+                self.input_size = input_size
             else:
-                raise TypeError('Got inappropriate size arg: {}'.format(size))
+                raise TypeError('Got inappropriate size arg: {}'.format(input_size))
         else:
-            self.size = None
+            self.input_size = None
 
-    @staticmethod
-    def get_scale(output_size, bboxes):
-        scale = 1.0
-        if output_size is not None and bboxes is not None and len(bboxes) > 0:
-            bboxes = np.array(bboxes)
-            border = bboxes[:, 2:] - bboxes[:, 0:2]
-            scale = 0.6 / max(max(border[:, 0]) / output_size[0], max(border[:, 1]) / output_size[1])
+    def get_scale(self, img_size, bboxes):
+        if self.method == 'random':
+            scale_ratio = random.uniform(self.scale_range[0], self.scale_range[1])
+            return scale_ratio
 
-        return scale
+        elif self.method == 'focus':
+            if self.input_size is not None and bboxes is not None and len(bboxes) > 0:
+                bboxes = np.array(bboxes)
+                border = bboxes[:, 2:] - bboxes[:, 0:2]
+                scale = 0.6 / max(max(border[:, 0]) / self.input_size[0], max(border[:, 1]) / self.input_size[1])
+                scale_ratio = random.uniform(self.scale_range[0], self.scale_range[1]) * scale
+                return scale_ratio
+
+            else:
+                scale_ratio = random.uniform(self.scale_range[0], self.scale_range[1])
+                return scale_ratio
+
+        elif self.method == 'bound':
+            scale1 = self.resize_bound[0] / min(img_size)
+            scale2 = self.resize_bound[1] / max(img_size)
+            scale = min(scale1, scale2)
+            return scale
+
+        else:
+            Log.error('Resize method {} is invalid.'.format(self.method))
+            exit(1)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
         """
@@ -366,8 +385,7 @@ class RandomResize(object):
 
         height, width, _ = img.shape
         if random.random() < self.ratio:
-            scale = self.get_scale(self.size, bboxes)
-            scale_ratio = random.uniform(self.scale_min, self.scale_max) * scale
+            scale_ratio = self.get_scale([width, height], bboxes)
         else:
             scale_ratio = 1.0
 
@@ -508,13 +526,13 @@ class RandomCrop(object):
         else:
             raise TypeError('Got inappropriate size arg: {}'.format(crop_size))
 
-    def get_center(self, img_size, bboxes):
+    def get_center(self, img_size):
         max_center = [img_size[0] // 2, img_size[1] // 2]
 
         if self.method == 'center':
             return max_center, -1
 
-        elif bboxes is None or len(bboxes) == 0 or self.method == 'random':
+        elif self.method == 'random':
             if img_size[0] > self.size[0]:
                 x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
             else:
@@ -570,7 +588,7 @@ class RandomCrop(object):
         height, width, _ = img.shape
         target_size = [min(self.size[0], width), min(self.size[1], height)]
 
-        center, index = self.get_center([width, height], bboxes)
+        center, index = self.get_center([width, height])
 
         # img = ImageHelper.draw_box(img, bboxes[index])
         offset_left = center[0] - target_size[0] // 2
@@ -906,54 +924,48 @@ class Resize(object):
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
-        height, width, _ = img.shape
+        height, width, channels = img.shape
         target_width, target_height = self.configer.get('data', 'input_size')
-        if 'resize_bound' in self.configer.get('trans_params', 'resize'):
-            min_size, max_size = self.configer.get('trans_params', 'resize')['resize_bound']
-            scale1 = min_size / min(height, width)
-            scale2 = max_size / max(height, width)
-            scale = min(scale1, scale2)
-            w_scale_ratio = scale
-            h_scale_ratio = scale
-        else:
+        scaled_size = [width, height]
+
+        if self.configer.get('trans_params', 'resize')['scale_resize']:
             w_scale_ratio = target_width / width
             h_scale_ratio = target_height / height
+            if self.configer.get('trans_params', 'resize')['keep_scale']:
+                w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
+                h_scale_ratio = w_scale_ratio
 
-        if self.configer.get('trans_params', 'resize')['keep_scale']:
-            w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
-            h_scale_ratio = w_scale_ratio
+            if kpts is not None and len(kpts) > 0:
+                num_objects = len(kpts)
+                num_keypoints = len(kpts[0])
 
-        if kpts is not None and len(kpts) > 0:
-            num_objects = len(kpts)
-            num_keypoints = len(kpts[0])
+                for i in range(num_objects):
+                    for j in range(num_keypoints):
+                        kpts[i][j][0] *= w_scale_ratio
+                        kpts[i][j][1] *= h_scale_ratio
 
-            for i in range(num_objects):
-                for j in range(num_keypoints):
-                    kpts[i][j][0] *= w_scale_ratio
-                    kpts[i][j][1] *= h_scale_ratio
+            if bboxes is not None and len(bboxes) > 0:
+                for i in range(len(bboxes)):
+                    bboxes[i][0] *= w_scale_ratio
+                    bboxes[i][1] *= h_scale_ratio
+                    bboxes[i][2] *= w_scale_ratio
+                    bboxes[i][3] *= h_scale_ratio
 
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] *= w_scale_ratio
-                bboxes[i][1] *= h_scale_ratio
-                bboxes[i][2] *= w_scale_ratio
-                bboxes[i][3] *= h_scale_ratio
+            scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
+            img = cv2.resize(img, scaled_size, interpolation=cv2.INTER_CUBIC)
+            if labelmap is not None:
+                labelmap = cv2.resize(labelmap, scaled_size, interpolation=cv2.INTER_NEAREST)
 
-        scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
-        img = cv2.resize(img, scaled_size, interpolation=cv2.INTER_CUBIC)
-        if labelmap is not None:
-            labelmap = cv2.resize(labelmap, scaled_size, interpolation=cv2.INTER_NEAREST)
+            if maskmap is not None:
+                maskmap = cv2.resize(maskmap, scaled_size, interpolation=cv2.INTER_NEAREST)
 
-        if maskmap is not None:
-            maskmap = cv2.resize(maskmap, scaled_size, interpolation=cv2.INTER_NEAREST)
-
-        if self.configer.get('trans_params', 'resize')['keep_scale']:
-            pad_width = target_width - scaled_size[0]
-            pad_height = target_height - scaled_size[1]
+        pad_width = target_width - scaled_size[0]
+        pad_height = target_height - scaled_size[1]
+        if pad_width > 0 or pad_height > 0:
             left_pad = random.randint(0, pad_width)  # pad_left
             up_pad = random.randint(0, pad_height)  # pad_up
 
-            expand_image = np.zeros((target_height, target_width, img.shape[2]), dtype=img.dtype)
+            expand_image = np.zeros((target_height, target_width, channels), dtype=img.dtype)
             expand_image[:, :, :] = self.configer.get('trans_params', 'mean_value')
             expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = img
             img = expand_image
@@ -1059,12 +1071,31 @@ class CV2AugCompose(object):
                 )
 
             if 'random_resize' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['random_resize'] = RandomResize(
-                    scale_min=self.configer.get('trans_params', 'random_resize')['scale_min'],
-                    scale_max=self.configer.get('trans_params', 'random_resize')['scale_max'],
-                    size=self.configer.get('data', 'train_input_size'),
-                    resize_ratio=self.configer.get('train_trans', 'resize_ratio')
-                )
+                if self.configer.get('trans_params', 'random_resize')['method'] == 'random':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
+                        resize_ratio=self.configer.get('train_trans', 'resize_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_resize')['method'] == 'focus':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
+                        input_size=self.configer.get('data', 'train_input_size'),
+                        resize_ratio=self.configer.get('train_trans', 'resize_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_resize')['method'] == 'bound':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        resize_bound=self.configer.get('trans_params', 'random_resize')['resize_bound'],
+                        resize_ratio=self.configer.get('train_trans', 'resize_ratio')
+                    )
+
+                else:
+                    Log.error('Not Support Resize Method!')
+                    exit(1)
 
             if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
                 if self.configer.get('trans_params', 'random_crop')['method'] == 'random':
@@ -1169,12 +1200,31 @@ class CV2AugCompose(object):
                 )
 
             if 'random_resize' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_resize'] = RandomResize(
-                    scale_min=self.configer.get('trans_params', 'random_resize')['scale_min'],
-                    scale_max=self.configer.get('trans_params', 'random_resize')['scale_max'],
-                    size=self.configer.get('data', 'train_input_size'),
-                    resize_ratio=self.configer.get('val_trans', 'resize_ratio')
-                )
+                if self.configer.get('trans_params', 'random_resize')['method'] == 'random':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
+                        resize_ratio=self.configer.get('val_trans', 'resize_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_resize')['method'] == 'focus':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
+                        input_size=self.configer.get('data', 'val_input_size'),
+                        resize_ratio=self.configer.get('val_trans', 'resize_ratio')
+                    )
+
+                elif self.configer.get('trans_params', 'random_resize')['method'] == 'bound':
+                    self.transforms['random_resize'] = RandomResize(
+                        method=self.configer.get('trans_params', 'random_resize')['method'],
+                        resize_bound=self.configer.get('trans_params', 'random_resize')['resize_bound'],
+                        resize_ratio=self.configer.get('val_trans', 'resize_ratio')
+                    )
+
+                else:
+                    Log.error('Not Support Resize Method!')
+                    exit(1)
 
             if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
                 if self.configer.get('trans_params', 'random_crop')['method'] == 'random':

@@ -29,11 +29,11 @@
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_pad",
+                    "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
                     "random_crop", "resize"]
     },
     "val_trans": {
@@ -46,11 +46,11 @@
       "blur_ratio": 0.0,
       "hsv_ratio": 0.0,
       "flip_ratio": 0.0,
-      "resize_ratio": 0.0,
+      "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_pad",
+                    "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
                     "random_crop", "resize"]
     },
     "trans_params": {
@@ -83,8 +83,8 @@
         "swap_pair": []
       },
       "random_resize": {
-        "scale_min": 0.75,
-        "scale_max": 1.25
+        "method": "bound",
+        "resize_bound": [600, 1000]
       },
       "random_rotate": {
         "rotate_degree": 40
@@ -96,8 +96,8 @@
         "center_jitter": 20
       },
       "resize": {
-        "keep_scale": true,
-        "resize_bound": [600, 1000]
+        "scale_resize": false,
+        "keep_scale": true
       },
       "mean_value": [124, 116, 104],
       "mean": [0.485, 0.456, 0.406],
