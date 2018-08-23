@@ -202,7 +202,7 @@
       "overlap_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.2
+      "conf_threshold": 0.05
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

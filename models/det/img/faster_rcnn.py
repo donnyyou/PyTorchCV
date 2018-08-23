@@ -207,7 +207,7 @@ class RoIHead(nn.Module):
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
         self.roi_layer = ROIPoolingLayer(self.configer)
 
-        normal_init(self.cls_loc, 0, 0.01)
+        normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
 
     def forward(self, x, indices_and_rois):
