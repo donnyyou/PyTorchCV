@@ -5,8 +5,8 @@
     "data": {
       "train_batch_size": 1,
       "val_batch_size": 1,
-      "train_input_size": [640, 640],
-      "val_input_size": [1024, 1024],
+      "train_input_size": [720, 720],
+      "val_input_size": [720, 720],
       "num_classes": 21,
       "data_dir": "/home/donny/DataSet/VOC07+12_DET",
       "image_tool": "pil",
@@ -48,7 +48,7 @@
       "flip_ratio": 0.0,
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
+      "crop_ratio": 1.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
                     "random_crop", "resize"]
