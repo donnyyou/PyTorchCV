@@ -169,6 +169,12 @@ class NaiveRPN(nn.Module):
         self.score = nn.Conv2d(512, self.num_anchor_list[0] * 2, 1, 1, 0)
         self.loc = nn.Conv2d(512, self.num_anchor_list[0] * 4, 1, 1, 0)
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                m.weight.data.normal_(0, 0.01)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
     def forward(self, x):
         h = F.relu(self.conv1(x))
 
@@ -201,6 +207,9 @@ class RoIHead(nn.Module):
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
         self.roi_layer = ROIPoolingLayer(self.configer)
 
+        normal_init(self.cls_loc, 0, 0.01)
+        normal_init(self.score, 0, 0.01)
+
     def forward(self, x, indices_and_rois):
         """Forward the chain.
         We assume that there are :math:`N` batches.
@@ -223,3 +232,16 @@ class RoIHead(nn.Module):
         roi_cls_locs = self.cls_loc(fc7)
         roi_scores = self.score(fc7)
         return roi_cls_locs, roi_scores
+
+
+def normal_init(m, mean, stddev, truncated=False):
+    """
+    weight initalizer: truncated normal and random normal.
+    """
+    # x is a parameter
+    if truncated:
+        m.weight.data.normal_().fmod_(2).mul_(stddev).add_(mean)  # not a perfect approximation
+    else:
+        m.weight.data.normal_(mean, stddev)
+        if m.bias is not None:
+            m.bias.data.zero_()
