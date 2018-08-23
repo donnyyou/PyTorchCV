@@ -199,7 +199,7 @@ class FasterRCNN(object):
         for i in range(len(gt_bboxes)):
             if len_arr[i] == 0:
                 continue
-                
+
             target_bboxes[i, :len_arr[i], :] = gt_bboxes[i].clone()
             target_labels[i, :len_arr[i]] = gt_labels[i].clone()
 

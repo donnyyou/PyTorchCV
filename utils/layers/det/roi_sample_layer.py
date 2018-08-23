@@ -49,10 +49,11 @@ class RoiSampleLayer(object):
             pos_roi_per_image = np.round(n_sample * pos_ratio)
             if not temp_gt_bboxes.numel():
                 neg_index = np.array([i for i in range(len(rois))])
-                neg_index = np.random.choice(neg_index, size=n_sample, replace=False)
+                rand_sample = min(n_sample, len(rois))
+                neg_index = np.random.choice(neg_index, size=rand_sample, replace=False)
                 sample_roi = rois[neg_index]
-                gt_roi_loc = torch.zeros((n_sample, 4)).float().to(sample_roi.device)
-                gt_roi_label = torch.zeros((n_sample,)).long().to(sample_roi.device)
+                gt_roi_loc = torch.zeros((rand_sample, 4)).float().to(sample_roi.device)
+                gt_roi_label = torch.zeros((rand_sample,)).long().to(sample_roi.device)
 
             else:
                 iou = DetHelper.bbox_iou(rois, temp_gt_bboxes)
