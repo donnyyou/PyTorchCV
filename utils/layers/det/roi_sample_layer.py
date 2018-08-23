@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import numpy as np
 import torch
+import random
 
 from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
@@ -41,21 +42,24 @@ class RoiSampleLayer(object):
                 temp_gt_bboxes[j, 2] *= self.configer.get('data', 'input_size')[0]
                 temp_gt_bboxes[j, 3] *= self.configer.get('data', 'input_size')[1]
 
-            if self.configer.get('phase') == 'debug':
-                rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
-            else:
-                rois = torch.cat((indices_and_rois[indices_and_rois[:, 0] == i][:, 1:], temp_gt_bboxes), 0)
-
-            pos_roi_per_image = np.round(n_sample * pos_ratio)
-            if not temp_gt_bboxes.numel():
-                neg_index = np.array([i for i in range(len(rois))])
-                rand_sample = min(n_sample, len(rois))
-                neg_index = np.random.choice(neg_index, size=rand_sample, replace=False)
-                sample_roi = rois[neg_index]
-                gt_roi_loc = torch.zeros((rand_sample, 4)).float().to(sample_roi.device)
-                gt_roi_label = torch.zeros((rand_sample,)).long().to(sample_roi.device)
+            if indices_and_rois.numel() == 0 or temp_gt_bboxes.numel() == 0:
+                min_size = self.configer.get('rpn', 'min_size')
+                roi_size = random.randint(min_size, min(self.configer.get('data', 'input_size')))
+                sample_roi = torch.zeros((1, 4), requires_grad=True).float().to(indices_and_rois.device)
+                sample_roi[0, 2:] = roi_size
+                gt_roi_loc = torch.zeros((1, 4), requires_grad=True).float().to(sample_roi.device)
+                gt_roi_label = torch.ones((1,), requires_grad=True).long().to(sample_roi.device) * -1
 
             else:
+                pos_roi_per_image = np.round(n_sample * pos_ratio)
+                if self.configer.get('phase') == 'debug':
+                    rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
+                else:
+                    if indices_and_rois.numel() == 0:
+                        rois = temp_gt_bboxes
+                    else:
+                        rois = torch.cat((indices_and_rois[indices_and_rois[:, 0] == i][:, 1:], temp_gt_bboxes), 0)
+
                 iou = DetHelper.bbox_iou(rois, temp_gt_bboxes)
                 max_iou, gt_assignment = iou.max(1, keepdim=False)
                 # Offset range of classes from [0, n_fg_class - 1] to [1, n_fg_class].
@@ -82,7 +86,6 @@ class RoiSampleLayer(object):
                 gt_roi_label = gt_roi_label[keep_index]
                 gt_roi_label[pos_roi_per_this_image:] = 0  # negative labels --> 0
                 sample_roi = rois[keep_index]
-
                 # Compute offsets and scales to match sampled RoIs to the GTs.
                 boxes = temp_gt_bboxes[gt_assignment][keep_index]
                 cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (sample_roi[:, :2] + sample_roi[:, 2:]) / 2  # [8732,2]

@@ -61,7 +61,7 @@ class PyROIPoolingLayer(nn.Module):
                     wstart = min(data_width, max(0, wstart + roi_start_w))
                     wend = min(data_width, max(0, wend + roi_start_w))
 
-                    is_empty = (hend <= hstart) or(wend <= wstart)
+                    is_empty = (hend <= hstart) or (wend <= wstart)
                     if is_empty:
                         outputs[roi_ind, :, ph, pw] = 0
                     else:

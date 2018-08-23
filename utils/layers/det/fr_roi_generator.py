@@ -116,6 +116,12 @@ class FRRoiGenerator(object):
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.
             # Take top pre_nms_topN (e.g. 6000).
+            if rois.numel() == 0:
+                rois_list.append(rois)
+                roi_indices_list.append(rois)
+                batch_rois_num[i] = rois.numel()
+                continue
+
             _, order = tmp_scores.sort(0, descending=True)
             if n_pre_nms > 0:
                 order = order[:n_pre_nms]
@@ -143,5 +149,10 @@ class FRRoiGenerator(object):
 
         rois = torch.cat(rois_list, 0)
         roi_indices = torch.cat(roi_indices_list, 0)
-        indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
+
+        if rois.numel() == 0:
+            indices_and_rois = rois
+        else:
+            indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
+
         return indices_and_rois, batch_rois_num.long()

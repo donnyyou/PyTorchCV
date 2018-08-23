@@ -252,7 +252,7 @@ class FRLocLoss(nn.Module):
         in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight)] = 1
         loc_loss = self.smooth_l1_loss(pred_locs, gt_locs, in_weight, sigma)
         # Normalize by total number of negtive and positive rois.
-        loc_loss /= (gt_labels.float() >= 0).sum().float()  # ignore gt_label==-1 for rpn_loss
+        loc_loss /= max((gt_labels.float() >= 0).sum().float(), 1e-9)  # ignore gt_label==-1 for rpn_loss
         return loc_loss
 
     @staticmethod
@@ -286,7 +286,7 @@ class FRLoss(nn.Module):
 
         roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
                                         gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
-        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels)
+        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels, ignore_index=-1)
         rpn_loss = (rpn_loc_loss + rpn_cls_loss) * self.configer.get('network', 'loss_weights')['rpn_loss']
         roi_loss = (roi_loc_loss + roi_cls_loss) * self.configer.get('network', 'loss_weights')['roi_loss']
         return rpn_loss + roi_loss
