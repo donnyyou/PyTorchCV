@@ -42,7 +42,7 @@ class RoiSampleLayer(object):
                 temp_gt_bboxes[j, 2] *= self.configer.get('data', 'input_size')[0]
                 temp_gt_bboxes[j, 3] *= self.configer.get('data', 'input_size')[1]
 
-            if indices_and_rois.numel() == 0 or temp_gt_bboxes.numel() == 0:
+            if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
                 roi_size = random.randint(min_size, min(self.configer.get('data', 'input_size')))
                 sample_roi = torch.zeros((1, 4), requires_grad=True).float().to(indices_and_rois.device)
