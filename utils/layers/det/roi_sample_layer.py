@@ -48,7 +48,7 @@ class RoiSampleLayer(object):
                 sample_roi = torch.zeros((1, 4), requires_grad=True).float().to(indices_and_rois.device)
                 sample_roi[0, 2:] = roi_size
                 gt_roi_loc = torch.zeros((1, 4), requires_grad=True).float().to(sample_roi.device)
-                gt_roi_label = torch.ones((1,), requires_grad=True).long().to(sample_roi.device) * -1
+                gt_roi_label = torch.ones((1,), requires_grad=True).long().to(sample_roi.device).mul_(-1)
 
             else:
                 pos_roi_per_image = np.round(n_sample * pos_ratio)

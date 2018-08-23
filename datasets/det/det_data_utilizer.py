@@ -40,8 +40,7 @@ class DetDataUtilizer(object):
             loc = torch.zeros_like(default_boxes)
             label = torch.zeros((default_boxes.size(0),)).long()
 
-            if gt_bboxes[i] is not None and len(gt_bboxes[i]) > 0:
-
+            if gt_bboxes[i].numel() > 0:
                 # label: 1 is positive, 0 is negative, -1 is dont care
                 ious = DetHelper.bbox_iou(gt_bboxes[i],
                                           torch.cat([default_boxes[:, :2] - default_boxes[:, 2:] / 2,
@@ -79,6 +78,14 @@ class DetDataUtilizer(object):
                 wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
                 wh = torch.log(wh)
                 loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+
+            else:
+                # subsample negative labels if we have too many
+                n_neg = n_sample // 2
+                neg_index = (label == 0).nonzero().contiguous().view(-1, ).numpy()
+                if len(neg_index) > n_neg:
+                    disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
+                    label[disable_index] = -1
 
             ret_label = torch.ones((anchor_boxes.size(0),), dtype=torch.long).mul_(-1)
             ret_label[index_inside] = torch.LongTensor(label)

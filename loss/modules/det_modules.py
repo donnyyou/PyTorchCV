@@ -281,6 +281,7 @@ class FRLoss(nn.Module):
 
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
                                         gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
+
         # NOTE: default value of ignore_index is -100 ...
         rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
 
