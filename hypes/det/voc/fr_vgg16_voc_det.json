@@ -90,7 +90,7 @@
         "rotate_degree": 40
       },
       "random_crop":{
-        "crop_size": [640, 640],
+        "crop_size": [720, 720],
         "method": "random",
         "grid":[3, 2],
         "center_jitter": 20,
