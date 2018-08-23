@@ -192,13 +192,16 @@ class FasterRCNN(object):
             self.module_utilizer.set_status(self.det_net, status='train')
 
     def __make_tensor(self, gt_bboxes, gt_labels):
-        len_arr = [gt_labels.numel() for i in range(len(gt_bboxes))]
+        len_arr = [gt_labels[i].numel() for i in range(len(gt_bboxes))]
         batch_maxlen = max(max(len_arr), 1)
         target_bboxes = torch.zeros((len(gt_bboxes), batch_maxlen, 4)).float()
         target_labels = torch.zeros((len(gt_bboxes), batch_maxlen)).long()
         for i in range(len(gt_bboxes)):
-            target_bboxes[i, :len_arr[i], :] = gt_bboxes[i]
-            target_labels[i, :len_arr[i]] = gt_labels[i]
+            if len_arr[i] == 0:
+                continue
+                
+            target_bboxes[i, :len_arr[i], :] = gt_bboxes[i].clone()
+            target_labels[i, :len_arr[i]] = gt_labels[i].clone()
 
         target_bboxes_num = torch.Tensor(len_arr).long()
         return target_bboxes, target_bboxes_num, target_labels
