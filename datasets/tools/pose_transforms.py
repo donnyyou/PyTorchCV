@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 
-class PadImage(object):
+class PILPadImage(object):
     """ Padding the Image to proper size.
         Args:
             stride: the stride of the network.
@@ -25,7 +25,6 @@ class PadImage(object):
         self.stride = stride
 
     def __call__(self, img):
-        img = Image.fromarray(img)
         assert isinstance(img, Image.Image)
         w, h = img.size
 

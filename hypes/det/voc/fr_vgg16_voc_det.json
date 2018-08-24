@@ -12,7 +12,7 @@
       "image_tool": "pil",
       "input_mode": "RGB",
       "keep_difficult": false,
-      "workers": 8
+      "workers": 0
     },
     "test": {
       "test_input_size": [720, 720],
@@ -31,10 +31,10 @@
       "flip_ratio": 0.5,
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 1.0,
+      "crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
-                    "random_crop", "resize"]
+                    "random_crop"]
     },
     "val_trans": {
       "saturation_ratio": 0.0,
@@ -48,10 +48,10 @@
       "flip_ratio": 0.0,
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
-      "crop_ratio": 1.0,
+      "crop_ratio": 0.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
                     "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
-                    "random_crop", "resize"]
+                    "random_crop"]
     },
     "trans_params": {
       "random_saturation": {
