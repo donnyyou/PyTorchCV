@@ -63,7 +63,7 @@ class FRRoiGenerator(object):
         anchor bases per pixel.
         Type of the output is same as the inputs.
         Args:
-            loc (array): Predicted offsets and scaling to anchors.
+            loc : Predicted offsets and scaling to anchors.
                 Its shape is :math:`(R, 4)`.
             score (array): Predicted foreground probability for anchors.
                 Its shape is :math:`(R,)`.
