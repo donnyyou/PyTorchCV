@@ -44,9 +44,9 @@ class FRDataLoader(data.Dataset):
         img, pad, = PILPadImage(max(self.configer.get('rpn', 'stride_list')))(img)
         self.configer.update_value(['data', 'input_size'], img.size)
         assert self.configer.get('data', 'workers') == 0
-        assert self.configer.get('data', 'train_batch_size') == 0
-        assert self.configer.get('data', 'val_batch_size') == 0
-        
+        assert self.configer.get('data', 'train_batch_size') == 1
+        assert self.configer.get('data', 'val_batch_size') == 1
+
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
 
         if self.img_transform is not None:
