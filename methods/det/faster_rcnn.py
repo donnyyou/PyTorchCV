@@ -115,6 +115,7 @@ class FasterRCNN(object):
 
             self.optimizer.zero_grad()
             loss.backward()
+            self.module_utilizer.clip_grad(self.det_net, 10.)
             self.optimizer.step()
 
             # Update the vars of the train phase.
