@@ -179,8 +179,22 @@ class ModuleUtilizer(object):
                 if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
                     m.eval()
 
-    def clip_grad(self, net, max_grad=1000):
-        nn.utils.clip_grad_norm_(net.parameters(), max_grad)
+    def clip_grad(self, model, max_grad=1000):
+        """Computes a gradient clipping coefficient based on gradient norm."""
+        total_norm = 0
+        for p in model.parameters():
+            if p.requires_grad:
+                modulenorm = p.grad.data.norm()
+                total_norm += modulenorm ** 2
+
+        import math
+        total_norm = math.sqrt(total_norm)
+
+        norm = max_grad / max(total_norm, max_grad)
+        for p in model.parameters():
+            if p.requires_grad:
+                p.grad.mul_(norm)
+
 
 
 
