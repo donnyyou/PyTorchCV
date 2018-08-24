@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 from scipy.ndimage.filters import gaussian_filter
 
-from datasets.tools.pose_transforms import PILPadImage
+from datasets.tools.pose_transforms import PadImage
 from datasets.tools.transforms import Normalize, ToTensor
 from models.pose_model_manager import PoseModelManager
 from utils.helpers.image_helper import ImageHelper
@@ -100,7 +100,7 @@ class OpenPoseDeploy(object):
 
         for i, scale in enumerate(multiplier):
             img_test = cv2.resize(img_raw, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            img_test_pad, pad = PILPadImage(self.configer.get('network', 'stride'))(img_test)
+            img_test_pad, pad = PadImage(self.configer.get('network', 'stride'))(img_test)
             pad_right = pad[2]
             pad_down = pad[3]
             img_test_pad = ToTensor()(img_test_pad)

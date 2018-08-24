@@ -15,7 +15,7 @@ from utils.helpers.json_helper import JsonHelper
 
 from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.det_transforms import ResizeBoxes
-from datasets.tools.pose_transforms import PILPadImage
+from datasets.tools.pose_transforms import PadImage
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -41,7 +41,8 @@ class FRDataLoader(data.Dataset):
         if self.aug_transform is not None:
             img, bboxes, labels = self.aug_transform(img, bboxes=bboxes, labels=labels)
 
-        img, pad, = PILPadImage(max(self.configer.get('rpn', 'stride_list')))(img)
+        img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
+                          mean_value=self.configer.get('trans_params', 'mean_value'))(img)
         self.configer.update_value(['data', 'input_size'], img.size)
         assert self.configer.get('data', 'workers') == 0
         assert self.configer.get('data', 'train_batch_size') == 1
