@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
+import torch.nn.functional as F
 
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.helpers.det_helper import DetHelper
@@ -98,7 +99,8 @@ class FRRoiGenerator(object):
         dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
         dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
-        rpn_fg_scores = score[:, :, 1]
+        cls_prob = F.softmax(score, dim=1)
+        rpn_fg_scores = cls_prob[:, :, 1]
 
         rois_list = list()
         roi_indices_list = list()
