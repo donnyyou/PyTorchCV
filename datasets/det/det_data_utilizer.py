@@ -38,7 +38,7 @@ class DetDataUtilizer(object):
         target_labels = list()
         for i in range(len(gt_bboxes)):
             loc = torch.zeros_like(default_boxes)
-            label = torch.zeros((default_boxes.size(0),)).long()
+            label = torch.ones((default_boxes.size(0),)).mul_(-1).long()
 
             if gt_bboxes[i].numel() > 0:
                 # label: 1 is positive, 0 is negative, -1 is dont care
