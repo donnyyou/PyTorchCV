@@ -7,9 +7,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import torch
-from PIL import Image
+
+from utils.helpers.image_helper import ImageHelper
 
 
 class ResizeBoxes(object):
@@ -17,10 +17,10 @@ class ResizeBoxes(object):
         pass
 
     def __call__(self, img, bboxes, labels):
-        assert isinstance(img, Image.Image)
+        width, height = ImageHelper.get_size(img)
         if bboxes is not None:
-            bboxes[:, 0::2] /= img.size[0]
-            bboxes[:, 1::2] /= img.size[1]
+            bboxes[:, 0::2] /= width
+            bboxes[:, 1::2] /= height
 
         labels = torch.from_numpy(labels).long()
         bboxes = torch.from_numpy(bboxes).float()
