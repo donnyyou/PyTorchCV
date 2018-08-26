@@ -44,8 +44,9 @@ class PoseDataLoader(object):
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),
-            trans.Normalize(mean=self.configer.get('trans_params', 'mean'),
-                            std=self.configer.get('trans_params', 'std')), ])
+            trans.Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                            mean=self.configer.get('trans_params', 'normalize')['mean'],
+                            std=self.configer.get('trans_params', 'normalize')['std']), ])
 
         self.label_transform = trans.Compose([trans.ToTensor(), ])
 

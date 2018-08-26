@@ -100,9 +100,12 @@
         "scale_resize": false,
         "keep_scale": true
       },
-      "mean_value": [124, 116, 104],
-      "mean": [0.485, 0.456, 0.406],
-      "std": [0.229, 0.224, 0.225]
+      "normalize": {
+        "div_value": 255,
+        "mean_value": [124, 116, 104],
+        "mean": [0.485, 0.456, 0.406],
+        "std": [0.229, 0.224, 0.225]
+      }
     },
     "rpn": {
       "anchor_sizes_list": [

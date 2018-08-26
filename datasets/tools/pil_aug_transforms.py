@@ -973,7 +973,7 @@ class Resize(object):
             down_pad = pad_height - up_pad  # pad_down
 
             img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad),
-                                  fill=tuple(self.configer.get('trans_params', 'mean_value')))
+                                  fill=tuple(self.configer.get('trans_params', 'normalize')['mean_value']))
 
             if labelmap is not None:
                 labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
@@ -1039,14 +1039,14 @@ class PILAugCompose(object):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio=self.configer.get('train_trans', 'pad_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'random_shift' in self.configer.get('train_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
                     shift_ratio=self.configer.get('train_trans', 'shift_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'random_brightness' in self.configer.get('train_trans', 'trans_seq'):
@@ -1133,7 +1133,7 @@ class PILAugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                         crop_ratio=self.configer.get('train_trans', 'crop_ratio'),
-                        mean=self.configer.get('trans_params', 'mean_value'),
+                        mean=self.configer.get('trans_params', 'normalize')['mean_value'],
                         allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
@@ -1150,7 +1150,7 @@ class PILAugCompose(object):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('train_trans', 'rotate_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'resize' in self.configer.get('train_trans', 'trans_seq'):
@@ -1186,14 +1186,14 @@ class PILAugCompose(object):
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio=self.configer.get('val_trans', 'pad_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'random_shift' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
                     shift_ratio=self.configer.get('val_trans', 'shift_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'random_brightness' in self.configer.get('val_trans', 'trans_seq'):
@@ -1280,7 +1280,7 @@ class PILAugCompose(object):
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
                         center_jitter=self.configer.get('trans_params', 'random_crop')['center_jitter'],
                         crop_ratio=self.configer.get('val_trans', 'crop_ratio'),
-                        mean=self.configer.get('trans_params', 'mean_value'),
+                        mean=self.configer.get('trans_params', 'normalize')['mean_value'],
                         allow_outside_center=self.configer.get('trans_params', 'random_crop')['allow_outside_center']
                     )
 
@@ -1297,7 +1297,7 @@ class PILAugCompose(object):
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('val_trans', 'rotate_ratio'),
-                    mean=self.configer.get('trans_params', 'mean_value')
+                    mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
             if 'resize' in self.configer.get('val_trans', 'trans_seq'):

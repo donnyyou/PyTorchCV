@@ -23,7 +23,7 @@ class PadImage(object):
     """
     def __init__(self, stride, mean_value=(104, 117, 123)):
         self.stride = stride
-        self.mean_value = mean_value
+        self.mean_value = tuple(mean_value)
 
     def __call__(self, img):
         if isinstance(img, Image.Image):
@@ -38,7 +38,7 @@ class PadImage(object):
         pad[3] = 0 if (h % self.stride == 0) else self.stride - (h % self.stride)  # down
 
         if isinstance(img, Image.Image):
-            img_padded = ImageOps.expand(img, tuple(pad), fill=0)  # confused.
+            img_padded = ImageOps.expand(img, tuple(pad), fill=self.mean_value)  # confused.
         else:
             img_padded = np.zeros((h + pad[3], w + pad[2], c), dtype=img.dtype)
             img_padded[:, :, :] = self.mean_value

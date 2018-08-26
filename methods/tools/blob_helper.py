@@ -37,8 +37,9 @@ class BlobHelper(object):
 
         image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
         img_tensor = ToTensor()(image)
-        img_tensor = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                               std=self.configer.get('trans_params', 'std'))(img_tensor)
+        img_tensor = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                               mean=self.configer.get('trans_params', 'normalize')['mean'],
+                               std=self.configer.get('trans_params', 'normalize')['std'])(img_tensor)
         img_tensor = img_tensor.unsqueeze(0).to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         return img_tensor
@@ -65,8 +66,9 @@ class BlobHelper(object):
 
         image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
         img_tensor = ToTensor()(image)
-        img_tensor = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                               std=self.configer.get('trans_params', 'std'))(img_tensor)
+        img_tensor = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                               mean=self.configer.get('trans_params', 'normalize')['mean'],
+                               std=self.configer.get('trans_params', 'normalize')['std'])(img_tensor)
         img_tensor = img_tensor.unsqueeze(0).to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         return img_tensor
@@ -74,8 +76,9 @@ class BlobHelper(object):
     def tensor2bgr(self, tensor):
         assert len(tensor.size()) == 3
 
-        ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                              std=self.configer.get('trans_params', 'std'))(tensor.cpu())
+        ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                              mean=self.configer.get('trans_params', 'normalize')['mean'],
+                              std=self.configer.get('trans_params', 'normalize')['std'])(tensor.cpu())
         ori_img = ori_img.numpy().transpose(1, 2, 0).astype(np.uint8)
 
         if self.configer.get('data', 'input_mode') == 'BGR':

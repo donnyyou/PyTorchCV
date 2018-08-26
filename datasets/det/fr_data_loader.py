@@ -44,7 +44,7 @@ class FRDataLoader(data.Dataset):
 
         now_w, _ = ImageHelper.get_size(img)
         img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
-                          mean_value=self.configer.get('trans_params', 'mean_value'))(img)
+                          mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
         self.configer.update_value(['data', 'input_size'], img.size)
         self.configer.update_value(['rpn', 'min_size'], 16 * now_w / ori_w)
         assert self.configer.get('data', 'workers') == 0
