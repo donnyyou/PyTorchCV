@@ -95,9 +95,8 @@ class FastRCNNTest(object):
         roi_scores = roi_scores.cpu()
         indices_and_rois = indices_and_rois.cpu()
         num_classes = configer.get('data', 'num_classes')
-        mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).repeat(num_classes)
-        std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).repeat(num_classes)
-
+        mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).repeat(num_classes)[None]
+        std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).repeat(num_classes)[None]
         mean = mean.to(roi_locs.device)
         std = std.to(roi_locs.device)
 
