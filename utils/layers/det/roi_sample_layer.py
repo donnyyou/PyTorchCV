@@ -36,11 +36,16 @@ class RoiSampleLayer(object):
         for i in range(len(gt_bboxes)):
             temp_gt_bboxes = gt_bboxes[i, :gt_bboxes_num[i]].clone()
             temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]].clone()
+            input_size = self.configer.get('data', 'input_size')
+            if temp_gt_bboxes[temp_gt_bboxes<0].numel():
+                print(temp_gt_bboxes)
+                exit(0)
+                
             for j in range(gt_bboxes_num[i]):
-                temp_gt_bboxes[j, 0] *= self.configer.get('data', 'input_size')[0]
-                temp_gt_bboxes[j, 1] *= self.configer.get('data', 'input_size')[1]
-                temp_gt_bboxes[j, 2] *= self.configer.get('data', 'input_size')[0]
-                temp_gt_bboxes[j, 3] *= self.configer.get('data', 'input_size')[1]
+                temp_gt_bboxes[j, 0] = (temp_gt_bboxes[j, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
+                temp_gt_bboxes[j, 1] = (temp_gt_bboxes[j, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
+                temp_gt_bboxes[j, 2] = (temp_gt_bboxes[j, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
+                temp_gt_bboxes[j, 3] = (temp_gt_bboxes[j, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
