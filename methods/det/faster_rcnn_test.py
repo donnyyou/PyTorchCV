@@ -240,6 +240,7 @@ class FastRCNNTest(object):
         for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
             gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
                                                                                  self.fr_priorbox_layer())
+
             eye_matrix = torch.eye(2)
             gt_rpn_labels[gt_rpn_labels == -1] = 0
             gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
@@ -274,6 +275,7 @@ class FastRCNNTest(object):
 
                 ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
+                self.det_visualizer.vis_default_bboxes(ori_img_bgr, self.fr_priorbox_layer(), gt_rpn_labels[j])
                 json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,

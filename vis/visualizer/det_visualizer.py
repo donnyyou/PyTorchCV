@@ -78,7 +78,7 @@ class DetVisualizer(object):
 
             cv2.imwrite(img_path, ori_img)
 
-    def vis_ssd_encode(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
+    def vis_default_bboxes(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
         if not os.path.exists(base_dir):
@@ -86,8 +86,9 @@ class DetVisualizer(object):
             os.makedirs(base_dir)
 
         if not isinstance(ori_img_in, np.ndarray):
-            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                  std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
+                                  std=self.configer.get('trans_params', 'normalize')['std'])(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
         else:
@@ -95,8 +96,8 @@ class DetVisualizer(object):
 
         assert labels.size(0) == default_bboxes.size(0)
 
-        default_bboxes = torch.cat([default_bboxes[:, :2] - default_bboxes[:, 2:] / 2,
-                                    default_bboxes[:, :2] + default_bboxes[:, 2:] / 2], 1)
+        bboxes = torch.cat([default_bboxes[:, :2] - default_bboxes[:, 2:] / 2,
+                            default_bboxes[:, :2] + default_bboxes[:, 2:] / 2], 1)
         height, width, _ = ori_img.shape
         for i in range(labels.size(0)):
             if labels[i] == 0:
@@ -106,12 +107,12 @@ class DetVisualizer(object):
             color_num = len(self.configer.get('details', 'color_list'))
 
             cv2.rectangle(ori_img,
-                          (int(default_bboxes[i][0] * width), int(default_bboxes[i][1] * width)),
-                          (int(default_bboxes[i][2] * height), int(default_bboxes[i][3] * height)),
+                          (int(bboxes[i][0] * width), int(bboxes[i][1] * height)),
+                          (int(bboxes[i][2] * width), int(bboxes[i][3] * height)),
                           color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=3)
 
             cv2.putText(ori_img, class_name,
-                        (int(default_bboxes[i][0] * width) + 5, int(default_bboxes[i][3] * height) - 5),
+                        (int(bboxes[i][0] * width) + 5, int(bboxes[i][3] * height) - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                         color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=2)
 

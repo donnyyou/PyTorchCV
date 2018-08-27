@@ -223,7 +223,7 @@ class SingleShotDetectorTest(object):
 
                 ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
-                self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.ssd_priorbox_layer(), labels[j])
+                self.det_visualizer.vis_default_bboxes(ori_img_bgr, self.ssd_priorbox_layer(), labels[j])
                 json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
