@@ -68,7 +68,7 @@ class FasterRCNN(nn.Module):
         self.rpn = NaiveRPN(configer)
         self.roi = FRRoiGenerator(configer)
         self.roi_sampler = RoiSampleLayer(configer)
-        self.roi_head = RoIHead(configer, self.classifier)
+        self.head = RoIHead(configer, self.classifier)
 
     def forward(self, *inputs):
         """Forward Faster R-CNN.
@@ -106,7 +106,7 @@ class FasterRCNN(nn.Module):
             indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                        self.configer.get('rpn', 'n_test_pre_nms'),
                                                        self.configer.get('rpn', 'n_test_post_nms'))
-            roi_cls_locs, roi_scores = self.roi_head(x, indices_and_rois)
+            roi_cls_locs, roi_scores = self.head(x, indices_and_rois)
             return indices_and_rois, roi_cls_locs, roi_scores, test_rois_num
 
         elif self.configer.get('phase') == 'train' and not self.training:
@@ -116,7 +116,7 @@ class FasterRCNN(nn.Module):
             test_indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                             self.configer.get('rpn', 'n_test_pre_nms'),
                                                             self.configer.get('rpn', 'n_test_post_nms'))
-            test_roi_cls_locs, test_roi_scores = self.roi_head(x, test_indices_and_rois)
+            test_roi_cls_locs, test_roi_scores = self.head(x, test_indices_and_rois)
 
             test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
             train_indices_and_rois, _ = self.roi(rpn_locs, rpn_scores,
@@ -126,7 +126,7 @@ class FasterRCNN(nn.Module):
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)
 
-            sample_roi_locs, sample_roi_scores = self.roi_head(x, sample_rois)
+            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
@@ -147,7 +147,7 @@ class FasterRCNN(nn.Module):
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)
 
-            sample_roi_locs, sample_roi_scores = self.roi_head(x, sample_rois)
+            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),

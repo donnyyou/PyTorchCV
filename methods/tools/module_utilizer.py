@@ -87,6 +87,9 @@ class ModuleUtilizer(object):
             if 'state_dict' in checkpoint_dict:
                 checkpoint_dict = checkpoint_dict['state_dict']
 
+            if 'model' in checkpoint_dict:
+                checkpoint_dict = checkpoint_dict['model']
+
             net_dict = net.state_dict()
 
             not_match_list = list()
@@ -115,7 +118,7 @@ class ModuleUtilizer(object):
                 Log.info('Not Matched Keys: {}'.format(not_match_list))
 
             else:
-                Log.error('Resume Level: {} is invalid.'.format_map(self.configer.get('network', 'resume_level')))
+                Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
                 exit(1)
 
             net.load_state_dict(net_dict)
