@@ -37,13 +37,16 @@ class RoiSampleLayer(object):
             temp_gt_bboxes = gt_bboxes[i, :gt_bboxes_num[i]].clone()
             temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]].clone()
             input_size = self.configer.get('data', 'input_size')
-                
+
+            print(temp_gt_bboxes)
             for j in range(gt_bboxes_num[i]):
                 temp_gt_bboxes[j, 0] = (temp_gt_bboxes[j, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
                 temp_gt_bboxes[j, 1] = (temp_gt_bboxes[j, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
                 temp_gt_bboxes[j, 2] = (temp_gt_bboxes[j, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
                 temp_gt_bboxes[j, 3] = (temp_gt_bboxes[j, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
+            print(temp_gt_bboxes)
+            
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
                 roi_size = random.randint(min_size, min(self.configer.get('data', 'input_size')))
