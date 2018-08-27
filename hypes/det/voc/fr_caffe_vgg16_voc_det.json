@@ -8,7 +8,7 @@
       "train_input_size": [720, 720],
       "val_input_size": [720, 720],
       "num_classes": 21,
-      "data_dir": "/home/donny/DataSet/VOC07+12_DET",
+      "data_dir": "/home/donny/DataSet/VOC07_DET",
       "image_tool": "cv2",
       "input_mode": "BGR",
       "keep_difficult": false,
