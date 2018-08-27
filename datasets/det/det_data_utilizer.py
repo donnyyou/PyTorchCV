@@ -68,6 +68,7 @@ class DetDataUtilizer(object):
                 # subsample negative labels if we have too many
                 n_neg = n_sample - torch.sum(label == 1).item()
                 neg_index = (label == 0).nonzero().contiguous().view(-1,).numpy()
+
                 if len(neg_index) > n_neg:
                     disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
                     label[disable_index] = -1
@@ -78,7 +79,7 @@ class DetDataUtilizer(object):
                 wh = (boxes[:, 2:] - boxes[:, :2]) / default_boxes[:, 2:]   # [8732,2]
                 wh = torch.log(wh)
                 loc = torch.cat([cxcy, wh], 1)  # [8732,4]
-
+                # loc = loc[:, [1, 0, 3, 2]]
             else:
                 # subsample negative labels if we have too many
                 n_neg = n_sample // 2

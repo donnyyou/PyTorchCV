@@ -278,7 +278,6 @@ class FRLoss(nn.Module):
         gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_list
         gt_rpn_labels = gt_rpn_labels.contiguous().view(-1)
         pred_rpn_scores = pred_rpn_scores.contiguous().view(-1, 2)
-
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
                                         gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
 
@@ -288,10 +287,10 @@ class FRLoss(nn.Module):
         roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
                                         gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
         roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels, ignore_index=-1)
-        # Log.info('rpn loc {}'.format(rpn_loc_loss))
-        # Log.info('rpn cls {}'.format(rpn_cls_loss))
-        # Log.info('roi loc {}'.format(roi_loc_loss))
-        # Log.info('roi cls {}'.format(roi_cls_loss))
+        Log.info('rpn loc {}'.format(rpn_loc_loss))
+        Log.info('rpn cls {}'.format(rpn_cls_loss))
+        Log.info('roi loc {}'.format(roi_loc_loss))
+        Log.info('roi cls {}'.format(roi_cls_loss))
         rpn_loss = (rpn_loc_loss + rpn_cls_loss) * self.configer.get('network', 'loss_weights')['rpn_loss']
         roi_loss = (roi_loc_loss + roi_cls_loss) * self.configer.get('network', 'loss_weights')['roi_loss']
         return rpn_loss + roi_loss

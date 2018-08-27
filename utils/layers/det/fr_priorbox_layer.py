@@ -52,8 +52,8 @@ class FRPriorBoxLayer(object):
             x_offset = torch.FloatTensor(a).view(-1, 1).div(fm_w)
             y_offset = torch.FloatTensor(b).view(-1, 1).div(fm_h)
 
-            x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(-1, 1, 2)
-            x_y_offset = x_y_offset.repeat(1, self.configer.get('rpn', 'num_anchor_list')[i], 1).contiguous().view(-1, 2)
+            x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous()
+            x_y_offset = x_y_offset.repeat(1, self.configer.get('rpn', 'num_anchor_list')[i]).contiguous().view(-1, 2)
             anchors[:, :2] = anchors[:, :2] + x_y_offset
             anchor_boxes_list.append(anchors)
 

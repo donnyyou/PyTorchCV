@@ -88,6 +88,7 @@ class FRRoiGenerator(object):
         # to set self.traing = False
         default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1).to(loc.device)
 
+        # loc = loc[:, :, [1, 0, 3, 2]]
         # Convert anchors into proposal via bbox transformations.
         wh = torch.exp(loc[:, :, 2:]) * default_boxes[:, :, 2:]
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]

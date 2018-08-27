@@ -18,6 +18,8 @@ from PIL import Image
 from datasets.det_data_loader import DetDataLoader
 from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.transforms import Normalize, ToTensor
+from datasets.tools.pose_transforms import PadImage
+from datasets.tools.det_transforms import BoundResize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.det_model_manager import DetModelManager
@@ -58,12 +60,18 @@ class FastRCNNTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
-        ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
-        inputs = ImageHelper.pil_resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
-        inputs = ToTensor()(inputs)
-        inputs = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                           std=self.configer.get('trans_params', 'std'))(inputs)
+        img = ImageHelper.read_image(image_path,
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        img = BoundResize()(img)
+        img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
+                          mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
+        self.configer.update_value(['data', 'input_size'], ImageHelper.get_size(img))
+        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
+        inputs = ToTensor()(img)
+        inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                           mean=self.configer.get('trans_params', 'normalize')['mean'],
+                           std=self.configer.get('trans_params', 'normalize')['std'])(inputs)
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
@@ -77,7 +85,7 @@ class FastRCNNTest(object):
                                        test_indices_and_rois,
                                        test_rois_num,
                                        self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -102,6 +110,7 @@ class FastRCNNTest(object):
 
         roi_locs = (roi_locs * std + mean)
         roi_locs = roi_locs.contiguous().view(-1, num_classes, 4)
+        # roi_locs = roi_locs[:,:, [1, 0, 3, 2]]
 
         rois = indices_and_rois[:, 1:]
         rois = rois.contiguous().view(-1, 1, 4).expand_as(roi_locs)
@@ -248,11 +257,11 @@ class FastRCNNTest(object):
                                                              self.configer.get('rpn', 'n_test_pre_nms'),
                                                              self.configer.get('rpn', 'n_test_post_nms'))
 
-            self.det_visualizer.vis_rois(inputs, test_indices_and_rois)
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
             sample_rois, gt_roi_locs, gt_roi_labels = self.roi_sampler(test_indices_and_rois,
                                                                        gt_bboxes, gt_nums, gt_labels)
 
+            self.det_visualizer.vis_rois(inputs, sample_rois[gt_roi_labels > 0])
             gt_cls_roi_locs = torch.zeros((gt_roi_locs.size(0), self.configer.get('data', 'num_classes'), 4))
             gt_cls_roi_locs[torch.arange(0, sample_rois.size(0)).long(), gt_roi_labels.long()] = gt_roi_locs
             gt_cls_roi_locs = gt_cls_roi_locs.contiguous().view(-1, 4*self.configer.get('data', 'num_classes'))

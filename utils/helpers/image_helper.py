@@ -83,6 +83,17 @@ class ImageHelper(object):
         return img_rgb
 
     @staticmethod
+    def get_cv2_bgr(img, mode='RGB'):
+        if isinstance(img, Image.Image):
+            img = ImageHelper.img2np(img)
+
+        if mode == 'RGB':
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            return img_bgr
+
+        return img
+
+    @staticmethod
     def imshow(win_name, img, time=0):
         if isinstance(img, Image.Image):
             img = ImageHelper.rgb2bgr(ImageHelper.img2np(img))

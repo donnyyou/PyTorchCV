@@ -8,7 +8,7 @@ export PYTHONPATH='/home/donny/Projects/PytorchCV'
 
 
 ROOT_DIR='/home/donny/DataSet/VOC/VOCdevkit'
-DATA_SET='VOC07+12'
+DATA_SET='VOC07'
 SAVE_DIR='/home/donny/DataSet/'${DATA_SET}'_DET'
 
 

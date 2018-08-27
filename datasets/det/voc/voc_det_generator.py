@@ -75,7 +75,7 @@ class VocDetGenerator(object):
 
     def generate_label(self):
         file_count = 0
-        if self.args.dataset in ['VOC07, VOC07+12', 'VOC07++12']:
+        if self.args.dataset in ['VOC07', 'VOC07+12', 'VOC07++12']:
             with open(os.path.join(self.args.root_dir, 'VOC2007/ImageSets/Main/trainval.txt'), 'r') as train_stream:
                 for img_name in train_stream.readlines():
                     img_name = img_name.rstrip()

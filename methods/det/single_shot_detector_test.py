@@ -58,8 +58,9 @@ class SingleShotDetectorTest(object):
         ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
         inputs = ImageHelper.pil_resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
         inputs = ToTensor()(inputs)
-        inputs = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                           std=self.configer.get('trans_params', 'std'))(inputs)
+        inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                           mean=self.configer.get('trans_params', 'normalize')['mean'],
+                           std=self.configer.get('trans_params', 'normalize')['std'])(inputs)
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)

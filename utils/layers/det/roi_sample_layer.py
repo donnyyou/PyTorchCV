@@ -93,6 +93,7 @@ class RoiSampleLayer(object):
                 wh = (boxes[:, 2:] - boxes[:, :2]) / (sample_roi[:, 2:] - sample_roi[:, :2])  # [8732,2]
                 wh = torch.log(wh)
                 loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+                # loc = loc[:, [1, 0, 3, 2]]
                 normalize_mean = torch.Tensor(loc_normalize_mean).to(loc.device)
                 normalize_std = torch.Tensor(loc_normalize_std).to(loc.device)
                 gt_roi_loc = (loc - normalize_mean) / normalize_std
