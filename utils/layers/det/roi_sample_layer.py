@@ -103,9 +103,9 @@ class RoiSampleLayer(object):
 
             batch_index = i * torch.ones((len(sample_roi),)).to(sample_roi.device)
             sample_roi = torch.cat([batch_index[:, None], sample_roi], dim=1).contiguous()
-            sample_roi_list.append(sample_roi)
-            gt_roi_loc_list.append(gt_roi_loc)
-            gt_roi_label_list.append(gt_roi_label)
+            sample_roi_list.append(sample_roi.detach())
+            gt_roi_loc_list.append(gt_roi_loc.detach())
+            gt_roi_label_list.append(gt_roi_label.detach())
             # sample_roi.register_hook(lambda g: print(g))
 
         return torch.cat(sample_roi_list, 0), torch.cat(gt_roi_loc_list, 0), torch.cat(gt_roi_label_list, 0)

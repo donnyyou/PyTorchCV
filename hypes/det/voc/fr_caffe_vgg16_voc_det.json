@@ -152,7 +152,7 @@
     "checkpoints": {
       "checkpoints_name": "fr_vgg16_voc_det",
       "checkpoints_dir": "checkpoints/det/voc",
-      "save_iters": 3000
+      "save_iters": 5000
     },
     "network":{
       "backbone": "vgg16",
@@ -176,13 +176,13 @@
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
-        "step_size": 15
+        "step_size": 9
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 3000,
-      "max_epoch": 20
+      "test_interval": 5000,
+      "max_epoch": 15
     },
     "optim": {
       "optim_method": "sgd",
