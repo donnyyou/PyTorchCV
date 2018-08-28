@@ -85,16 +85,16 @@ class RoiSampleLayer(object):
 
                 # The indices that we're selecting (both positive and negative).
                 keep_index = np.append(pos_index, neg_index)
-                gt_roi_label = gt_roi_label[keep_index]
+                gt_roi_label = gt_roi_label[keep_index].detach()
                 gt_roi_label[pos_roi_per_this_image:] = 0  # negative labels --> 0
-                sample_roi = rois[keep_index]
+                sample_roi = rois[keep_index].detach()
                 # Compute offsets and scales to match sampled RoIs to the GTs.
                 boxes = temp_gt_bboxes[gt_assignment][keep_index]
                 cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (sample_roi[:, :2] + sample_roi[:, 2:]) / 2  # [8732,2]
                 cxcy /= (sample_roi[:, 2:] - sample_roi[:, :2])
                 wh = (boxes[:, 2:] - boxes[:, :2]) / (sample_roi[:, 2:] - sample_roi[:, :2])  # [8732,2]
                 wh = torch.log(wh)
-                loc = torch.cat([cxcy, wh], 1)  # [8732,4]
+                loc = torch.cat([cxcy, wh], 1).detach()  # [8732,4]
                 # loc = loc[:, [1, 0, 3, 2]]
 
                 normalize_mean = torch.Tensor(loc_normalize_mean).to(loc.device)
@@ -103,9 +103,9 @@ class RoiSampleLayer(object):
 
             batch_index = i * torch.ones((len(sample_roi),)).to(sample_roi.device)
             sample_roi = torch.cat([batch_index[:, None], sample_roi], dim=1).contiguous()
-            sample_roi_list.append(sample_roi.detach())
-            gt_roi_loc_list.append(gt_roi_loc.detach())
-            gt_roi_label_list.append(gt_roi_label.detach())
+            sample_roi_list.append(sample_roi)
+            gt_roi_loc_list.append(gt_roi_loc)
+            gt_roi_label_list.append(gt_roi_label)
             # sample_roi.register_hook(lambda g: print(g))
 
         return torch.cat(sample_roi_list, 0), torch.cat(gt_roi_loc_list, 0), torch.cat(gt_roi_label_list, 0)
