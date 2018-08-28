@@ -225,7 +225,6 @@ class RoIHead(nn.Module):
                 which bounding boxes correspond to. Its shape is :math:`(R',)`.
         """
         # in case roi_indices is  ndarray
-
         pool = self.roi_layer(x, indices_and_rois)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)

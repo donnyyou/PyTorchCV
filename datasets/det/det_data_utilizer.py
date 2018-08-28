@@ -29,10 +29,10 @@ class DetDataUtilizer(object):
         # Calc indicies of anchors which are located completely inside of the image
         # whose size is speficied.
 
-        index_inside = ((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2 >= 0)
-                        & (anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2 >= 0)
-                        & (anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2 <= 1.0)
-                        & (anchor_boxes[:, 1] + anchor_boxes[:, 3] / 2 <= 1.0)).nonzero().contiguous().view(-1,)
+        index_inside = (((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2) >= 0)
+                        & ((anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2) >= 0)
+                        & ((anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2) <= 1.0)
+                        & ((anchor_boxes[:, 1] + anchor_boxes[:, 3] / 2) <= 1.0)).nonzero().contiguous().view(-1,)
         default_boxes = anchor_boxes[index_inside]
         target_bboxes = list()
         target_labels = list()
