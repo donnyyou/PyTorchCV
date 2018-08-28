@@ -23,7 +23,7 @@ class ResizeBoxes(object):
             bboxes[:, 1::2] /= height
 
         labels = torch.from_numpy(labels).long()
-        bboxes = torch.from_numpy(bboxes).float()
+        bboxes = torch.from_numpy(bboxes).float().clamp_(min=0.0, max=1.0)
 
         return img, bboxes, labels
 

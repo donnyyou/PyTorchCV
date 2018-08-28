@@ -12,6 +12,7 @@ import os
 import numpy as np
 import cv2
 import torch
+import time
 from PIL import Image
 
 from datasets.tools.transforms import DeNormalize
@@ -52,7 +53,7 @@ class DetVisualizer(object):
         image = cv2.resize(image, tuple(self.configer.get('data', 'input_size')))
         cv2.imwrite(img_path, image)
 
-    def vis_rois(self, inputs, indices_and_rois, name='default', sub_dir='rois'):
+    def vis_rois(self, inputs, indices_and_rois, rois_labels=None, name='default', sub_dir='rois'):
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
         if not os.path.exists(base_dir):
@@ -66,15 +67,25 @@ class DetVisualizer(object):
                                   std=self.configer.get('trans_params', 'normalize')['std'])(inputs[i])
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+            color_num = len(self.configer.get('details', 'color_list'))
 
             for j in range(len(rois)):
+                label = 1 if rois_labels is None else rois_labels[j]
+                if label == 0:
+                    continue
+
+                class_name = self.configer.get('details', 'name_seq')[label - 1]
                 cv2.rectangle(ori_img,
                                 (int(rois[j][0]), int(rois[j][1])),
                                 (int(rois[j][2]), int(rois[j][3])),
-                                color=self.configer.get('details', 'color_list')[0], thickness=3)
+                                color=self.configer.get('details', 'color_list')[(label - 1) % color_num], thickness=3)
+                cv2.putText(ori_img, class_name,
+                            (int(rois[j][0]) + 5, int(rois[j][3]) - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
+                            color=self.configer.get('details', 'color_list')[(label - 1) % color_num], thickness=2)
 
             ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
-            img_path = os.path.join(base_dir, '{}_{}.jpg'.format(name, i))
+            img_path = os.path.join(base_dir, '{}_{}_{}.jpg'.format(name, i, time.time()))
 
             cv2.imwrite(img_path, ori_img)
 
