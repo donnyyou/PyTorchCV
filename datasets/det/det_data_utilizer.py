@@ -83,10 +83,10 @@ class DetDataUtilizer(object):
             else:
                 # subsample negative labels if we have too many
                 n_neg = n_sample // 2
-                neg_index = (label == 0).nonzero().contiguous().view(-1, ).numpy()
+                neg_index = (label == -1).nonzero().contiguous().view(-1, ).numpy()
                 if len(neg_index) > n_neg:
-                    disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
-                    label[disable_index] = -1
+                    disable_index = np.random.choice(neg_index, size=n_neg, replace=False)
+                    label[disable_index] = 0
 
             ret_label = torch.ones((anchor_boxes.size(0),), dtype=torch.long).mul_(-1)
             ret_label[index_inside] = torch.LongTensor(label)

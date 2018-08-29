@@ -42,6 +42,7 @@ class FRDataLoader(data.Dataset):
         if self.aug_transform is not None:
             img, bboxes, labels = self.aug_transform(img, bboxes=bboxes, labels=labels)
 
+        '''
         now_w, _ = ImageHelper.get_size(img)
         img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
                           mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
@@ -50,7 +51,7 @@ class FRDataLoader(data.Dataset):
         assert self.configer.get('data', 'workers') == 0
         assert self.configer.get('data', 'train_batch_size') == 1
         assert self.configer.get('data', 'val_batch_size') == 1
-
+        '''
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
 
         if self.img_transform is not None:
