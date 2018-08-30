@@ -6,6 +6,10 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 cpu_path = os.path.join(cwd, 'cpu')
 gpu_path = os.path.join(cwd, 'gpu')
 
+build_path = '/tmp/bulid'
+if not os.path.exists(build_path):
+    os.makedirs(build_path)
+
 cpu = load( 'enclib_cpu', [
         os.path.join(cpu_path, 'roi_align.cpp'),
         os.path.join(cpu_path, 'roi_align_cpu.cpp'),
