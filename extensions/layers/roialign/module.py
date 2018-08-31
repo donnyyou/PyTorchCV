@@ -14,9 +14,9 @@ build_path = '/tmp/bulid'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-roialign = load(name='roialign', sources=['./src/roi_align_binding.cpp',
-                                          './src/roi_align_forward_cuda.cu',
-                                          './src/roi_align_backward_cuda.cu'],
+roialign = load(name='roialign', sources=['extensions/layers/roialign/src/roi_align_binding.cpp',
+                                          'extensions/layers/roialign/src/roi_align_forward_cuda.cu',
+                                          'extensions/layers/roialign/src/roi_align_backward_cuda.cu'],
                 build_directory=build_path, verbose=True)
 
 
@@ -96,9 +96,9 @@ class RoIAlignFunction(Function):
         return grad_input, None, None, None, None, None
 
 
-class RoIAlign(Module):
+class RoIAlign2D(Module):
     def __init__(self, pooled_height, pooled_width, spatial_scale, sampling_ratio=0):
-        super(RoIAlign, self).__init__()
+        super(RoIAlign2D, self).__init__()
 
         self.pooled_height = int(pooled_height)
         self.pooled_width = int(pooled_width)
@@ -128,10 +128,12 @@ def preprocess_rois(rois):
                 rois = rois.squeeze(0)
             else:
                 raise ("rois has wrong size")
+
         if rois.size(1) == 4:
             # add zeros
             zeros = Variable(torch.zeros((rois.size(0), 1)))
             if rois.is_cuda:
                 zeros = zeros.cuda()
+
             rois = torch.cat((zeros, rois), 1).contiguous()
     return rois
