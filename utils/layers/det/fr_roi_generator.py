@@ -86,7 +86,10 @@ class FRRoiGenerator(object):
         # NOTE: when test, remember
         # faster_rcnn.eval()
         # to set self.traing = False
-        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1).to(loc.device)
+        device = loc.device
+        loc = loc.cpu()
+        score = score.cpu()
+        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
 
         # loc = loc[:, :, [1, 0, 3, 2]]
         # Convert anchors into proposal via bbox transformations.
@@ -105,7 +108,7 @@ class FRRoiGenerator(object):
 
         rois_list = list()
         roi_indices_list = list()
-        batch_rois_num = torch.zeros((loc.size(0),)).to(loc.device)
+        batch_rois_num = torch.zeros((loc.size(0),))
 
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
@@ -145,7 +148,7 @@ class FRRoiGenerator(object):
 
             rois = rois[keep]
 
-            batch_index = i * torch.ones((len(rois),)).to(loc.device)
+            batch_index = i * torch.ones((len(rois),))
             rois_list.append(rois)
             roi_indices_list.append(batch_index)
             batch_rois_num[i] = len(rois)
@@ -158,4 +161,4 @@ class FRRoiGenerator(object):
         else:
             indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
 
-        return indices_and_rois, batch_rois_num.long()
+        return indices_and_rois.to(device), batch_rois_num.long().to(device)
