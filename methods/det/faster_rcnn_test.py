@@ -63,11 +63,11 @@ class FastRCNNTest(object):
         img = ImageHelper.read_image(image_path,
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
-        img = BoundResize()(img)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
+        img, scale = BoundResize()(img)
         img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
                           mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
         self.configer.update_value(['data', 'input_size'], ImageHelper.get_size(img))
-        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
         inputs = ToTensor()(img)
         inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
                            mean=self.configer.get('trans_params', 'normalize')['mean'],
@@ -85,7 +85,7 @@ class FastRCNNTest(object):
                                        test_indices_and_rois,
                                        test_rois_num,
                                        self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr, scale=scale)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -175,17 +175,17 @@ class FastRCNNTest(object):
         target_bboxes_num = torch.Tensor(len_arr).long()
         return target_bboxes, target_bboxes_num, target_labels
 
-    def __get_info_tree(self, detections, image_raw):
+    def __get_info_tree(self, detections, image_raw, scale=None):
         height, width, _ = image_raw.shape
         json_dict = dict()
         object_list = list()
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = x1.cpu().item() / self.configer.get('data', 'input_size')[0] * width
-                ymin = y1.cpu().item() / self.configer.get('data', 'input_size')[1] * height
-                xmax = x2.cpu().item() / self.configer.get('data', 'input_size')[0] * width
-                ymax = y2.cpu().item() / self.configer.get('data', 'input_size')[1] * height
+                xmin = min(x1.cpu().item() / scale, width)
+                ymin = min(y1.cpu().item() / scale, height)
+                xmax = min(x2.cpu().item() / scale, width)
+                ymax = min(y2.cpu().item() / scale, height)
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item()) - 1
                 object_dict['score'] = float('%.2f' % conf.cpu().item())

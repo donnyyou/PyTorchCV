@@ -16,8 +16,8 @@ build_path = '/tmp/bulid/roipool'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-roipool = load(name='roipool', sources=['src/roi_pool_binding.cpp',
-                                        'src/roi_pool_kernel.cu'],
+roipool = load(name='roipool', sources=['extensions/layers/roipool/src/roi_pool_binding.cpp',
+                                        'extensions/layers/roipool/src/roi_pool_kernel.cu'],
                build_directory=build_path, verbose=True)
 
 

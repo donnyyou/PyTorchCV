@@ -39,4 +39,4 @@ class BoundResize(object):
         scale = min(scale1, scale2)
         target_size = [int(round(i*scale)) for i in img_size]
         img = ImageHelper.resize(img, target_size=target_size)
-        return img
+        return img, scale

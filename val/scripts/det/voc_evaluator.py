@@ -99,7 +99,7 @@ class VOCEvaluator(object):
 
         return objects
 
-    def evaluate(self, pred_dir=None, gt_dir=None, image_set_file=None, use_07=True):
+    def evaluate(self, pred_dir=None, gt_dir=None, use_07=True):
         aps = []
         # The PASCAL VOC metric changed in 2010
         use_07_metric = use_07
@@ -107,7 +107,7 @@ class VOCEvaluator(object):
         for i, cls in enumerate(self.configer.get('details', 'name_seq')):
             filename = self.get_voc_results_file_template(pred_dir, cls)
             rec, prec, ap = self.voc_eval(
-                filename, gt_dir, image_set_file, cls,
+                filename, gt_dir, cls,
                 ovthresh=0.5, use_07_metric=use_07_metric)
             aps += [ap]
             print('AP for {} = {:.4f}'.format(cls, ap))
@@ -162,7 +162,6 @@ class VOCEvaluator(object):
     @staticmethod
     def voc_eval(det_file,
                  gt_dir,
-                 image_set_file,
                  classname,
                  ovthresh=0.5,
                  use_07_metric=True):
