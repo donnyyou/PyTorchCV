@@ -125,6 +125,7 @@
 
     },
     "roi": {
+      "method": "roipool",
       "pooled_width": 7,
       "pooled_height": 7,
       "spatial_stride": 16,
