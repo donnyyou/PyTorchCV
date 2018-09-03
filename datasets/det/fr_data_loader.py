@@ -42,16 +42,15 @@ class FRDataLoader(data.Dataset):
         if self.aug_transform is not None:
             img, bboxes, labels = self.aug_transform(img, bboxes=bboxes, labels=labels)
 
-        '''
-        now_w, _ = ImageHelper.get_size(img)
-        img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
-                          mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
-        self.configer.update_value(['data', 'input_size'], ImageHelper.get_size(img))
-        self.configer.update_value(['rpn', 'min_size'], 16 * now_w / ori_w)
-        assert self.configer.get('data', 'workers') == 0
-        assert self.configer.get('data', 'train_batch_size') == 1
-        assert self.configer.get('data', 'val_batch_size') == 1
-        '''
+        if self.configer.get('data', 'train_batch_size') == 1 and self.configer.get('data', 'val_batch_size') == 1:
+            now_w, _ = ImageHelper.get_size(img)
+            img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
+                              mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
+            self.configer.update_value(['data', 'input_size'], ImageHelper.get_size(img))
+            min_size = self.configer.get('rpn', 'min_size')
+            self.configer.update_value(['rpn', 'min_size'], min_size * now_w / ori_w)
+            assert self.configer.get('data', 'workers') == 0
+
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
 
         if self.img_transform is not None:
