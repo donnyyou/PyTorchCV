@@ -118,7 +118,14 @@ class FRRoiGenerator(object):
             ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
             hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
             min_size = self.configer.get('rpn', 'min_size')
-            keep = (hs >= min_size) & (ws >= min_size)
+            try:
+                keep = (hs >= min_size) & (ws >= min_size)
+            except RuntimeError:
+                print(min_size)
+                print(ws)
+                print(hs)
+                exit()
+
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.
