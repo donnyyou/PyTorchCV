@@ -87,9 +87,8 @@ class FRRoiGenerator(object):
         # faster_rcnn.eval()
         # to set self.traing = False
         device = loc.device
-        loc = loc.cpu()
-        score = score.cpu()
-        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1)
+
+        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1).to(device)
 
         # loc = loc[:, :, [1, 0, 3, 2]]
         # Convert anchors into proposal via bbox transformations.
@@ -103,6 +102,8 @@ class FRRoiGenerator(object):
         dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
         dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
+        dst_bbox = dst_bbox.cpu()
+        score = score.cpu()
         # cls_prob = F.softmax(score, dim=-1)
         rpn_fg_scores = score[:, :, 1]
 
