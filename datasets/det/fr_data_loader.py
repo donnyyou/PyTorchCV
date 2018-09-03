@@ -47,8 +47,7 @@ class FRDataLoader(data.Dataset):
             img, _ = PadImage(max(self.configer.get('rpn', 'stride_list')),
                               mean_value=self.configer.get('trans_params', 'normalize')['mean_value'])(img)
             self.configer.update_value(['data', 'input_size'], ImageHelper.get_size(img))
-            min_size = self.configer.get('rpn', 'min_size')
-            self.configer.update_value(['rpn', 'min_size'], min_size * now_w / ori_w)
+            self.configer.update_value(['rpn', 'min_size'], 16 * now_w / ori_w)  # Warning: Recursive update.
             assert self.configer.get('data', 'workers') == 0
 
         img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
