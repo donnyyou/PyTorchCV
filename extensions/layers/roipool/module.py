@@ -4,18 +4,20 @@
 
 
 import os
+import torch
 from torch.nn import Module
 from torch.autograd import Function
 from torch.utils.cpp_extension import load
 
+torch_ver = torch.__version__[:3]
 
-print('compiling/loading roi_align')
+print('compiling/loading roi_pool')
 build_path = '/tmp/bulid/roipool'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-roipool = load(name='roipool', sources=['src/roi_pool_binding.cpp',
-                                        'src/roi_pool_kernel.cu'],
+roipool = load(name='roipool', sources=['extensions/layers/roipool/src/roi_pool_binding.cpp',
+                                        'extensions/layers/roipool/src/roi_pool_kernel.cu'],
                build_directory=build_path, verbose=True)
 
 
@@ -29,7 +31,7 @@ class ROIPoolFunction(Function):
         if train:
             ctx.memory = torch.zeros((rois.size(0), feat.size(1), pool_h, pool_w), dtype=torch.int)
         else:
-            ctx.memory = torch.zeros(0)
+            ctx.memory = torch.zeros(0).int()
         if feat.is_cuda:
             ctx.memory = ctx.memory.cuda()
             output = roipool.forward_cuda(feat, rois, pool_h, pool_w, scale, ctx.memory)

@@ -12,19 +12,36 @@ import numpy as np
 import torch
 from torch import nn
 
+from utils.tools.logger import Logger as Log
 
-class ROIPoolingLayer(object):
 
+class ROILayer(nn.Module):
     def __init__(self, configer):
+        super(ROILayer, self).__init__()
         self.configer = configer
-        self.pooled_width = int(self.configer.get('roi', 'pooled_width'))
-        self.pooled_height = int(self.configer.get('roi', 'pooled_height'))
-        self.spatial_scale = 1.0 / float(self.configer.get('roi', 'spatial_stride'))
-        from extensions.layers.roi.roi_pool import _RoIPooling
-        self.roi_pooling = _RoIPooling(self.pooled_height, self.pooled_width, self.spatial_scale)
+        if self.configer.get('roi', 'method') == 'roipool':
+            from extensions.layers.roipool.module import RoIPool2D
+            self.roi_layer = RoIPool2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
+                                       pooled_width=int(self.configer.get('roi', 'pooled_width')),
+                                       spatial_scale=1.0 / float(self.configer.get('roi', 'spatial_stride')))
 
-    def __call__(self, features, rois):
-        return self.roi_pooling(features, rois)
+        elif self.configer.get('roi', 'method') == 'roialign':
+            from extensions.layers.roialign.module import RoIAlign2D
+            self.roi_layer = RoIAlign2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
+                                        pooled_width=int(self.configer.get('roi', 'pooled_width')),
+                                        spatial_scale=1.0 / float(self.configer.get('roi', 'spatial_stride')),
+                                        sampling_ratio=2)
+
+        elif self.configer.get('roi', 'method') == 'py_roipool':
+            self.roi_layer = PyROIPoolingLayer(self.configer)
+
+        else:
+            Log.error('Invalid roi method.')
+            exit(1)
+
+    def forward(self, features, rois):
+        out = self.roi_layer(features, rois)
+        return out
 
 
 class PyROIPoolingLayer(nn.Module):

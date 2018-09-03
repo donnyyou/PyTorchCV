@@ -14,8 +14,7 @@ from torch import nn
 from torchvision.models import vgg16
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.roi_pooling_layer import ROIPoolingLayer, PyROIPoolingLayer
-from extensions.layers.roialign.module import RoIAlign2D
+from utils.layers.det.roi_layer import ROILayer
 from utils.layers.det.roi_sample_layer import RoiSampleLayer
 from utils.tools.logger import Logger as Log
 
@@ -207,10 +206,7 @@ class RoIHead(nn.Module):
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
         # self.roi_layer = ROIPoolingLayer(self.configer)
-        self.roi_align = RoIAlign2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
-                                    pooled_width=int(self.configer.get('roi', 'pooled_width')),
-                                    spatial_scale=1.0 / float(self.configer.get('roi', 'spatial_stride')),
-                                    sampling_ratio=2)
+        self.roi_layer = ROILayer(self.configer)
 
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
@@ -230,7 +226,7 @@ class RoIHead(nn.Module):
                 which bounding boxes correspond to. Its shape is :math:`(R',)`.
         """
         # in case roi_indices is  ndarray
-        pool = self.roi_align(x, indices_and_rois)
+        pool = self.roi_layer(x, indices_and_rois)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)
         roi_cls_locs = self.cls_loc(fc7)
