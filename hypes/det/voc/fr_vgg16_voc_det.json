@@ -203,7 +203,7 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.45
+      "overlap_threshold": 0.3
     },
     "vis": {
       "conf_threshold": 0.05
