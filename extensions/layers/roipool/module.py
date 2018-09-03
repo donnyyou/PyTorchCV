@@ -16,8 +16,8 @@ build_path = '/tmp/bulid/roipool'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-roipool = load(name='roipool', sources=['extensions/layers/roipool/src/roi_pool_binding.cpp',
-                                        'extensions/layers/roipool/src/roi_pool_kernel.cu'],
+roipool = load(name='roipool', sources=['src/roi_pool_binding.cpp',
+                                        'src/roi_pool_kernel.cu'],
                build_directory=build_path, verbose=True)
 
 
@@ -76,7 +76,8 @@ if __name__ == '__main__':
 
     print('------------test on cpu------------')
     roi_pool = RoIPool2D(2, 2, 0.5)
-    feat = torch.arange(64).view(1, 1, 8, 8).float()
+    feat = torch.arange(64 * 4).view(2, 2, 8, 8).float()
+    print(feat)
     # Note: first element is batch_idx
     rois = torch.Tensor([0, 1.6, 1.6, 9.2, 11.0]).view(-1, 5)
     feat.requires_grad = True
@@ -90,10 +91,12 @@ if __name__ == '__main__':
         feat = feat.detach().cuda()
         rois = rois.cuda()
         feat.requires_grad = True
+        feat.register_hook(lambda g: print(g))
         out = roi_pool(feat, rois)
         print(out)
         temp = out.sum()
         temp.backward()
-        print(feat.grad)
+
+        # print(feat.grad)
     else:
         print('You device have not a GPU')

@@ -17,10 +17,18 @@ __global__ void
 roi_pool_forward_kernel(const int total, const T *input, const T *rois, const T scale, const int channels, const int h,
                         const int w, const int pool_h, const int pool_w, T *output, int *memory) {
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < total; idx += blockDim.x * gridDim.x) {
-        int pw = idx % pool_w;
-        int ph = (idx / pool_w) % pool_h;
-        int c = (idx / pool_h / pool_w) % channels;
-        int n = idx / pool_h / pool_w / channels;
+        // int pw = idx % pool_w;
+        // int ph = (idx / pool_w) % pool_h;
+        // int c = (idx / pool_h / pool_w) % channels;
+        // int n = idx / pool_h / pool_w / channels;
+
+        int n = idx;
+        int pw = n % pool_w;
+        n /= pool_w;
+        int ph = n % pool_h;
+        n /= pool_h;
+        int c = n % channels;
+        n /= channels;
 
         const T *offset_rois = rois + n * 5;
         int roi_batch_idx = offset_rois[0];
@@ -53,7 +61,7 @@ roi_pool_forward_kernel(const int total, const T *input, const T *rois, const T 
         T maxval = is_empty ? 0 : -FLT_MAX;
         // If nothing is pooled, argmax = -1 causes nothing to be backprop'd
         int maxidx = -1;
-        const T *offset_input = input + (roi_batch_idx * channels * c) * h * w;
+        const T *offset_input = input + (roi_batch_idx * channels + c) * h * w;
         for (int hi = hstart; hi < hend; ++hi) {
             for (int wi = wstart; wi < wend; ++wi) {
                 int ind = hi * w + wi;
@@ -100,20 +108,29 @@ __global__ void roi_pool_backward_kernel(const int total, const T *grad_out, con
                                          const int *memory) {
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < total; idx += blockDim.x * gridDim.x) {
         // (n, c, ph, pw) is an element in the pooled output
-        int pw = idx % pool_w;
-        int ph = (idx / pool_w) % pool_h;
-        int c = (idx / pool_w / pool_h) % channels;
-        int n = idx / pool_w / pool_h / channels;
+        // int pw = idx % pool_w;
+        // int ph = (idx / pool_w) % pool_h;
+        // int c = (idx / pool_w / pool_h) % channels;
+        // int n = idx / pool_w / pool_h / channels;
+
+        int n = idx;
+        int pw = n % pool_w;
+        n /= pool_w;
+        int ph = n % pool_h;
+        n /= pool_h;
+        int c = n % channels;
+        n /= channels;
 
         const T *offset_rois = rois + n * 5;
         int roi_batch_idx = offset_rois[0];
         // offset of index
+
         int grad_in_offset = (roi_batch_idx * channels + c) * h * w;
         int grad_out_offset = (n * channels + c) * pool_h * pool_w;
 
         const T *offset_grad_out = grad_out + grad_out_offset;
         T *offset_grad_in = grad_in + grad_in_offset;
-        const int *offset_memory = memory + grad_in_offset;
+        const int *offset_memory = memory + grad_out_offset;
 
         int argmax = offset_memory[ph * pool_w + pw];
         if (argmax != -1)
