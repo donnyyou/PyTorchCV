@@ -10,10 +10,8 @@ from __future__ import print_function
 
 import os
 import cv2
-import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
 from datasets.det.det_data_utilizer import DetDataUtilizer

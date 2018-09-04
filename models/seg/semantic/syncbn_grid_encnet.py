@@ -43,7 +43,7 @@ class PPMBilinearDeepsup(nn.Module):
     def __init__(self, pool_scales=(1, 2, 3, 6), fc_dim=1024):
         super(PPMBilinearDeepsup, self).__init__()
         self.ppm = []
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
@@ -70,7 +70,7 @@ class FCNHead(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(FCNHead, self).__init__()
         inter_channels = in_channels // 4
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         self.conv5 = nn.Sequential(nn.Conv2d(in_channels, inter_channels, 3, padding=1, bias=False),
                                    BatchNorm2d(inter_channels),
                                    nn.ReLU(),
@@ -87,8 +87,8 @@ class EncModule(nn.Module):
         # norm_layer = nn.BatchNorm1d if isinstance(norm_layer, nn.BatchNorm2d) else \
         #    encoding.nn.BatchNorm1d
         self.se_loss = se_loss
-        from extensions.layers.encoding.syncbn import BatchNorm1d, BatchNorm2d
-        from extensions.layers.encoding.encoding import Encoding
+        from extensions.layers.syncbn.module import BatchNorm1d, BatchNorm2d
+        from extensions.layers.encoding.module import Encoding
         self.encoding = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, bias=False),
             BatchNorm2d(in_channels),
@@ -122,7 +122,7 @@ class PyramidEncHead(nn.Module):
         self.enc_size = enc_size
         self.se_loss = se_loss
         self.lateral = lateral
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         self.conv5 = nn.Sequential(
             nn.Conv2d(in_channels, 512, 3, padding=1, bias=False),
             BatchNorm2d(512),
@@ -183,6 +183,7 @@ if __name__ == "__main__":
     configer = Configer(
         hypes_file='/home/donny/Projects/PyTorchCV/hypes/seg/cityscape/fs_gridencnet_cityscape_seg.json')
     configer.add_key_value(['project_dir'], '/home/donny/Projects/PyTorchCV')
+    configer.add_key_value(['network', 'pretrained'], False)
     model = SyncBNGridEncNet(configer).cuda()
     model.eval()
     image = torch.randn(1, 3, 96, 96).cuda()

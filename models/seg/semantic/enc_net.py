@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from extensions.layers.encoding.syncbn import BatchNorm1d, BatchNorm2d
-from extensions.layers.encoding.encoding import Encoding
+from extensions.layers.syncbn.module import BatchNorm1d, BatchNorm2d
+from extensions.layers.encoding.module import Encoding
 from models.tools.module_helper import Mean
 from models.backbones.backbone_selector import BackboneSelector
 

@@ -19,7 +19,7 @@ class _ConvBatchNormReluBlock(nn.Module):
         self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
                             kernel_size=kernel_size, stride=stride, padding=padding,
                             dilation = dilation, bias=False)
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         self.bn = BatchNorm2d(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
@@ -37,7 +37,7 @@ class PPMBilinearDeepsup(nn.Module):
         super(PPMBilinearDeepsup, self).__init__()
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
@@ -82,7 +82,7 @@ class PPMBilinearDeepsup(nn.Module):
 class EmbedModule(nn.Module):
     def __init__(self, inchannels):
         super(EmbedModule, self).__init__()
-        from extensions.layers.encoding.syncbn import BatchNorm2d
+        from extensions.layers.syncbn.module import BatchNorm2d
         inter_channels = inchannels // 4
         self.conv = nn.Sequential(
             nn.Conv2d(inchannels, inter_channels, kernel_size=1, padding=0, bias=False),

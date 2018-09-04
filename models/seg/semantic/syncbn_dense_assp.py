@@ -9,7 +9,7 @@ import torch
 from torch import nn
 from torchvision.models import DenseNet
 
-from extensions.layers.encoding.syncbn import BatchNorm2d
+from extensions.layers.syncbn.module import BatchNorm2d
 from models.backbones.backbone_selector import BackboneSelector
 
 

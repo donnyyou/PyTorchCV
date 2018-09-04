@@ -173,7 +173,7 @@ class DenseNetBackbone(object):
             orig_densenet = self.densenet_models.densenet121()
             arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
 
-        elif arch == 'sync_densenet121_dilated8':
+        elif arch == 'syncbn_densenet121_dilated8':
             orig_densenet = self.syncbn_densenet_models.densenet121()
             arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=8)
 

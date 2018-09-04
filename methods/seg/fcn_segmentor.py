@@ -18,7 +18,7 @@ from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.seg_model_manager import SegModelManager
 from val.scripts.seg.seg_running_score import SegRunningScore
-from extensions.layers.encoding.parallel import DataParallelCriterion
+from extensions.layers.syncbn.parallel import DataParallelCriterion
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from vis.visualizer.seg_visualizer import SegVisualizer

@@ -20,7 +20,7 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
-from extensions.layers.encoding.syncbn import BatchNorm2d
+from extensions.layers.syncbn.module import BatchNorm2d
 from utils.tools.logger import Logger as Log
 
 

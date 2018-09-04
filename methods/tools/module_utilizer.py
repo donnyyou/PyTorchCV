@@ -62,7 +62,7 @@ class ModuleUtilizer(object):
         if not self.configer.is_empty('network', 'encoding_parallel')\
                 and self.configer.get('network', 'encoding_parallel'):
             if len(self.configer.get('gpu')) > 1:
-                from extensions.layers.encoding.parallel import DataParallelModel
+                from extensions.layers.syncbn.parallel import DataParallelModel
                 self.configer.update_value(['network', 'parallel'], True)
                 return DataParallelModel(net)
             else:
@@ -178,7 +178,7 @@ class ModuleUtilizer(object):
                 m.eval()
 
             if syncbn:
-                from extensions.layers.encoding.syncbn import BatchNorm2d, BatchNorm1d
+                from extensions.layers.syncbn.module import BatchNorm2d, BatchNorm1d
                 if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
                     m.eval()
 
