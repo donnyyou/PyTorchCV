@@ -34,13 +34,13 @@ class RandomPad(object):
         self.ratio = pad_ratio
         self.mean = mean
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, channels = img.shape
         expand_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
@@ -68,6 +68,14 @@ class RandomPad(object):
             expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = maskmap
             maskmap = expand_maskmap
 
+        if insmap_list is not None:
+            for i, insmap in enumerate(insmap_list):
+                expand_insmap = np.zeros((int(height * expand_ratio), int(width * expand_ratio)), dtype=insmap.dtype)
+                expand_insmap[:, :] = 0
+                expand_insmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = insmap
+                insmap = expand_insmap
+                insmap_list[i] = insmap
+
         if kpts is not None and kpts.size > 0:
             kpts[:, :, 0] += left_pad
             kpts[:, :, 1] += up_pad
@@ -76,7 +84,7 @@ class RandomPad(object):
             bboxes[:, 0::2] += left_pad
             bboxes[:, 1::2] += up_pad
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomShift(object):
@@ -95,13 +103,13 @@ class RandomShift(object):
         self.ratio = shift_ratio
         self.mean = mean
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, channels = img.shape
         left_pad = random.randint(0, self.shift_pixel * 2)  # pad_left
@@ -129,6 +137,16 @@ class RandomShift(object):
                            self.shift_pixel:self.shift_pixel + width] = maskmap
             maskmap = expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)]
 
+        if insmap_list is not None:
+            for i, insmap in enumerate(insmap_list):
+                expand_insmap = np.zeros((height + self.shift_pixel * 2,
+                                          width + self.shift_pixel * 2), dtype=insmap.dtype)
+                expand_insmap[:, :] = 0
+                expand_insmap[self.shift_pixel:self.shift_pixel + height,
+                              self.shift_pixel:self.shift_pixel + width] = insmap
+                insmap = expand_insmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)]
+                insmap_list[i] = insmap
+
         if kpts is not None and kpts.size > 0:
             kpts[:, :, 0] += left_pad
             kpts[:, :, 1] += up_pad
@@ -137,7 +155,7 @@ class RandomShift(object):
             bboxes[:, 0::2] += left_pad
             bboxes[:, 1::2] += up_pad
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomHFlip(object):
@@ -145,13 +163,13 @@ class RandomHFlip(object):
         self.swap_pair = swap_pair
         self.ratio = flip_ratio
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, _ = img.shape
         img = cv2.flip(img, 1)
@@ -160,6 +178,11 @@ class RandomHFlip(object):
 
         if maskmap is not None:
             maskmap = cv2.flip(maskmap, 1)
+
+        if insmap_list is not None:
+            for i, insmap in enumerate(insmap_list):
+                insmap = cv2.flip(insmap, 1)
+                insmap_list[i] = insmap
 
         if bboxes is not None and bboxes.size > 0:
             xmin = width - 1 - bboxes[:, 2]
@@ -175,7 +198,7 @@ class RandomHFlip(object):
                 kpts[:, pair[0] - 1] = kpts[:, pair[1] - 1]
                 kpts[:, pair[1] - 1] = temp_point
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomSaturation(object):
@@ -186,20 +209,20 @@ class RandomSaturation(object):
         assert self.upper >= self.lower, "saturation upper must be >= lower."
         assert self.lower >= 0, "saturation lower must be non-negative."
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         img[:, :, 1] *= random.uniform(self.lower, self.upper)
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         img = np.clip(img, 0, 255).astype(np.uint8)
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomHue(object):
@@ -208,13 +231,13 @@ class RandomHue(object):
         self.delta = delta
         self.ratio = hue_ratio
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -223,7 +246,7 @@ class RandomHue(object):
         img[:, :, 0][img[:, :, 0] < 0] += 360
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         img = np.clip(img, 0, 255).astype(np.uint8)
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomPerm(object):
@@ -233,17 +256,17 @@ class RandomPerm(object):
                       (1, 0, 2), (1, 2, 0),
                       (2, 0, 1), (2, 1, 0))
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         swap = self.perms[random.randint(0, len(self.perms) - 1)]
         img = img[:, :, swap].astype(np.uint8)
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomContrast(object):
@@ -254,18 +277,18 @@ class RandomContrast(object):
         assert self.upper >= self.lower, "contrast upper must be >= lower."
         assert self.lower >= 0, "contrast lower must be non-negative."
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         img *= random.uniform(self.lower, self.upper)
         img = np.clip(img, 0, 255).astype(np.uint8)
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomBrightness(object):
@@ -273,13 +296,13 @@ class RandomBrightness(object):
         self.shift_value = shift_value
         self.ratio = brightness_ratio
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         img = img.astype(np.float32)
         shift = random.randint(-self.shift_value, self.shift_value)
@@ -287,7 +310,7 @@ class RandomBrightness(object):
         img = np.around(img)
         img = np.clip(img, 0, 255).astype(np.uint8)
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomResize(object):
@@ -342,7 +365,7 @@ class RandomResize(object):
             Log.error('Resize method {} is invalid.'.format(self.method))
             exit(1)
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         """
         Args:
             img     (Image):   Image to be resized.
@@ -381,7 +404,12 @@ class RandomResize(object):
         if maskmap is not None:
             maskmap = cv2.resize(maskmap, converted_size, interpolation=cv2.INTER_NEAREST)
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        if insmap_list is not None:
+            for i, insmap in enumerate(insmap_list):
+                insmap = cv2.resize(insmap, converted_size, interpolation=cv2.INTER_NEAREST)
+                insmap_list[i] = insmap
+
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomRotate(object):
@@ -397,7 +425,7 @@ class RandomRotate(object):
         self.ratio = rotate_ratio
         self.mean = mean
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         """
         Args:
             img    (Image):     Image to be rotated.
@@ -440,6 +468,13 @@ class RandomRotate(object):
                                      borderValue=(1, 1, 1), flags=cv2.INTER_NEAREST)
             maskmap = maskmap.astype(np.uint8)
 
+        if insmap_list is not None:
+            for i, insmap in enumerate(insmap_list):
+                insmap = cv2.warpAffine(insmap, rotate_mat, (new_width, new_height),
+                                        borderValue=(0, 0, 0), flags=cv2.INTER_NEAREST)
+                insmap = insmap.astype(np.uint8)
+                insmap_list[i] = insmap
+
         if kpts is not None and kpts.size > 0:
             num_objects = len(kpts)
             num_keypoints = len(kpts[0])
@@ -471,7 +506,7 @@ class RandomRotate(object):
                              max(bbox_temp[0], bbox_temp[2], bbox_temp[4], bbox_temp[6]),
                              max(bbox_temp[1], bbox_temp[3], bbox_temp[5], bbox_temp[7])]
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomCrop(object):
@@ -532,7 +567,7 @@ class RandomCrop(object):
             Log.error('Crop method {} is invalid.'.format(self.method))
             exit(1)
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         """
         Args:
             img (Image):   Image to be cropped.
@@ -549,7 +584,7 @@ class RandomCrop(object):
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, _ = img.shape
         target_size = [min(self.size[0], width), min(self.size[1], height)]
@@ -582,6 +617,15 @@ class RandomCrop(object):
             if labels is not None:
                 labels = labels[mask]
 
+            if insmap_list is not None:
+                new_insmap_list = list()
+                for i, insmap in enumerate(insmap_list):
+                    if mask[i] == 1:
+                        insmap = insmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
+                        new_insmap_list.append(insmap)
+
+                insmap_list = new_insmap_list
+
         img = img[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
         if maskmap is not None:
             maskmap = maskmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
@@ -589,7 +633,7 @@ class RandomCrop(object):
         if labelmap is not None:
             labelmap = labelmap[offset_up:offset_up + target_size[1], offset_left:offset_left + target_size[0]]
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomFocusCrop(object):
@@ -645,7 +689,7 @@ class RandomFocusCrop(object):
 
             return max_center, max_index
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         """
         Args:
             img (Image):   Image to be cropped.
@@ -662,7 +706,7 @@ class RandomFocusCrop(object):
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, channels = img.shape
 
@@ -694,6 +738,21 @@ class RandomFocusCrop(object):
             if labels is not None:
                 labels = labels[mask]
 
+            if insmap_list is not None:
+                new_insmap_list = list()
+                for i, insmap in enumerate(insmap_list):
+                    if mask[i] == 1:
+                        expand_insmap = np.zeros((max(height, self.size[1]) + abs(offset_up),
+                                                  max(width, self.size[0]) + abs(offset_left)), dtype=insmap.dtype)
+                        expand_insmap[:, :, :] = 0
+                        expand_insmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+                                      abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = insmap
+                        insmap = expand_insmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
+                                               max(offset_left, 0):max(offset_left, 0) + self.size[0]]
+                        new_insmap_list.append(insmap)
+
+                insmap_list = new_insmap_list
+
         expand_image = np.zeros((max(height, self.size[1]) + abs(offset_up),
                                  max(width, self.size[0]) + abs(offset_left), channels), dtype=img.dtype)
         expand_image[:, :, :] = self.mean
@@ -720,7 +779,7 @@ class RandomFocusCrop(object):
             labelmap = expand_labelmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
                                        max(offset_left, 0):max(offset_left, 0) + self.size[0]]
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class RandomDetCrop(object):
@@ -779,12 +838,12 @@ class RandomDetCrop(object):
         union = area_a + area_b - inter
         return inter / union  # [A,B]
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
-        assert labelmap is None and maskmap is None and kpts is None
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
+        assert labelmap is None and maskmap is None and kpts is None and insmap_list is None
         assert bboxes is not None and labels is not None
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
         height, width, _ = img.shape
 
@@ -792,7 +851,7 @@ class RandomDetCrop(object):
             # randomly choose a mode
             mode = random.choice(self.sample_options)
             if mode is None:
-                return img, labelmap, maskmap, kpts, bboxes, labels
+                return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
             min_iou, max_iou = mode
             if min_iou is None:
@@ -857,7 +916,7 @@ class RandomDetCrop(object):
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
 
-                return current_img, labelmap, maskmap, kpts, current_boxes, current_labels
+                return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, insmap_list
 
 
 class Resize(object):
@@ -871,7 +930,7 @@ class Resize(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
         """
         Args:
             img     (Image):   Image to be resized.
@@ -916,6 +975,11 @@ class Resize(object):
             if maskmap is not None:
                 maskmap = cv2.resize(maskmap, scaled_size, interpolation=cv2.INTER_NEAREST)
 
+            if insmap_list is not None:
+                for i, insmap in enumerate(insmap_list):
+                    insmap = cv2.resize(insmap, scaled_size, interpolation=cv2.INTER_NEAREST)
+                    insmap_list[i] = insmap
+
         pad_width = target_width - scaled_size[0]
         pad_height = target_height - scaled_size[1]
         if pad_width > 0 or pad_height > 0:
@@ -939,6 +1003,14 @@ class Resize(object):
                 expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = maskmap
                 maskmap = expand_maskmap
 
+            if insmap_list is not None:
+                for i, insmap in enumerate(insmap_list):
+                    expand_insmap = np.zeros((target_height, target_width), dtype=insmap.dtype)
+                    expand_insmap[:, :] = 0
+                    expand_insmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = insmap
+                    insmap = expand_insmap
+                    insmap_list[i] = insmap
+
             if kpts is not None and kpts.size > 0:
                 kpts[:, :, 0] += left_pad
                 kpts[:, :, 1] += up_pad
@@ -947,7 +1019,7 @@ class Resize(object):
                 bboxes[:, 0::2] += left_pad
                 bboxes[:, 1::2] += up_pad
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, insmap_list
 
 
 class CV2AugCompose(object):
@@ -1243,47 +1315,52 @@ class CV2AugCompose(object):
 
         return True
 
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None):
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, insmap_list=None):
 
         if self.split == 'train':
             for trans_key in self.configer.get('train_trans', 'trans_seq'):
-                (img, labelmap, maskmap,
-                 kpts, bboxes, labels) = self.transforms[trans_key](img, labelmap, maskmap, kpts, bboxes, labels)
+                (img, labelmap, maskmap, kpts,
+                 bboxes, labels, insmap_list) = self.transforms[trans_key](img, labelmap, maskmap,
+                                                                           kpts, bboxes, labels, insmap_list)
 
         else:
             for trans_key in self.configer.get('val_trans', 'trans_seq'):
-                (img, labelmap, maskmap,
-                 kpts, bboxes, labels) = self.transforms[trans_key](img, labelmap, maskmap, kpts, bboxes, labels)
+                (img, labelmap, maskmap, kpts,
+                 bboxes, labels, insmap_list) = self.transforms[trans_key](img, labelmap, maskmap,
+                                                                           kpts, bboxes, labels, insmap_list)
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'n', 'n', 'n', 'n']):
             return img
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'n', 'n', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['y', 'n', 'n', 'n', 'n', 'n']):
             return img, labelmap
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'y', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'n', 'y', 'n', 'n']):
             return img, bboxes
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'y', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'y', 'n', 'n', 'n']):
             return img, kpts
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'y', 'y', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'y', 'y', 'n', 'n']):
             return img, kpts, bboxes
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'y', 'y', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'y', 'y', 'n', 'n', 'n']):
             return img, maskmap, kpts
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'y', 'y', 'n', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['y', 'y', 'y', 'n', 'n', 'n']):
             return img, labelmap, maskmap, kpts
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'y', 'y', 'y', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'y', 'y', 'y', 'n', 'n']):
             return img, maskmap, kpts, bboxes
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['y', 'y', 'y', 'y', 'n']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['y', 'y', 'y', 'y', 'n', 'n']):
             return img, labelmap, maskmap, kpts, bboxes
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels], ['n', 'n', 'n', 'y', 'y']):
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'n', 'y', 'y', 'n']):
             return img, bboxes, labels
+
+        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, insmap_list], ['n', 'n', 'n', 'y', 'y', 'y']):
+            return img, bboxes, labels, insmap_list
 
         Log.error('Params is not valid.')
         exit(1)
