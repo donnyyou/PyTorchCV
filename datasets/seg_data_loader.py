@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import torch
 from torch.utils import data
 
 from datasets.seg.fs_data_loader import FSDataLoader
@@ -71,7 +72,7 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
 
             return trainloader
 
@@ -99,13 +100,36 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
 
             return valloader
 
         else:
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
+
+    @staticmethod
+    def _seg_collate(batch):
+        """Custom collate fn for dealing with batches of images that have a different
+        number of associated object annotations (bounding boxes).
+        Arguments:
+            batch: (tuple) A tuple of tensor images and lists of annotations
+        Return:
+            A tuple containing:
+                1) (tensor) batch of images stacked on their 0 dim
+                2) (list of tensors) annotations for a given image are stacked on 0 dim
+        """
+        imgs = []
+        bboxes = []
+        labels = []
+        polygons = []
+        for sample in batch:
+            imgs.append(sample[0])
+            bboxes.append(sample[1])
+            labels.append(sample[2])
+            polygons.append(sample[3])
+
+        return torch.stack(imgs, 0), bboxes, labels, polygons
 
 if __name__ == "__main__":
     # Test data loader.

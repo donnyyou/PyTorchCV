@@ -31,16 +31,16 @@ class MRDataLoader(data.Dataset):
         img = ImageHelper.read_image(self.img_list[index],
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
-        labels, bboxes, insmap_list = self.__read_json_file(self.json_list[index])
+        labels, bboxes, polygons = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
-            img, bboxes, labels, insmap_list = self.aug_transform(img, bboxes=bboxes,
-                                                                  labels=labels, insmap_list=insmap_list)
+            img, bboxes, labels, polygons = self.aug_transform(img, bboxes=bboxes,
+                                                               labels=labels, polygons=polygons)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, bboxes, labels, insmap_list
+        return img, bboxes, labels, polygons
 
     def __read_json_file(self, json_file):
         """
@@ -52,7 +52,7 @@ class MRDataLoader(data.Dataset):
 
         labels = list()
         bboxes = list()
-        insmap_list = list()
+        polygons = list()
 
         for object in json_dict['objects']:
             if 'difficult' in object and object['difficult'] and not self.configer.get('data', 'keep_difficult'):
@@ -60,8 +60,9 @@ class MRDataLoader(data.Dataset):
 
             labels.append(object['label'])
             bboxes.append(object['bbox'])
+            polygons.append(object['segm'])
 
-        return np.array(labels), np.array(bboxes).astype(np.float32), insmap_list
+        return np.array(labels), np.array(bboxes).astype(np.float32), polygons
 
     def __list_dirs(self, root_dir):
         img_list = list()
