@@ -35,6 +35,33 @@ class MaskHelper(object):
         return mask
 
     @staticmethod
+    def polys2mask_wrt_box(polygons, box, target_size):
+        """Convert from the COCO polygon segmentation format to a binary mask
+        encoded as a 2D array of data type numpy.float32. The polygon segmentation
+        is understood to be enclosed in the given box and rasterized to an M x M
+        mask. The resulting mask is therefore of shape (M, M).
+        """
+        w = box[2] - box[0]
+        h = box[3] - box[1]
+
+        w = np.maximum(w, 1)
+        h = np.maximum(h, 1)
+
+        polygons_norm = []
+        for poly in polygons:
+            p = np.array(poly, dtype=np.float32)
+            p[0::2] = (p[0::2] - box[0]) * target_size[0] / w
+            p[1::2] = (p[1::2] - box[1]) * target_size[1] / h
+            polygons_norm.append(p)
+
+        rle = mask_util.frPyObjects(polygons_norm, target_size[1], target_size[0])
+        mask = np.array(mask_util.decode(rle), dtype=np.float32)
+        # Flatten in case polygons was a list
+        mask = np.sum(mask, axis=2)
+        mask = np.array(mask > 0, dtype=np.float32)
+        return mask
+
+    @staticmethod
     def rle_mask_voting(top_masks, all_masks, all_dets, iou_thresh, binarize_thresh, method='AVG'):
         """Returns new masks (in correspondence with `top_masks`) by combining
         multiple overlapping masks coming from the pool of `all_masks`. Two methods

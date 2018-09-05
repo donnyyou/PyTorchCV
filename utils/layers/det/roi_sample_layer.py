@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import random
 
+from utils.helpers.mask_helper import MaskHelper
 from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
@@ -20,7 +21,7 @@ class RoiSampleLayer(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, indices_and_rois, gt_bboxes, gt_bboxes_num, gt_labels):
+    def __call__(self, indices_and_rois, gt_bboxes, gt_bboxes_num, gt_labels, gt_polygons=None):
         n_sample = self.configer.get('roi', 'loss')['n_sample']
         pos_iou_thresh = self.configer.get('roi', 'loss')['pos_iou_thresh']
         neg_iou_thresh_hi = self.configer.get('roi', 'loss')['neg_iou_thresh_hi']
@@ -32,10 +33,12 @@ class RoiSampleLayer(object):
         sample_roi_list = list()
         gt_roi_loc_list = list()
         gt_roi_label_list= list()
+        gt_roi_mask_list = list()
 
         for i in range(len(gt_bboxes)):
             temp_gt_bboxes = gt_bboxes[i, :gt_bboxes_num[i]].clone()
             temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]].clone()
+
             input_size = self.configer.get('data', 'input_size')
 
             for j in range(gt_bboxes_num[i]):
@@ -88,6 +91,18 @@ class RoiSampleLayer(object):
                 gt_roi_label = gt_roi_label[keep_index].detach()
                 gt_roi_label[pos_roi_per_this_image:] = 0  # negative labels --> 0
                 sample_roi = rois[keep_index].detach()
+
+                if gt_polygons is not None:
+                    temp_gt_polygons = gt_polygons[i]
+                    target_size = [self.configer.get('roi', 'pooled_width'), self.configer.get('roi', 'pooled_height')]
+                    for roi_index in range(pos_roi_per_this_image):
+                        gt_index = gt_assignment[keep_index[roi_index]]
+                        roi_polygons = temp_gt_polygons[gt_index]
+                        roi = sample_roi[roi_index].cpu().numpy()
+                        mask = MaskHelper.polys2mask_wrt_box(roi_polygons, roi, target_size)
+                        mask = torch.from_numpy(mask).to(indices_and_rois.device)
+                        gt_roi_mask_list.append(mask)
+
                 # Compute offsets and scales to match sampled RoIs to the GTs.
                 boxes = temp_gt_bboxes[gt_assignment][keep_index]
                 cxcy = (boxes[:, :2] + boxes[:, 2:]) / 2 - (sample_roi[:, :2] + sample_roi[:, 2:]) / 2  # [8732,2]
@@ -108,4 +123,12 @@ class RoiSampleLayer(object):
             gt_roi_label_list.append(gt_roi_label)
             # sample_roi.register_hook(lambda g: print(g))
 
-        return torch.cat(sample_roi_list, 0), torch.cat(gt_roi_loc_list, 0), torch.cat(gt_roi_label_list, 0)
+        sample_roi = torch.cat(sample_roi_list, 0)
+        gt_roi_loc = torch.cat(gt_roi_loc_list, 0)
+        gt_roi_label = torch.cat(gt_roi_label_list, 0)
+        gt_pos_roi_mask = torch.cat(gt_roi_mask_list, 0)
+
+        if gt_polygons is not None:
+            return sample_roi, gt_roi_loc, gt_roi_label, gt_pos_roi_mask
+        else:
+            return sample_roi, gt_roi_loc, gt_roi_label
