@@ -17,7 +17,7 @@ from utils.tools.configer import Configer
 from utils.tools.logger import Logger as Log
 
 
-class DetParser(object):
+class InsParser(object):
     def __init__(self, configer):
         self.configer = configer
 
@@ -85,19 +85,19 @@ class DetParser(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes_file', default='../../hypes/det/coco/ssd_vgg300_coco_det.json', type=str,
+    parser.add_argument('--hypes_file', default='../../hypes/seg/coco/mr_fpn_coco_seg.json', type=str,
                         dest='hypes_file', help='The file of the hyper parameters.')
     parser.add_argument('--image_file', default=None, type=str,
-                        dest='image_file', help='The image file of Det Parser.')
+                        dest='image_file', help='The image file of Ins Parser.')
     parser.add_argument('--json_file', default=None, type=str,
                         dest='json_file', help='The json file of Det Parser.')
-    parser.add_argument('--image_dir', default='/home/donny/DataSet/COCO_DET/train/image', type=str,
-                        dest='image_dir', help='The image directory of Det Parser.')
-    parser.add_argument('--json_dir', default='/home/donny/DataSet/COCO_DET/train/json', type=str,
-                        dest='json_dir', help='The json directory of Det Parser.')
+    parser.add_argument('--image_dir', default='/home/donny/DataSet/COCO_INS/train/image', type=str,
+                        dest='image_dir', help='The image directory of Ins Parser.')
+    parser.add_argument('--json_dir', default='/home/donny/DataSet/COCO_INS/train/json', type=str,
+                        dest='json_dir', help='The json directory of Ins Parser.')
 
     args_parser = parser.parse_args()
 
-    det_parser = DetParser(Configer(hypes_file=args_parser.hypes_file))
-    det_parser.parse_img_det(args_parser.image_file, args_parser.json_file)
-    det_parser.parse_dir_det(args_parser.image_dir, args_parser.json_dir)
+    ins_parser = InsParser(Configer(hypes_file=args_parser.hypes_file))
+    ins_parser.parse_img_det(args_parser.image_file, args_parser.json_file)
+    ins_parser.parse_dir_det(args_parser.image_dir, args_parser.json_dir)

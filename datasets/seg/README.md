@@ -32,7 +32,7 @@ The json format for Instance Segmentation below.
         {
             "bbox": [x_left_up, y_left_up, x_right_bottom, y_right_bottom],
             "label": class_num,
-            "segm": [[polygon1], [...], ...] or "rle": rle
+            "segm": [[polygon1], [...], ...] or rle
         },
         {
             ...
