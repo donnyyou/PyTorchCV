@@ -18,11 +18,9 @@ class MaskHelper(object):
 
     @staticmethod
     def polys2mask(polygons, width, height):
-        rle = mask_util.frPyObjects(polygons, height, width)
+        rles = mask_util.frPyObjects(polygons, height, width)
+        rle = mask_util.merge(rles)
         mask = np.array(mask_util.decode(rle), dtype=np.float32)
-        # Flatten in case polygons was a list
-        mask = np.sum(mask, axis=2)
-        mask = np.array(mask > 0, dtype=np.float32)
         return mask
 
     @staticmethod

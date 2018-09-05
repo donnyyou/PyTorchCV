@@ -18,10 +18,10 @@ TRAIN_SAVE_DIR='/home/donny/DataSet/COCO_INS/train'
 VAL_SAVE_DIR='/home/donny/DataSet/COCO_INS/val'
 
 
-python coco_det_generator.py --save_dir $TRAIN_SAVE_DIR \
+python coco_ins_generator.py --save_dir $TRAIN_SAVE_DIR \
                              --anno_file $TRAIN_ANNO_FILE \
                              --ori_img_dir $COCO_TRAIN_IMG_DIR
 
-python coco_det_generator.py --save_dir $VAL_SAVE_DIR \
+python coco_ins_generator.py --save_dir $VAL_SAVE_DIR \
                              --anno_file $VAL_ANNO_FILE \
                              --ori_img_dir $COCO_VAL_IMG_DIR

@@ -12,7 +12,10 @@ import json
 import cv2
 import os
 import argparse
+import random
+import numpy as np
 
+from utils.helpers.mask_helper import MaskHelper
 from utils.tools.configer import Configer
 from utils.tools.logger import Logger as Log
 
@@ -79,6 +82,19 @@ class InsParser(object):
                         (int(object['bbox'][0]) + 5, int(object['bbox'][3]) - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                         color=self.configer.get('details', 'color_list')[object['label'] % color_num], thickness=2)
+
+            height, width, _ = image_canvas.shape
+            if isinstance(object['segm'], list):
+                maskmap = MaskHelper.polys2mask(object['segm'], width, height)
+            else:
+                maskmap = MaskHelper.rle2mask(object['segm'], width, height)
+
+            ori_image_canvas = image_canvas.copy()
+            mask_color = self.configer.get('details', 'color_list')[object['label'] % color_num]
+            mask_color = np.array(mask_color, dtype=np.uint8)
+            mask_canvas = np.repeat(maskmap[:, :, np.newaxis], 3, 2).astype(np.uint8) * mask_color
+            image_canvas = cv2.addWeighted(image_canvas, 0.6, mask_canvas, 0.5, 0)
+            image_canvas[mask_canvas == 0] = ori_image_canvas[mask_canvas == 0]
 
         return image_canvas
 
