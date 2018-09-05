@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument('--hypes_file', default=None, type=str,
                         dest='hypes_file', help='The hypes file of pose.')
     parser.add_argument('--gt_file', default=None, type=str,
-                        dest='gt_file', help='The groundtruth annotations file of coco keypoints.')
+                        dest='gt_file', help='The groundtruth annotations file of coco instances.')
     parser.add_argument('--json_dir', default=None, type=str,
                         dest='json_dir', help='The json dir of predict annotations.')
     args = parser.parse_args()
