@@ -11,8 +11,6 @@ from __future__ import print_function
 import numpy as np
 import pycocotools.mask as mask_util
 
-from utils.tools.logger import Logger as Log
-
 
 class MaskHelper(object):
 
