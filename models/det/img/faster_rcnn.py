@@ -14,7 +14,7 @@ from torch import nn
 from torchvision.models import vgg16
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.fr_anchor_predict_layer import FRAnchorPredictLayer
+from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
 from utils.layers.det.fr_roi_process_layer import FRRoiProcessLayer
 from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
 from utils.tools.logger import Logger as Log
@@ -67,7 +67,6 @@ class FasterRCNN(nn.Module):
         self.configer = configer
         self.extractor, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
-        self.fr_anchor_predict_layer = FRAnchorPredictLayer(configer)
         self.roi = FRRoiGenerator(configer)
         self.roi_sampler = FRRoiSampleLayer(configer)
         self.head = RoIHead(configer, self.classifier)
@@ -104,9 +103,8 @@ class FasterRCNN(nn.Module):
         input_size = [inputs[0].size(3), inputs[0].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
             x = self.extractor(inputs[0])
-            feat_list = self.rpn(x)
+            feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
             indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                        self.configer.get('rpn', 'n_test_pre_nms'),
                                                        self.configer.get('rpn', 'n_test_post_nms'))
@@ -116,9 +114,7 @@ class FasterRCNN(nn.Module):
         elif self.configer.get('phase') == 'train' and not self.training:
             x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
             x = self.extractor(x)
-            feat_list = self.rpn(x)
-
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
+            feat_list, rpn_locs, rpn_scores = self.rpn(x)
             test_indices_and_rois, test_rois_num = self.roi(feat_list, rpn_locs, rpn_scores,
                                                             self.configer.get('rpn', 'n_test_pre_nms'),
                                                             self.configer.get('rpn', 'n_test_post_nms'),
@@ -147,9 +143,7 @@ class FasterRCNN(nn.Module):
         elif self.configer.get('phase') == 'train' and self.training:
             x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
             x = self.extractor(x)
-            feat_list = self.rpn(x)
-
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
+            feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
             train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
                                                  self.configer.get('rpn', 'n_train_pre_nms'),
@@ -179,6 +173,7 @@ class NaiveRPN(nn.Module):
         self.configer = configer
         self.num_anchor_list = self.configer.get('rpn', 'num_anchor_list')
         self.conv1 = nn.Conv2d(512, 512, 3, 1, 1)
+        self.rpn_detection_layer = RPNDetectionLayer(configer)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -188,7 +183,8 @@ class NaiveRPN(nn.Module):
 
     def forward(self, x):
         h = F.relu(self.conv1(x))
-        return [h]
+        rpn_locs, rpn_scores = self.rpn_detection_layer([h])
+        return [h], rpn_locs, rpn_scores
 
 
 class RoIHead(nn.Module):

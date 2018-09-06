@@ -8,7 +8,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.det.img.dense_aspp_ssd import DenseASPPSSD
 from models.det.img.vgg300_ssd import Vgg300SSD
 from models.det.img.vgg512_ssd import Vgg512SSD
 from models.det.img.darknet_yolov2 import DarkNetYolov2
@@ -19,7 +18,6 @@ from utils.tools.logger import Logger as Log
 
 
 DET_MODEL_DICT = {
-    'dense_aspp_ssd': DenseASPPSSD,
     'vgg300_ssd': Vgg300SSD,
     'vgg512_ssd': Vgg512SSD,
     'darknet_yolov2': DarkNetYolov2,

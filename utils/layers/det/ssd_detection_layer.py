@@ -13,10 +13,10 @@ import torch
 import torch.nn as nn
 
 
-class SSDAnchorPredictLayer(nn.Module):
+class SSDDetectionLayer(nn.Module):
 
     def __init__(self, configer):
-        super(SSDAnchorPredictLayer, self).__init__()
+        super(SSDDetectionLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
         self.num_anchors = configer.get('gt', 'num_anchor_list')

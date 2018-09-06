@@ -7,7 +7,7 @@
 import torch.nn.functional as F
 from torch import nn
 
-from utils.layers.det.ssd_multibox_layer import SSDMultiBoxLayer
+from utils.layers.det.ssd_detection_layer import SSDDetectionLayer
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -74,7 +74,7 @@ class SSDHead(nn.Module):
                                            num_c=self.num_centrals[3], stride=self.num_strides[3],
                                            pad=self.num_paddings[3])
 
-        self.multibox_layer = SSDMultiBoxLayer(configer)
+        self.ssd_detection_layer = SSDDetectionLayer(configer)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -115,7 +115,7 @@ class SSDHead(nn.Module):
         feature = self.feature5(feature)
         det_feature.append(feature)
 
-        loc_preds, conf_preds = self.multibox_layer(det_feature)
+        loc_preds, conf_preds = self.ssd_detection_layer(det_feature)
 
         return det_feature, loc_preds, conf_preds
 

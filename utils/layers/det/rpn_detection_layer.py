@@ -11,9 +11,9 @@ from __future__ import print_function
 import torch.nn as nn
 
 
-class FRAnchorPredictLayer(nn.Module):
+class RPNDetectionLayer(nn.Module):
     def __init__(self, configer):
-        super(FRAnchorPredictLayer, self).__init__()
+        super(RPNDetectionLayer, self).__init__()
         self.configer = configer
         self.num_anchor_list = self.configer.get('rpn', 'num_anchor_list')
         self.num_features = configer.get('rpn', 'num_feature_list')
