@@ -16,8 +16,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.det.det_data_utilizer import DetDataUtilizer
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from datasets.tools.transforms import Normalize, ToTensor
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.det_model_manager import DetModelManager
@@ -40,7 +39,6 @@ class SingleShotDetectorTest(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.ssd_target_generator = SSDTargetGenerator(configer)

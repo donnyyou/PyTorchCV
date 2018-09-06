@@ -13,9 +13,7 @@ import numpy as np
 import torch.utils.data as data
 from utils.helpers.json_helper import JsonHelper
 
-from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.det_transforms import ResizeBoxes
-from datasets.tools.pose_transforms import PadImage
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -29,7 +27,6 @@ class FRDataLoader(data.Dataset):
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
-        self.det_data_utilizer = DetDataUtilizer(configer)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],

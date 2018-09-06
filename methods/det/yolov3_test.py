@@ -15,8 +15,7 @@ import torch
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.det.det_data_utilizer import DetDataUtilizer
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from datasets.tools.transforms import Normalize, ToTensor
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.det_model_manager import DetModelManager
@@ -25,6 +24,7 @@ from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
+from utils.layers.det.yolo_target_generator import YOLOTargetGenerator
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -38,7 +38,7 @@ class YOLOv3Test(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.det_data_utilizer = DetDataUtilizer(configer)
+        self.yolo_target_generator = YOLOTargetGenerator(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.yolo_detection_layer = YOLODetectionLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -53,19 +53,24 @@ class YOLOv3Test(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
-        ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
-        inputs = ImageHelper.pil_resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
+        img = ImageHelper.read_image(image_path,
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
+
+        input_size = self.configer.get('data', 'input_size')
+        inputs = ImageHelper.resize(img, input_size, Image.CUBIC)
         inputs = ToTensor()(inputs)
-        inputs = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                           std=self.configer.get('trans_params', 'std'))(inputs)
+        inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                           mean=self.configer.get('trans_params', 'normalize')['mean'],
+                           std=self.configer.get('trans_params', 'normalize')['std'])(inputs)
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
             _, detections = self.det_net(inputs)
 
         batch_detections = self.decode(detections, self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -198,9 +203,15 @@ class YOLOv3Test(object):
 
         count = 0
         self.module_utilizer.set_status(self.det_net, status='debug')
-        input_size = self.configer.get('data', 'input_size')
-        for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            targets, _, _ = self.det_data_utilizer.yolo_batch_encode(bboxes, labels)
+
+        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
+            input_size = [inputs.size(3), inputs.size(2)]
+            feat_list = list()
+            for stride in self.configer.get('network', 'stride_list'):
+                feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
+
+            targets, _, _ = self.yolo_target_generator(feat_list, batch_gt_bboxes,
+                                                       batch_gt_labels, input_size)
             targets = targets.to(self.device)
             anchors_list = self.configer.get('gt', 'anchors_list')
             output_list = list()

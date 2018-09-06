@@ -83,4 +83,4 @@ class YOLODetectionLayer(object):
 
             detect_list.append(detect_out)
 
-        return torch.cat(prediction_list, 1), torch.cat(detect_list, 1)
+        return layer_out_list, torch.cat(prediction_list, 1), torch.cat(detect_list, 1)

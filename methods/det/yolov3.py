@@ -13,14 +13,13 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.det.det_data_utilizer import DetDataUtilizer
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.yolov3_test import YOLOv3Test
 from models.det_model_manager import DetModelManager
 from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
-from utils.helpers.det_helper import DetHelper
+from utils.layers.det.yolo_target_generator import YOLOTargetGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -41,8 +40,8 @@ class YOLOv3(object):
         self.det_loss_manager = DetLossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.det_data_utilizer = DetDataUtilizer(configer)
         self.yolo_detection_layer = YOLODetectionLayer(configer)
+        self.yolo_target_generator = YOLOTargetGenerator(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -96,14 +95,18 @@ class YOLOv3(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
+            input_size = [inputs.size(3), inputs.size(2)]
+
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            targets, objmask, noobjmask = self.det_data_utilizer.yolo_batch_encode(batch_gt_bboxes, batch_gt_labels)
-            inputs, targets, objmask, noobjmask = self.module_utilizer.to_device(inputs, targets, objmask, noobjmask)
+            inputs = self.module_utilizer.to_device(inputs)
 
             # Forward pass.
-            predictions, _ = self.det_net(inputs)
+            feat_list, predictions, _ = self.det_net(inputs)
 
+            targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
+                                                                     batch_gt_labels, input_size)
+            targets, objmask, noobjmask = self.module_utilizer.to_device(targets, objmask, noobjmask)
             # Compute the loss of the train batch & backward.
             loss = self.det_loss(predictions, targets, objmask, noobjmask)
 
@@ -145,11 +148,14 @@ class YOLOv3(object):
         start_time = time.time()
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
+                input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
-                targets, objmask, noobjmask = self.det_data_utilizer.yolo_batch_encode(batch_gt_bboxes, batch_gt_labels)
-                inputs, targets, objmask, noobjmask = self.module_utilizer.to_device(inputs, targets, objmask,
-                                                                                     noobjmask)
-                predictions, detections = self.det_net(inputs)
+                inputs = self.module_utilizer.to_device(inputs)
+                feat_list, predictions, detections = self.det_net(inputs)
+
+                targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
+                                                                         batch_gt_labels, input_size)
+                targets, objmask, noobjmask = self.module_utilizer.to_device(targets, objmask, noobjmask)
 
                 # Compute the loss of the val batch.
                 loss = self.det_loss(predictions, targets, objmask, noobjmask)

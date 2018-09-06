@@ -14,7 +14,6 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.det.det_data_utilizer import DetDataUtilizer
 from datasets.tools.transforms import Normalize, ToTensor
 from datasets.tools.det_transforms import BoundResize
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -41,7 +40,6 @@ class FastRCNNTest(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.det_data_utilizer = DetDataUtilizer(configer)
         self.roi_sampler = FRRoiSampleLayer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.rpn_target_generator = RPNTargetGenerator(configer)
