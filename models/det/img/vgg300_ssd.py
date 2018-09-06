@@ -117,7 +117,7 @@ class SSDHead(nn.Module):
 
         loc_preds, conf_preds = self.multibox_layer(det_feature)
 
-        return loc_preds, conf_preds
+        return det_feature, loc_preds, conf_preds
 
 
 class L2Norm2d(nn.Module):

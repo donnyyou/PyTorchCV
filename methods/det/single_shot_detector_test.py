@@ -26,6 +26,7 @@ from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.helpers.det_helper import DetHelper
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.ssd_anchor_target_layer import SSDAnchorTargetLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -42,6 +43,7 @@ class SingleShotDetectorTest(object):
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
+        self.ssd_anchor_target_layer = SSDAnchorTargetLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -54,9 +56,13 @@ class SingleShotDetectorTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
-        ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
-        inputs = ImageHelper.pil_resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
+        img = ImageHelper.read_image(image_path,
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
+
+        input_size = self.configer.get('data', 'input_size')
+        inputs = ImageHelper.resize(img, input_size, Image.CUBIC)
         inputs = ToTensor()(inputs)
         inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
                            mean=self.configer.get('trans_params', 'normalize')['mean'],
@@ -64,10 +70,10 @@ class SingleShotDetectorTest(object):
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
-            bbox, cls = self.det_net(inputs)
+            feat_list, bbox, cls = self.det_net(inputs)
 
-        batch_detections = self.decode(bbox, cls, self.ssd_priorbox_layer(), self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_rgb)
+        batch_detections = self.decode(bbox, cls, self.ssd_priorbox_layer(feat_list, input_size), self.configer)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -211,12 +217,19 @@ class SingleShotDetectorTest(object):
 
         count = 0
         self.module_utilizer.set_status(self.det_net, status='debug')
-        for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
-            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(bboxes, labels, self.ssd_priorbox_layer())
+        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
+            input_size = [inputs.size(3), inputs.size(2)]
+            feat_list = list()
+            for stride in self.configer.get('network', 'stride_list'):
+                feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
+
+            bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
+                                                          batch_gt_labels, input_size)
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
                                                              self.configer.get('data', 'num_classes'))
-            batch_detections = self.decode(bboxes, labels_target, self.ssd_priorbox_layer(), self.configer)
+            batch_detections = self.decode(bboxes, labels_target,
+                                           self.ssd_priorbox_layer(feat_list, input_size), self.configer)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
@@ -224,7 +237,8 @@ class SingleShotDetectorTest(object):
 
                 ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
-                self.det_visualizer.vis_default_bboxes(ori_img_bgr, self.ssd_priorbox_layer(), labels[j])
+                self.det_visualizer.vis_default_bboxes(ori_img_bgr,
+                                                       self.ssd_priorbox_layer(feat_list, input_size), labels[j])
                 json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,

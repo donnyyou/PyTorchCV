@@ -9,9 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
@@ -22,6 +20,7 @@ from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.ssd_anchor_target_layer import SSDAnchorTargetLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -43,6 +42,7 @@ class SingleShotDetector(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
+        self.ssd_anchor_target_layer = SSDAnchorTargetLayer(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
@@ -86,16 +86,17 @@ class SingleShotDetector(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
-            bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes,
-                                                                     batch_gt_labels,
-                                                                     self.ssd_priorbox_layer())
-            self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
+            inputs = self.module_utilizer.to_device(inputs)
 
+            self.data_time.update(time.time() - start_time)
             # Forward pass.
-            loc, cls = self.det_net(inputs)
+            feat_list, loc, cls = self.det_net(inputs)
 
+            bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
+                                                          batch_gt_labels, [inputs.size(3), inputs.size(2)])
+
+            bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
             loss = self.det_loss(loc, bboxes, cls, labels)
 
@@ -138,19 +139,21 @@ class SingleShotDetector(object):
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Change the data type.
-                bboxes, labels = self.det_data_utilizer.ssd_batch_encode(batch_gt_bboxes,
-                                                                         batch_gt_labels,
-                                                                         self.ssd_priorbox_layer())
-                inputs, bboxes, labels = self.module_utilizer.to_device(inputs, bboxes, labels)
-
+                inputs = self.module_utilizer.to_device(inputs)
+                input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
-                loc, cls = self.det_net(inputs)
+                feat_list, loc, cls = self.det_net(inputs)
+                bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
+                                                              batch_gt_labels, input_size)
 
+                bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
                 loss = self.det_loss(loc, bboxes, cls, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
-                batch_detections = SingleShotDetectorTest.decode(loc, cls, self.ssd_priorbox_layer(), self.configer)
+                batch_detections = SingleShotDetectorTest.decode(loc, cls,
+                                                                 self.ssd_priorbox_layer(feat_list, input_size),
+                                                                 self.configer)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 # batch_pred_bboxes = self._get_gt_object_list(batch_gt_bboxes, batch_gt_labels)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)

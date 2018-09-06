@@ -76,7 +76,7 @@ class RandomPad(object):
             bboxes[:, 0::2] += left_pad
             bboxes[:, 1::2] += up_pad
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
 class RandomShift(object):
@@ -129,7 +129,7 @@ class RandomShift(object):
             bboxes[:, 0::2] += (self.shift_pixel - left_pad)
             bboxes[:, 1::2] += (self.shift_pixel - up_pad)
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
 class RandomHFlip(object):
@@ -172,7 +172,7 @@ class RandomHFlip(object):
                 kpts[:, pair[0] - 1] = kpts[:, pair[1] - 1]
                 kpts[:, pair[1] - 1] = temp_point
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
 class RandomSaturation(object):
@@ -768,7 +768,7 @@ class RandomFocusCrop(object):
         assert maskmap is None or isinstance(maskmap, Image.Image)
 
         if random.random() > self.ratio:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         center, index = self.get_center(img.size, bboxes)
 
@@ -1066,7 +1066,7 @@ class Resize(object):
                 bboxes[:, 0::2] += left_pad
                 bboxes[:, 1::2] += up_pad
 
-        return img, labelmap, maskmap, kpts, bboxes, labels
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
 class PILAugCompose(object):
@@ -1396,13 +1396,13 @@ class PILAugCompose(object):
             for trans_key in self.configer.get('train_trans', 'trans_seq'):
                 (img, labelmap, maskmap, kpts,
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
-                                                                           kpts, bboxes, labels, polygons)
+                                                                        kpts, bboxes, labels, polygons)
 
         else:
             for trans_key in self.configer.get('val_trans', 'trans_seq'):
                 (img, labelmap, maskmap, kpts,
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
-                                                                           kpts, bboxes, labels, polygons)
+                                                                        kpts, bboxes, labels, polygons)
 
         if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'n', 'n', 'n']):
             return img

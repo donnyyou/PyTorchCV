@@ -15,8 +15,8 @@ from PIL import Image
 from utils.tools.logger import Logger as Log
 
 
-PIL_INTER = [Image.CUBIC, Image.BILINEAR, Image.NEAREST]
-CV2_INTER = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_NEAREST]
+PIL_INTER = [Image.NEAREST, Image.ANTIALIAS, Image.BILINEAR, Image.CUBIC]
+CV2_INTER = [cv2.INTER_NEAREST, cv2.INTER_LANCZOS4, cv2.INTER_LINEAR, cv2.INTER_CUBIC]
 
 
 class ImageHelper(object):
@@ -128,8 +128,9 @@ class ImageHelper(object):
             exit(1)
 
     @staticmethod
-    def resize(img, target_size, interpolation=1):
+    def resize(img, target_size, interpolation=None):
         assert isinstance(target_size, (list, tuple))
+        interpolation = int(interpolation)
 
         target_size = tuple(target_size)
         if isinstance(img, Image.Image):
