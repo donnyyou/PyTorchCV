@@ -17,7 +17,7 @@ from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.tools.logger import Logger as Log
 
 
-class SSDAnchorTargetLayer(object):
+class SSDTargetGenerator(object):
     """Compute prior boxes coordinates in center-offset form for each source feature map."""
 
     def __init__(self, configer):

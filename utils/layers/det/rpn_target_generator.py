@@ -17,7 +17,7 @@ from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.logger import Logger as Log
 
 
-class FRAnchorTargetLayer(object):
+class RPNTargetGenerator(object):
     """Compute prior boxes coordinates in center-offset form for each source feature map."""
 
     def __init__(self, configer):

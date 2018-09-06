@@ -26,7 +26,7 @@ from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.layers.det.fr_anchor_target_layer import FRAnchorTargetLayer
+from utils.layers.det.rpn_target_generator import RPNTargetGenerator
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
 from utils.tools.logger import Logger as Log
@@ -45,7 +45,7 @@ class FastRCNNTest(object):
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.roi_sampler = FRRoiSampleLayer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.fr_anchor_target_layer = FRAnchorTargetLayer(configer)
+        self.rpn_target_generator = RPNTargetGenerator(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRRoiGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -250,7 +250,7 @@ class FastRCNNTest(object):
             for stride in self.configer.get('rpn', 'stride_list'):
                 feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
 
-            gt_rpn_locs, gt_rpn_labels = self.fr_anchor_target_layer(feat_list, batch_gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list, batch_gt_bboxes, input_size)
             eye_matrix = torch.eye(2)
             gt_rpn_labels[gt_rpn_labels == -1] = 0
             gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)

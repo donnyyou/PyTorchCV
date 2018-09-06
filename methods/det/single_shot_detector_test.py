@@ -26,7 +26,7 @@ from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.helpers.det_helper import DetHelper
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
-from utils.layers.det.ssd_anchor_target_layer import SSDAnchorTargetLayer
+from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -43,7 +43,7 @@ class SingleShotDetectorTest(object):
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
-        self.ssd_anchor_target_layer = SSDAnchorTargetLayer(configer)
+        self.ssd_target_generator = SSDTargetGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -223,8 +223,8 @@ class SingleShotDetectorTest(object):
             for stride in self.configer.get('network', 'stride_list'):
                 feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
 
-            bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
-                                                          batch_gt_labels, input_size)
+            bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
+                                                       batch_gt_labels, input_size)
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
                                                              self.configer.get('data', 'num_classes'))

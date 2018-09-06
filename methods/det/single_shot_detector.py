@@ -20,7 +20,7 @@ from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
-from utils.layers.det.ssd_anchor_target_layer import SSDAnchorTargetLayer
+from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -42,7 +42,7 @@ class SingleShotDetector(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
-        self.ssd_anchor_target_layer = SSDAnchorTargetLayer(configer)
+        self.ssd_target_generator = SSDTargetGenerator(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
@@ -93,8 +93,8 @@ class SingleShotDetector(object):
             # Forward pass.
             feat_list, loc, cls = self.det_net(inputs)
 
-            bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
-                                                          batch_gt_labels, [inputs.size(3), inputs.size(2)])
+            bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
+                                                       batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
@@ -143,8 +143,8 @@ class SingleShotDetector(object):
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
                 feat_list, loc, cls = self.det_net(inputs)
-                bboxes, labels = self.ssd_anchor_target_layer(feat_list, batch_gt_bboxes,
-                                                              batch_gt_labels, input_size)
+                bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
+                                                           batch_gt_labels, input_size)
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
