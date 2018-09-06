@@ -101,7 +101,7 @@ class FasterRCNN(nn.Module):
             * **roi_indices**: Batch indices of RoIs. Its shape is \
                 :math:`(R',)`.
         """
-        input_size = [inputs[0].size(3), inputs[1].size(2)]
+        input_size = [inputs[0].size(3), inputs[0].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
             x = self.extractor(inputs[0])
             feat_list = self.rpn(x)
@@ -132,7 +132,8 @@ class FasterRCNN(nn.Module):
                                                  input_size=input_size)
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
-                                                                         gt_bboxes, gt_bboxes_num, gt_labels)
+                                                                         gt_bboxes, gt_bboxes_num,
+                                                                         gt_labels, input_size)
 
             sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
@@ -156,7 +157,8 @@ class FasterRCNN(nn.Module):
                                                  input_size=input_size)
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
-                                                                         gt_bboxes, gt_bboxes_num, gt_labels)
+                                                                         gt_bboxes, gt_bboxes_num,
+                                                                         gt_labels, input_size)
 
             sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)

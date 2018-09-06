@@ -25,7 +25,7 @@ class DetRunningScore(object):
             self.pred_list.append(list())
             self.num_positive.append(1e-9)
 
-    def _voc_ap(self, rec, prec, use_07_metric=False):
+    def _voc_ap(self, rec, prec, use_07_metric=True):
         """ ap = voc_ap(rec, prec, [use_07_metric])
             Compute VOC AP given precision and recall.
             If use_07_metric is true, uses the
