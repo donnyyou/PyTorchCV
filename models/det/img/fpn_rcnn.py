@@ -14,7 +14,6 @@ from torch import nn
 from torchvision.models import vgg16
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.fr_anchor_predict_layer import FRAnchorPredictLayer
 from utils.layers.det.roi_layer import ROILayer
 from utils.layers.det.roi_sample_layer import RoiSampleLayer
 from utils.tools.logger import Logger as Log
@@ -67,7 +66,6 @@ class FasterRCNN(nn.Module):
         self.configer = configer
         self.extractor, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
-        self.fr_anchor_predict_layer = FRAnchorPredictLayer(configer)
         self.roi = FRRoiGenerator(configer)
         self.roi_sampler = RoiSampleLayer(configer)
         self.head = RoIHead(configer, self.classifier)
@@ -101,12 +99,10 @@ class FasterRCNN(nn.Module):
             * **roi_indices**: Batch indices of RoIs. Its shape is \
                 :math:`(R',)`.
         """
-        input_size = [inputs[0].size(3), inputs[1].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
             x = self.extractor(inputs[0])
-            feat_list = self.rpn(x)
+            rpn_locs, rpn_scores = self.rpn(x)
 
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
             indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                        self.configer.get('rpn', 'n_test_pre_nms'),
                                                        self.configer.get('rpn', 'n_test_post_nms'))
@@ -116,20 +112,16 @@ class FasterRCNN(nn.Module):
         elif self.configer.get('phase') == 'train' and not self.training:
             x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
             x = self.extractor(x)
-            feat_list = self.rpn(x)
-
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
-            test_indices_and_rois, test_rois_num = self.roi(feat_list, rpn_locs, rpn_scores,
+            rpn_locs, rpn_scores = self.rpn(x)
+            test_indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                             self.configer.get('rpn', 'n_test_pre_nms'),
-                                                            self.configer.get('rpn', 'n_test_post_nms'),
-                                                            input_size=input_size)
+                                                            self.configer.get('rpn', 'n_test_post_nms'))
             test_roi_cls_locs, test_roi_scores = self.head(x, test_indices_and_rois)
 
             test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
-            train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
+            train_indices_and_rois, _ = self.roi(rpn_locs, rpn_scores,
                                                  self.configer.get('rpn', 'n_train_pre_nms'),
-                                                 self.configer.get('rpn', 'n_train_post_nms'),
-                                                 input_size=input_size)
+                                                 self.configer.get('rpn', 'n_train_post_nms'))
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)
@@ -141,19 +133,16 @@ class FasterRCNN(nn.Module):
                 gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
             train_group = [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
-            return feat_list, train_group, test_group
+            return train_group, test_group
 
         elif self.configer.get('phase') == 'train' and self.training:
             x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
             x = self.extractor(x)
-            feat_list = self.rpn(x)
+            rpn_locs, rpn_scores = self.rpn(x)
 
-            rpn_locs, rpn_scores = self.fr_anchor_predict_layer(feat_list)
-
-            train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
+            train_indices_and_rois, _ = self.roi(rpn_locs, rpn_scores,
                                                  self.configer.get('rpn', 'n_train_pre_nms'),
-                                                 self.configer.get('rpn', 'n_train_post_nms'),
-                                                 input_size=input_size)
+                                                 self.configer.get('rpn', 'n_train_post_nms'))
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num, gt_labels)
@@ -164,7 +153,7 @@ class FasterRCNN(nn.Module):
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
                 gt_roi_labels.long().to(sample_roi_locs.device)].contiguous().view(-1, 4)
 
-            return feat_list, [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
+            return [rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels]
 
         else:
             Log.error('Invalid Status.')
@@ -177,6 +166,8 @@ class NaiveRPN(nn.Module):
         self.configer = configer
         self.num_anchor_list = self.configer.get('rpn', 'num_anchor_list')
         self.conv1 = nn.Conv2d(512, 512, 3, 1, 1)
+        self.score = nn.Conv2d(512, self.num_anchor_list[0] * 2, 1, 1, 0)
+        self.loc = nn.Conv2d(512, self.num_anchor_list[0] * 4, 1, 1, 0)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -186,7 +177,12 @@ class NaiveRPN(nn.Module):
 
     def forward(self, x):
         h = F.relu(self.conv1(x))
-        return [h]
+
+        rpn_locs = self.loc(h)
+        rpn_locs = rpn_locs.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1, 4)
+        rpn_scores = self.score(h)
+        rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1, 2)
+        return rpn_locs, rpn_scores
 
 
 class RoIHead(nn.Module):

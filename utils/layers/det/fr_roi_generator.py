@@ -54,7 +54,7 @@ class FRRoiGenerator(object):
         self.configer = configer
         self.fr_priorbox_layer = FRPriorBoxLayer(self.configer)
 
-    def __call__(self, loc, score, n_pre_nms, n_post_nms):
+    def __call__(self, feat_list, loc, score, n_pre_nms, n_post_nms, input_size):
         """input should  be ndarray
         Propose RoIs.
         Inputs :obj:`loc, score, anchor` refer to the same anchor when indexed
@@ -88,7 +88,7 @@ class FRRoiGenerator(object):
         # to set self.traing = False
         device = loc.device
 
-        default_boxes = self.fr_priorbox_layer().unsqueeze(0).repeat(loc.size(0), 1, 1).to(device)
+        default_boxes = self.fr_priorbox_layer(feat_list, input_size).unsqueeze(0).repeat(loc.size(0), 1, 1).to(device)
 
         # loc = loc[:, :, [1, 0, 3, 2]]
         # Convert anchors into proposal via bbox transformations.

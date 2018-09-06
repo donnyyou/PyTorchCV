@@ -126,9 +126,9 @@ class RoiSampleLayer(object):
         sample_roi = torch.cat(sample_roi_list, 0)
         gt_roi_loc = torch.cat(gt_roi_loc_list, 0)
         gt_roi_label = torch.cat(gt_roi_label_list, 0)
-        gt_pos_roi_mask = torch.cat(gt_roi_mask_list, 0)
 
         if gt_polygons is not None:
+            gt_pos_roi_mask = torch.cat(gt_roi_mask_list, 0)
             return sample_roi, gt_roi_loc, gt_roi_label, gt_pos_roi_mask
         else:
             return sample_roi, gt_roi_loc, gt_roi_label

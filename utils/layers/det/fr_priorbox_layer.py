@@ -22,13 +22,13 @@ class FRPriorBoxLayer(object):
         self.configer = configer
         self.clip = clip
 
-    def __call__(self):
-        img_w, img_h = self.configer.get('data', 'input_size')
-        feature_map_w = [int(round(img_w / s)) for s in self.configer.get('rpn', 'stride_list')]
-        feature_map_h = [int(round(img_h / s)) for s in self.configer.get('rpn', 'stride_list')]
-        num_layers = len(self.configer.get('rpn', 'stride_list'))
+    def __call__(self, feat_list, input_size):
+        img_w, img_h = input_size
+
+        feature_map_w = [feat.size(3) for feat in feat_list]
+        feature_map_h = [feat.size(2) for feat in feat_list]
         anchor_boxes_list = list()
-        for i in range(num_layers):
+        for i in range(len(feat_list)):
             fm_w = feature_map_w[i]
             fm_h = feature_map_h[i]
             boxes = []

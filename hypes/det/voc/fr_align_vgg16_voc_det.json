@@ -110,6 +110,7 @@
       "num_anchor_list": [9],
       "aspect_ratio_list": [[2]],
       "stride_list": [16],
+      "num_feature_list": [512],
       "nms_threshold": 0.7,
       "min_size": 16,
       "loss": {

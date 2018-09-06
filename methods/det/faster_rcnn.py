@@ -20,6 +20,7 @@ from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.faster_rcnn_test import FastRCNNTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
+from utils.layers.det.fr_anchor_target_layer import FRAnchorTargetLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -42,6 +43,7 @@ class FasterRCNN(object):
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
+        self.fr_anchor_target_layer = FRAnchorTargetLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -97,13 +99,14 @@ class FasterRCNN(object):
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
-            gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
-                                                                                 self.fr_priorbox_layer())
-            gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
+
             gt_bboxes, gt_num, gt_labels = self.module_utilizer.to_device(gt_bboxes, gt_nums, gt_labels)
             inputs = self.module_utilizer.to_device(inputs)
             # Forward pass.
-            train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels)
+            feat_list, train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels)
+            gt_rpn_locs, gt_rpn_labels = self.fr_anchor_target_layer(feat_list,
+                                                                     batch_gt_bboxes, [inputs.size(3), inputs.size(2)])
+            gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
 
             rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels = train_group
 
@@ -152,15 +155,17 @@ class FasterRCNN(object):
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
-                gt_rpn_locs, gt_rpn_labels = self.det_data_utilizer.rpn_batch_encode(batch_gt_bboxes,
-                                                                                     self.fr_priorbox_layer())
-                gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
                 gt_bboxes, gt_num, gt_labels = self.module_utilizer.to_device(gt_bboxes, gt_nums, gt_labels)
                 inputs = self.module_utilizer.to_device(inputs)
 
                 # Forward pass.
-                train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels)
+                feat_list, train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels)
                 rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels = train_group
+
+                gt_rpn_locs, gt_rpn_labels = self.fr_anchor_target_layer(feat_list,
+                                                                         batch_gt_bboxes,
+                                                                         [inputs.size(3), inputs.size(2)])
+                gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
 
                 # Compute the loss of the train batch & backward.
                 loss = self.fr_loss([rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores],

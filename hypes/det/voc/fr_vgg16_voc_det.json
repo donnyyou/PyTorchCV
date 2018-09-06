@@ -12,7 +12,7 @@
       "image_tool": "pil",
       "input_mode": "RGB",
       "keep_difficult": false,
-      "workers": 0
+      "workers": 8
     },
     "test": {
       "test_input_size": [720, 720],
@@ -114,6 +114,7 @@
       "num_anchor_list": [9],
       "aspect_ratio_list": [[2]],
       "stride_list": [16],
+      "num_feature_list": [512],
       "nms_threshold": 0.7,
       "min_size": 16,
       "loss": {
