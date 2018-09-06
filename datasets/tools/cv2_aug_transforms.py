@@ -926,7 +926,7 @@ class RandomDetCrop(object):
                 return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, polygons
 
 
-class Resize(object):
+class ScaleAndPad(object):
     """Resize the given numpy.ndarray to random size and aspect ratio.
 
     Args:
@@ -959,10 +959,10 @@ class Resize(object):
         target_width, target_height = self.configer.get('data', 'input_size')
         scaled_size = [width, height]
 
-        if self.configer.get('trans_params', 'resize')['scale_resize']:
+        if self.configer.get('trans_params', 'scale_and_pad')['method'] in ['only_scale', 'scale_and_pad']:
             w_scale_ratio = target_width / width
             h_scale_ratio = target_height / height
-            if self.configer.get('trans_params', 'resize')['keep_scale']:
+            if self.configer.get('trans_params', 'scale_and_pad')['method'] == 'scale_and_pad':
                 w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
                 h_scale_ratio = w_scale_ratio
 
@@ -990,7 +990,9 @@ class Resize(object):
 
         pad_width = target_width - scaled_size[0]
         pad_height = target_height - scaled_size[1]
+        assert pad_height >= 0 and pad_width >= 0
         if pad_width > 0 or pad_height > 0:
+            assert self.configer.get('trans_params', 'scale_and_pad')['method'] in ['only_pad', 'scale_and_pad']
             left_pad = random.randint(0, pad_width)  # pad_left
             up_pad = random.randint(0, pad_height)  # pad_up
 
@@ -1175,8 +1177,8 @@ class CV2AugCompose(object):
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
-            if 'resize' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['resize'] = Resize(self.configer)
+            if 'scale_and_pad' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['scale_and_pad'] = ScaleAndPad(self.configer)
 
         else:
             if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
@@ -1308,8 +1310,8 @@ class CV2AugCompose(object):
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
-            if 'resize' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['resize'] = Resize(self.configer)
+            if 'scale_and_pad' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['scale_and_pad'] = ScaleAndPad(self.configer)
 
     def __check_none(self, key_list, value_list):
         for key, value in zip(key_list, value_list):

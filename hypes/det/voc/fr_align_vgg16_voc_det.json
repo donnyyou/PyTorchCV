@@ -32,7 +32,7 @@
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_hflip", "random_resize", "random_crop", "resize"]
+      "trans_seq": ["random_hflip", "random_resize", "random_crop", "scale_and_pad"]
     },
     "val_trans": {
       "saturation_ratio": 0.0,
@@ -47,7 +47,7 @@
       "resize_ratio": 1.0,
       "rotate_ratio": 0.0,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_hflip", "random_resize", "random_crop", "resize"]
+      "trans_seq": ["random_hflip", "random_resize", "random_crop", "scale_and_pad"]
     },
     "trans_params": {
       "random_saturation": {
@@ -92,9 +92,8 @@
         "center_jitter": 20,
         "allow_outside_center": false
       },
-      "resize": {
-        "scale_resize": false,
-        "keep_scale": true
+      "scale_and_pad": {
+        "method": "only_pad"
       },
       "normalize": {
         "div_value": 1.0,

@@ -92,9 +92,8 @@
         "center_jitter": 20,
         "allow_outside_center": false
       },
-      "resize": {
-        "scale_resize": false,
-        "keep_scale": true
+      "scale_and_pad": {
+        "method": "only_pad"
       },
       "normalize": {
         "div_value": 1.0,
