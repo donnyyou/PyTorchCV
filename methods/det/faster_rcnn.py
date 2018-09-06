@@ -177,7 +177,8 @@ class FasterRCNN(object):
                                                        test_roi_scores,
                                                        test_indices_and_rois,
                                                        test_rois_num,
-                                                       self.configer)
+                                                       self.configer,
+                                                       [inputs.size(3), inputs.size(2)])
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 

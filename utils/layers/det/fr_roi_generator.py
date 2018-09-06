@@ -96,7 +96,6 @@ class FRRoiGenerator(object):
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        input_size = self.configer.get('data', 'input_size')
         dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
         dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
         dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)

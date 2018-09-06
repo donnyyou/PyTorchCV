@@ -24,7 +24,7 @@ class FRAnchorTargetLayer(object):
         self.configer = configer
         self.fr_proirbox_layer = FRPriorBoxLayer(configer)
 
-    def __call__(self, feat_list, gt_bboxes, input_size=None):
+    def __call__(self, feat_list, gt_bboxes, input_size):
         anchor_boxes = self.fr_proirbox_layer(feat_list, input_size)
         n_sample = self.configer.get('rpn', 'loss')['n_sample']
         pos_iou_thresh = self.configer.get('rpn', 'loss')['pos_iou_thresh']

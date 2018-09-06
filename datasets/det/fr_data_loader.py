@@ -36,7 +36,6 @@ class FRDataLoader(data.Dataset):
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
 
-        ori_w, _ = ImageHelper.get_size(img)
         labels, bboxes = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
