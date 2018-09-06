@@ -15,9 +15,9 @@ from torch import nn
 from utils.tools.logger import Logger as Log
 
 
-class ROILayer(nn.Module):
+class ROIProcessLayer(nn.Module):
     def __init__(self, configer):
-        super(ROILayer, self).__init__()
+        super(ROIProcessLayer, self).__init__()
         self.configer = configer
         if self.configer.get('roi', 'method') == 'roipool':
             from extensions.layers.roipool.module import RoIPool2D
