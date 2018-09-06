@@ -28,7 +28,7 @@ from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.layers.det.fr_anchor_target_layer import FRAnchorTargetLayer
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.roi_sample_layer import RoiSampleLayer
+from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -43,7 +43,7 @@ class FastRCNNTest(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.det_data_utilizer = DetDataUtilizer(configer)
-        self.roi_sampler = RoiSampleLayer(configer)
+        self.roi_sampler = FRRoiSampleLayer(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.fr_anchor_target_layer = FRAnchorTargetLayer(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)

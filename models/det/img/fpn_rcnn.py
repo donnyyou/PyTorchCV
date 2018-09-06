@@ -14,8 +14,8 @@ from torch import nn
 from torchvision.models import vgg16
 
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.roi_process_layer import ROIProcessLayer
-from utils.layers.det.roi_sample_layer import RoiSampleLayer
+from utils.layers.det.fr_roi_process_layer import FRRoiProcessLayer
+from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
 from utils.tools.logger import Logger as Log
 
 
@@ -67,7 +67,7 @@ class FasterRCNN(nn.Module):
         self.extractor, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
         self.roi = FRRoiGenerator(configer)
-        self.roi_sampler = RoiSampleLayer(configer)
+        self.roi_sampler = FRRoiSampleLayer(configer)
         self.head = RoIHead(configer, self.classifier)
 
     def forward(self, *inputs):
@@ -206,7 +206,7 @@ class RoIHead(nn.Module):
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
         # self.roi_layer = ROIPoolingLayer(self.configer)
-        self.roi_layer = ROIProcessLayer(self.configer)
+        self.roi_layer = FRRoiProcessLayer(self.configer)
 
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)

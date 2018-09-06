@@ -17,7 +17,7 @@ from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
 
-class RoiSampleLayer(object):
+class FRRoiSampleLayer(object):
     def __init__(self, configer):
         self.configer = configer
 
