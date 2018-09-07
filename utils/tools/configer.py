@@ -143,7 +143,7 @@ class Configer(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes', default='../../hypes/cls/flower/fc_flower_cls.json', type=str,
+    parser.add_argument('--hypes', default='../../hypes/cls/flower/fc_vgg19_flower_cls.json', type=str,
                         dest='hypes', help='The file of the hyper parameters.')
     parser.add_argument('--phase', default='train', type=str,
                         dest='phase', help='The phase of Pose Estimator.')
