@@ -15,8 +15,6 @@ from methods.det.single_shot_detector import SingleShotDetector
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.det.yolov3 import YOLOv3
 from methods.det.yolov3_test import YOLOv3Test
-from methods.pose.associative_embedding import AssociativeEmbedding
-from methods.pose.associative_embedding_test import AssociativeEmbeddingTest
 from methods.pose.conv_pose_machine import ConvPoseMachine
 from methods.pose.conv_pose_machine_test import ConvPoseMachineTest
 from methods.pose.open_pose import OpenPose
@@ -31,13 +29,11 @@ from utils.tools.logger import Logger as Log
 POSE_METHOD_DICT = {
     'open_pose': OpenPose,
     'conv_pose_machine': ConvPoseMachine,
-    'associative_embedding': AssociativeEmbedding,
     'capsule_pose': CapsulePose,
 }
 POSE_TEST_DICT = {
     'open_pose': OpenPoseTest,
     'conv_pose_machine': ConvPoseMachineTest,
-    'associative_embedding': AssociativeEmbeddingTest,
     'capsule_pose': CapsulePoseTest,
 }
 
