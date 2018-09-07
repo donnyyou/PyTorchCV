@@ -55,7 +55,7 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
 
@@ -66,7 +66,7 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
 
@@ -77,7 +77,7 @@ class DetDataLoader(object):
                                img_transform=self.img_transform,
                                configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
 
@@ -93,7 +93,7 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader
 
@@ -104,7 +104,7 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader
 
@@ -115,7 +115,7 @@ class DetDataLoader(object):
                                img_transform=self.img_transform,
                                configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._detection_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader
 
@@ -124,7 +124,7 @@ class DetDataLoader(object):
             return None
 
     @staticmethod
-    def _detection_collate(batch):
+    def _det_collate(batch):
         """Custom collate fn for dealing with batches of images that have a different
         number of associated object annotations (bounding boxes).
         Arguments:
@@ -134,12 +134,12 @@ class DetDataLoader(object):
                 1) (tensor) batch of images stacked on their 0 dim
                 2) (list of tensors) annotations for a given image are stacked on 0 dim
         """
-        imgs = []
-        bboxes = []
-        labels = []
-        for sample in batch:
-            imgs.append(sample[0])
-            bboxes.append(sample[1])
-            labels.append(sample[2])
+        out_list= []
+        for i in range(len(batch[0])):
+            out_list.append([])
 
-        return torch.stack(imgs, 0), bboxes, labels
+        for sample in batch:
+            for i in range(len(sample)):
+                out_list[i].append(sample[i])
+
+        return out_list

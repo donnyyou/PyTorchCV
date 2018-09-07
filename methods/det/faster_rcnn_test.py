@@ -14,10 +14,12 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.tools.det_transforms import ResizeBoxes
 from datasets.tools.transforms import Normalize, ToTensor
 from datasets.tools.det_transforms import BoundResize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
+from methods.tools.data_transformer import DataTransformer
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
 from utils.helpers.image_helper import ImageHelper
@@ -45,6 +47,7 @@ class FastRCNNTest(object):
         self.rpn_target_generator = RPNTargetGenerator(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRRoiGenerator(configer)
+        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -53,7 +56,7 @@ class FastRCNNTest(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-        self.module_utilizer.set_status(self.det_net, status='test')
+        self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -238,10 +241,17 @@ class FastRCNNTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        self.module_utilizer.set_status(self.det_net, status='debug')
         val_data_loader = self.det_data_loader.get_valloader()
         count = 0
-        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              bboxes_list=batch_data[1],
+                                              labels_list=batch_data[2],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+            inputs = data_dict['img']
+            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_labels = data_dict['labels']
+
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()
             for stride in self.configer.get('rpn', 'stride_list'):

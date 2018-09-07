@@ -9,11 +9,11 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import torch
 import numpy as np
 import torch.utils.data as data
-from utils.helpers.json_helper import JsonHelper
 
-from datasets.tools.det_transforms import ResizeBoxes
+from utils.helpers.json_helper import JsonHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -33,12 +33,13 @@ class FRDataLoader(data.Dataset):
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
 
-        labels, bboxes = self.__read_json_file(self.json_list[index])
+        bboxes, labels = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
             img, bboxes, labels = self.aug_transform(img, bboxes=bboxes, labels=labels)
 
-        img, bboxes, labels = ResizeBoxes()(img, bboxes, labels)
+        labels = torch.from_numpy(labels).long()
+        bboxes = torch.from_numpy(bboxes).float()
 
         if self.img_transform is not None:
             img = self.img_transform(img)
@@ -67,7 +68,7 @@ class FRDataLoader(data.Dataset):
             labels.append(object['label'])
             bboxes.append(object['bbox'])
 
-        return np.array(labels), np.array(bboxes).astype(np.float32)
+        return np.array(bboxes).astype(np.float32), np.array(labels)
 
     def __list_dirs(self, root_dir):
         img_list = list()

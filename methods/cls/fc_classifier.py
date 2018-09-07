@@ -20,7 +20,6 @@ from models.cls_model_manager import ClsModelManager
 from val.scripts.cls.cls_running_score import ClsRunningScore
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
-from vis.visdom.visdom_helper import VisdomHelper
 
 
 class FCClassifier(object):
@@ -39,7 +38,6 @@ class FCClassifier(object):
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
-        self.visdom_helper = VisdomHelper()
 
         self.cls_net = None
         self.train_loader = None
@@ -104,8 +102,6 @@ class FCClassifier(object):
                     self.scheduler.get_lr(), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
 
-                self.visdom_helper.plot_line('loss1', 'train', self.configer.get('iters'), self.train_losses.avg)
-
                 self.batch_time.reset()
                 self.data_time.reset()
                 self.train_losses.reset()
@@ -144,7 +140,6 @@ class FCClassifier(object):
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))
             Log.info('TestLoss = {loss.avg:.8f}'.format(loss=self.val_losses))
             Log.info('Top1 ACC = {acc.avg:.8f}\n'.format(acc=self.cls_running_score.get_top1_acc()))
-            self.visdom_helper.plot_line('loss1', 'val', self.configer.get('iters'), self.val_losses.avg)
             self.batch_time.reset()
             self.val_losses.reset()
             self.cls_running_score.reset()

@@ -31,7 +31,6 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
         self.configer.add_key_value(['network', 'parallel'], False)
-        self.configer.add_key_value(['data', 'input_size'], None)
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -40,23 +39,6 @@ class ModuleUtilizer(object):
             return_list.append(params[i].to(device))
 
         return return_list[0] if len(params) == 1 else return_list
-
-    def set_status(self, net, status='train'):
-        if status == 'train':
-            net.train()
-            self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'train_input_size'))
-        elif status == 'val':
-            net.eval()
-            self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'val_input_size'))
-        elif status == 'debug':
-            net.eval()
-            self.configer.update_value(['data', 'input_size'], self.configer.get('data', 'val_input_size'))
-        elif status == 'test':
-            net.eval()
-            self.configer.update_value(['data', 'input_size'], self.configer.get('test', 'test_input_size'))
-        else:
-            Log.error('Status: {} is invalid.'.format(status))
-            exit(1)
 
     def _make_parallel(self, net):
         if not self.configer.is_empty('network', 'encoding_parallel')\

@@ -16,16 +16,14 @@ class ResizeBoxes(object):
     def __init__(self):
         pass
 
-    def __call__(self, img, bboxes, labels):
-        width, height = ImageHelper.get_size(img)
-        if bboxes is not None:
-            bboxes[:, 0::2] /= width
-            bboxes[:, 1::2] /= height
+    def __call__(self, batch_img, batch_bboxes_list):
+        batch_size, _, height, width = batch_img.size()
+        for i in range(batch_size):
+            if batch_bboxes_list[i].numel() > 0:
+                batch_bboxes_list[i][:, 0::2] /= width
+                batch_bboxes_list[i][:, 1::2] /= height
 
-        labels = torch.from_numpy(labels).long()
-        bboxes = torch.from_numpy(bboxes).float().clamp_(min=0.0, max=1.0)
-
-        return img, bboxes, labels
+        return batch_bboxes_list
 
 
 class BoundResize(object):

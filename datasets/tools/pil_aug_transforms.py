@@ -973,104 +973,6 @@ class RandomDetCrop(object):
                 return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, polygons
 
 
-class ScaleAndPad(object):
-    """Resize the given numpy.ndarray to random size and aspect ratio.
-
-    Args:
-        scale_min: the min scale to resize.
-        scale_max: the max scale to resize.
-    """
-
-    def __init__(self, configer):
-        self.configer = configer
-
-    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
-        """
-        Args:
-            img     (Image):   Image to be resized.
-            maskmap    (Image):   Mask to be resized.
-            kpt     (list):    keypoints to be resized.
-            center: (list):    center points to be resized.
-
-        Returns:
-            Image:  Randomly resize image.
-            Image:  Randomly resize maskmap.
-            list:   Randomly resize keypoints.
-            list:   Randomly resize center points.
-        """
-        assert isinstance(img, Image.Image)
-        assert labelmap is None or isinstance(labelmap, Image.Image)
-        assert maskmap is None or isinstance(maskmap, Image.Image)
-
-        width, height = img.size
-        target_width, target_height = self.configer.get('data', 'input_size')
-        scaled_size = [width, height]
-
-        if self.configer.get('trans_params', 'scale_and_pad')['method'] in ['only_scale', 'scale_and_pad']:
-            w_scale_ratio = target_width / width
-            h_scale_ratio = target_height / height
-            if self.configer.get('trans_params', 'scale_and_pad')['method'] == 'scale_and_pad':
-                w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
-                h_scale_ratio = w_scale_ratio
-
-            if kpts is not None and kpts.size > 0:
-                kpts[:, :, 0] *= w_scale_ratio
-                kpts[:, :, 1] *= h_scale_ratio
-
-            if bboxes is not None and bboxes.size > 0:
-                bboxes[:, 0::2] *= w_scale_ratio
-                bboxes[:, 1::2] *= h_scale_ratio
-
-            if polygons is not None:
-                for object_id in range(len(polygons)):
-                    for polygon_id in range(len(polygons[object_id])):
-                        polygons[object_id][polygon_id][0::2] *= w_scale_ratio
-                        polygons[object_id][polygon_id][1::2] *= h_scale_ratio
-
-            scaled_size = (int(round(width*w_scale_ratio)), int(round(height*h_scale_ratio)))
-            img = img.resize(scaled_size, Image.BILINEAR)
-            if labelmap is not None:
-                labelmap = labelmap.resize(scaled_size, Image.NEAREST)
-
-            if maskmap is not None:
-                maskmap = maskmap.resize(scaled_size, Image.NEAREST)
-
-        pad_width = target_width - scaled_size[0]
-        pad_height = target_height - scaled_size[1]
-        assert pad_height >= 0 and pad_width >= 0
-        if pad_width > 0 or pad_height > 0:
-            assert self.configer.get('trans_params', 'scale_and_pad')['method'] in ['only_pad', 'scale_and_pad']
-            left_pad = random.randint(0, pad_width)  # pad_left
-            up_pad = random.randint(0, pad_height)  # pad_up
-            right_pad = pad_width - left_pad  # pad_right
-            down_pad = pad_height - up_pad  # pad_down
-
-            img = ImageOps.expand(img, (left_pad, up_pad, right_pad, down_pad),
-                                  fill=tuple(self.configer.get('trans_params', 'normalize')['mean_value']))
-
-            if labelmap is not None:
-                labelmap = ImageOps.expand(labelmap, (left_pad, up_pad, right_pad, down_pad), fill=255)
-
-            if maskmap is not None:
-                maskmap = ImageOps.expand(maskmap, (left_pad, up_pad, right_pad, down_pad), fill=1)
-
-            if polygons is not None:
-                for object_id in range(len(polygons)):
-                    for polygon_id in range(len(polygons[object_id])):
-                        polygons[object_id][polygon_id][0::2] += left_pad
-                        polygons[object_id][polygon_id][1::2] += up_pad
-
-            if kpts is not None and kpts.size > 0:
-                kpts[:, :, 0] += left_pad
-                kpts[:, :, 1] += up_pad
-
-            if bboxes is not None and bboxes.size > 0:
-                bboxes[:, 0::2] += left_pad
-                bboxes[:, 1::2] += up_pad
-
-        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
-
-
 class PILAugCompose(object):
     """Composes several transforms together.
 
@@ -1232,9 +1134,6 @@ class PILAugCompose(object):
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
-            if 'scale_and_pad' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['scale_and_pad'] = ScaleAndPad(self.configer)
-
         else:
             if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_saturation'] = RandomSaturation(
@@ -1378,9 +1277,6 @@ class PILAugCompose(object):
                     rotate_ratio=self.configer.get('val_trans', 'rotate_ratio'),
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
-
-            if 'scale_and_pad' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['scale_and_pad'] = ScaleAndPad(self.configer)
 
     def __check_none(self, key_list, value_list):
         for key, value in zip(key_list, value_list):

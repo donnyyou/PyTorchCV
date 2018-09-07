@@ -84,7 +84,6 @@ class DetVisualizer(object):
                             cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                             color=self.configer.get('details', 'color_list')[(label - 1) % color_num], thickness=2)
 
-            ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
             img_path = os.path.join(base_dir, '{}_{}_{}.jpg'.format(name, i, time.time()))
 
             cv2.imwrite(img_path, ori_img)
@@ -127,7 +126,6 @@ class DetVisualizer(object):
                         cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                         color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=2)
 
-        ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
         img_path = os.path.join(base_dir, '{}.jpg'.format(name))
 
         cv2.imwrite(img_path, ori_img)

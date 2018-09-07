@@ -61,7 +61,8 @@ class SegDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                drop_last=True, collate_fn=self._seg_collate)
 
             return trainloader
 
@@ -89,7 +90,8 @@ class SegDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, drop_last=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                drop_last=True, collate_fn=self._seg_collate)
 
             return valloader
 
@@ -119,17 +121,15 @@ class SegDataLoader(object):
                 1) (tensor) batch of images stacked on their 0 dim
                 2) (list of tensors) annotations for a given image are stacked on 0 dim
         """
-        imgs = []
-        bboxes = []
-        labels = []
-        polygons = []
-        for sample in batch:
-            imgs.append(sample[0])
-            bboxes.append(sample[1])
-            labels.append(sample[2])
-            polygons.append(sample[3])
+        out_list = []
+        for i in range(len(batch[0])):
+            out_list.append([])
 
-        return torch.stack(imgs, 0), bboxes, labels, polygons
+        for sample in batch:
+            for i in range(len(sample)):
+                out_list[i].append(sample[i])
+
+        return out_list
 
 if __name__ == "__main__":
     # Test data loader.

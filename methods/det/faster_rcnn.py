@@ -13,7 +13,9 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
+from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from methods.det.faster_rcnn_test import FastRCNNTest
@@ -45,6 +47,7 @@ class FasterRCNN(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
+        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -87,13 +90,20 @@ class FasterRCNN(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.module_utilizer.set_status(self.det_net, status='train')
+        self.det_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              bboxes_list=batch_data[1],
+                                              labels_list=batch_data[2],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
@@ -147,10 +157,17 @@ class FasterRCNN(object):
         """
           Validation function during the train phase.
         """
-        self.module_utilizer.set_status(self.det_net, status='val')
+        self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
+            for j, batch_data in enumerate(self.val_loader):
+                data_dict = self.data_transformer(img_list=batch_data[0],
+                                                  bboxes_list=batch_data[1],
+                                                  labels_list=batch_data[2],
+                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+                inputs = data_dict['img']
+                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_labels = data_dict['labels']
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
                 gt_bboxes, gt_num, gt_labels = self.module_utilizer.to_device(gt_bboxes, gt_nums, gt_labels)
@@ -194,7 +211,7 @@ class FasterRCNN(object):
             self.det_running_score.reset()
             self.batch_time.reset()
             self.val_losses.reset()
-            self.module_utilizer.set_status(self.det_net, status='train')
+            self.det_net.train()
 
     def __make_tensor(self, gt_bboxes, gt_labels):
         len_arr = [gt_labels[i].numel() for i in range(len(gt_bboxes))]

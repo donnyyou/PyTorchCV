@@ -3,16 +3,24 @@
     "task": "det",
     "method": "faster_rcnn",
     "data": {
-      "train_batch_size": 1,
-      "val_batch_size": 1,
-      "train_input_size": [720, 720],
-      "val_input_size": [720, 720],
       "num_classes": 21,
       "data_dir": "/home/donny/DataSet/VOC07_DET",
       "image_tool": "cv2",
       "input_mode": "BGR",
       "keep_difficult": false,
       "workers": 8
+    },
+    "train": {
+      "batch_size": 1,
+      "data_transformer": {
+        "size_mode": "random_size"
+      }
+    },
+    "val": {
+      "batch_size": 1,
+      "data_transformer": {
+        "size_mode": "random_size"
+      }
     },
     "test": {
       "test_input_size": [720, 720],
@@ -182,7 +190,7 @@
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 5000,
+      "test_interval": 5,
       "max_epoch": 15
     },
     "optim": {

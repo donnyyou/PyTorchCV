@@ -58,7 +58,7 @@ class PoseDataLoader(object):
                               label_transform=self.label_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return trainloader
 
@@ -70,7 +70,7 @@ class PoseDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return trainloader
 
@@ -82,7 +82,7 @@ class PoseDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return trainloader
 
@@ -99,7 +99,7 @@ class PoseDataLoader(object):
                               label_transform=self.label_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return valloader
 
@@ -111,7 +111,7 @@ class PoseDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return valloader
 
@@ -123,13 +123,34 @@ class PoseDataLoader(object):
                              label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
 
             return valloader
 
         else:
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
+
+    @staticmethod
+    def _pose_collate(batch):
+        """Custom collate fn for dealing with batches of images that have a different
+        number of associated object annotations (bounding boxes).
+        Arguments:
+            batch: (tuple) A tuple of tensor images and lists of annotations
+        Return:
+            A tuple containing:
+                1) (tensor) batch of images stacked on their 0 dim
+                2) (list of tensors) annotations for a given image are stacked on 0 dim
+        """
+        out_list = []
+        for i in range(len(batch[0])):
+            out_list.append([])
+
+        for sample in batch:
+            for i in range(len(sample)):
+                out_list[i].append(sample[i])
+
+        return out_list
 
 
 if __name__ == "__main__":
