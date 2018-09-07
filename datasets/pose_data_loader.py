@@ -12,7 +12,6 @@ import os
 from torch.utils import data
 
 from datasets.pose.cpm_data_loader import CPMDataLoader
-from datasets.pose.ae_data_loader import AEDataLoader
 from datasets.pose.op_data_loader import OPDataLoader
 from datasets.pose.cp_data_loader import CPDataLoader
 import datasets.tools.pil_aug_transforms as pil_aug_trans
@@ -75,18 +74,6 @@ class PoseDataLoader(object):
 
             return trainloader
 
-        elif self.configer.get('method') == 'associative_embedding':
-            trainloader = data.DataLoader(
-                AEDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
-                             aug_transform=self.aug_train_transform,
-                             img_transform=self.img_transform,
-                             label_transform=self.label_transform,
-                             configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
-
-            return trainloader
-
         elif self.configer.get('method') == 'capsule_pose':
             trainloader = data.DataLoader(
                 CPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
@@ -119,18 +106,6 @@ class PoseDataLoader(object):
         elif self.configer.get('method') == 'open_pose':
             valloader = data.DataLoader(
                 OPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
-                             aug_transform=self.aug_val_transform,
-                             img_transform=self.img_transform,
-                             label_transform=self.label_transform,
-                             configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
-
-            return valloader
-
-        elif self.configer.get('method') == 'associative_embedding':
-            valloader = data.DataLoader(
-                AEDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
