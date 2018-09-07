@@ -65,7 +65,7 @@ class FCClassifier(object):
         """
           Train function of every epoch during train phase.
         """
-        self.module_utilizer.set_status(self.cls_net, status='train')
+        self.cls_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -115,7 +115,7 @@ class FCClassifier(object):
         """
           Validation function during the train phase.
         """
-        self.module_utilizer.set_status(self.cls_net, status='val')
+        self.cls_net.eval()
         start_time = time.time()
 
         with torch.no_grad():
@@ -143,7 +143,7 @@ class FCClassifier(object):
             self.batch_time.reset()
             self.val_losses.reset()
             self.cls_running_score.reset()
-            self.module_utilizer.set_status(self.cls_net, status='train')
+            self.cls_net.train()
 
     def train(self):
         cudnn.benchmark = True

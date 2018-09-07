@@ -74,7 +74,7 @@ class CapsulePose(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.module_utilizer.set_status(self.pose_net, status='train')
+        self.pose_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -134,7 +134,7 @@ class CapsulePose(object):
         """
           Validation function during the train phase.
         """
-        self.module_utilizer.set_status(self.pose_net, status='val')
+        self.pose_net.eval()
         start_time = time.time()
 
         with torch.no_grad():
@@ -168,7 +168,7 @@ class CapsulePose(object):
             self.val_losses.reset()
             self.val_loss_heatmap.reset()
             self.val_loss_associate.reset()
-            self.module_utilizer.set_status(self.pose_net, status='train')
+            self.pose_net.train()
 
     def train(self):
         cudnn.benchmark = True

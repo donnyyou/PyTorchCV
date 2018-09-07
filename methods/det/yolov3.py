@@ -87,7 +87,7 @@ class YOLOv3(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.module_utilizer.set_status(self.det_net, status='train')
+        self.det_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
@@ -144,7 +144,7 @@ class YOLOv3(object):
         """
           Validation function during the train phase.
         """
-        self.module_utilizer.set_status(self.det_net, status='val')
+        self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
             for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
@@ -180,7 +180,7 @@ class YOLOv3(object):
             self.det_running_score.reset()
             self.batch_time.reset()
             self.val_losses.reset()
-            self.module_utilizer.set_status(self.det_net, status='train')
+            self.det_net.train()
 
     def __get_object_list(self, batch_detections):
         batch_pred_bboxes = list()

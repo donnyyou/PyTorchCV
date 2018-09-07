@@ -86,7 +86,7 @@ class FCNSegmentor(object):
         if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
             self.__val()
 
-        self.module_utilizer.set_status(self.seg_net, status='train')
+        self.seg_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
 
@@ -138,7 +138,7 @@ class FCNSegmentor(object):
         """
           Validation function during the train phase.
         """
-        self.module_utilizer.set_status(self.seg_net, status='val')
+        self.seg_net.eval()
         start_time = time.time()
 
         for j, (inputs, targets) in enumerate(self.val_loader):
@@ -182,7 +182,7 @@ class FCNSegmentor(object):
         self.batch_time.reset()
         self.val_losses.reset()
         self.seg_running_score.reset()
-        self.module_utilizer.set_status(self.seg_net, status='train')
+        self.seg_net.train()
 
     def train(self):
         cudnn.benchmark = True

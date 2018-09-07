@@ -50,7 +50,7 @@ class SingleShotDetectorTest(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-        self.module_utilizer.set_status(self.det_net, status='test')
+        self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -214,7 +214,6 @@ class SingleShotDetectorTest(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
-        self.module_utilizer.set_status(self.det_net, status='debug')
         for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()
