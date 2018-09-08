@@ -16,6 +16,7 @@ from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
 from models.seg_model_manager import SegModelManager
 from utils.helpers.image_helper import ImageHelper
@@ -34,6 +35,7 @@ class FCNSegmentorTest(object):
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.seg_net = None
 
@@ -208,7 +210,12 @@ class FCNSegmentorTest(object):
         val_data_loader = self.seg_data_loader.get_valloader()
 
         count = 0
-        for i, (inputs, targets) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labelmap_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            targets = data_dict['labelmap']
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:

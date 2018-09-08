@@ -18,7 +18,8 @@ class _ConvBatchNormReluBlock(nn.Module):
         self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
                             kernel_size=kernel_size, stride=stride, padding = padding,
                             dilation = dilation, bias=False)
-        self.bn = nn.BatchNorm2d(num_features=outplanes)
+        from extensions.layers.syncbn.module import BatchNorm2d
+        self.bn = BatchNorm2d(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
     def forward(self, x):
@@ -95,13 +96,12 @@ class _ASPPModule(nn.Module):
         return h
 
 
-class DeepLabV3(nn.Module):
+class SyncBNDeepLabV3(nn.Module):
     def __init__(self, configer):
-        super(DeepLabV3, self).__init__()
+        super(SyncBNDeepLabV3, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
-
-        num_features = self.backbone.get_num_features()
+        from extensions.layers.syncbn.module import BatchNorm2d
         
         self.backbone = nn.Sequential(
             self.backbone.conv1, self.backbone.bn1, self.backbone.relu1,
@@ -116,7 +116,7 @@ class DeepLabV3(nn.Module):
         self.aspp = _ASPPModule(2048, 256, pyramids)
 
         self.fc1 = nn.Sequential(nn.Conv2d(1280, 256, kernel_size=1),  # 256 * 5 = 1280
-                                 nn.BatchNorm2d(256))
+                                 BatchNorm2d(256))
         self.fc2 = nn.Conv2d(256, self.configer.get('data', 'num_classes'), kernel_size=1)
 
     def forward(self, x):

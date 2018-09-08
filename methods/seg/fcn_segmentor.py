@@ -16,6 +16,7 @@ from datasets.seg_data_loader import SegDataLoader
 from loss.seg_loss_manager import SegLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.data_transformer import DataTransformer
 from models.seg_model_manager import SegModelManager
 from val.scripts.seg.seg_running_score import SegRunningScore
 from extensions.layers.syncbn.parallel import DataParallelCriterion
@@ -38,6 +39,7 @@ class FCNSegmentor(object):
         self.seg_visualizer = SegVisualizer(configer)
         self.seg_loss_manager = SegLossManager(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.data_transformer = DataTransformer(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -92,7 +94,12 @@ class FCNSegmentor(object):
 
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, (inputs, targets) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labelmap_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            targets = data_dict['labelmap']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
 
@@ -141,7 +148,13 @@ class FCNSegmentor(object):
         self.seg_net.eval()
         start_time = time.time()
 
-        for j, (inputs, targets) in enumerate(self.val_loader):
+        for j, batch_data in enumerate(self.val_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labelmap_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            targets = data_dict['labelmap']
+
             with torch.no_grad():
                 # Change the data type.
                 inputs, targets = self.module_utilizer.to_device(inputs, targets)
