@@ -46,15 +46,12 @@ class PoseDataLoader(object):
                             mean=self.configer.get('trans_params', 'normalize')['mean'],
                             std=self.configer.get('trans_params', 'normalize')['std']), ])
 
-        self.label_transform = trans.Compose([trans.ToTensor(), ])
-
     def get_trainloader(self):
         if self.configer.get('method') == 'conv_pose_machine':
             trainloader = data.DataLoader(
                 CPMDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
                               aug_transform=self.aug_train_transform,
                               img_transform=self.img_transform,
-                              label_transform=self.label_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
@@ -66,7 +63,6 @@ class PoseDataLoader(object):
                 OPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
                              aug_transform=self.aug_train_transform,
                              img_transform=self.img_transform,
-                             label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
@@ -83,7 +79,6 @@ class PoseDataLoader(object):
                 CPMDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
                               aug_transform=self.aug_val_transform,
                               img_transform=self.img_transform,
-                              label_transform=self.label_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)
@@ -95,7 +90,6 @@ class PoseDataLoader(object):
                 OPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform,
-                             label_transform=self.label_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._pose_collate)

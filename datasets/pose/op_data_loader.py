@@ -9,13 +9,12 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
+import torch
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
 from utils.helpers.json_helper import JsonHelper
 
-from datasets.pose.pose_data_utilizer import PoseDataUtilizer
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -23,14 +22,12 @@ from utils.tools.logger import Logger as Log
 class OPDataLoader(data.Dataset):
 
     def __init__(self, root_dir = None, aug_transform=None,
-                 img_transform=None, label_transform=None, configer=None):
+                 img_transform=None, configer=None):
 
         self.img_list, self.json_list, self.mask_list = self.__list_dirs(root_dir)
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
-        self.label_transform = label_transform
-        self.pose_data_utilizer = PoseDataUtilizer(configer)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -56,13 +53,10 @@ class OPDataLoader(data.Dataset):
         maskmap = ImageHelper.resize(maskmap, (width // self.configer.get('network', 'stride'),
                                                height // self.configer.get('network', 'stride')), Image.NEAREST)
 
-        maskmap = np.expand_dims(np.array(maskmap, dtype=np.float32), axis=2)
+        maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
 
         if self.img_transform is not None:
             img = self.img_transform(img)
-
-        if self.label_transform is not None:
-            maskmap = self.label_transform(maskmap)
 
         return img, maskmap, kpts
 

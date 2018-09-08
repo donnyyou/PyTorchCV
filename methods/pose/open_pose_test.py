@@ -18,11 +18,12 @@ import torch
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.pose_transforms import PadImage
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from models.pose_model_manager import PoseModelManager
+from utils.layers.pose.paf_generator import PafGenerator
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
@@ -40,6 +41,9 @@ class OpenPoseTest(object):
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.heatmap_generator = HeatmapGenerator(configer)
+        self.paf_generator = PafGenerator(configer)
+        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
 
@@ -336,7 +340,16 @@ class OpenPoseTest(object):
         val_data_loader = self.pose_data_loader.get_valloader()
 
         count = 0
-        for i, (inputs, heatmap, maskmap, vecmap) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              kpts_list=batch_data[1],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+
+            inputs = data_dict['img']
+            maskmap = data_dict['maskmap']
+            input_size = [inputs.size(3), inputs.size(2)]
+            heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+            vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 10:

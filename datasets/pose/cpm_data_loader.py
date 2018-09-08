@@ -12,7 +12,6 @@ import numpy as np
 import torch.utils.data as data
 from utils.helpers.json_helper import JsonHelper
 
-from datasets.pose.pose_data_utilizer import PoseDataUtilizer
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -20,13 +19,11 @@ from utils.tools.logger import Logger as Log
 class CPMDataLoader(data.Dataset):
 
     def __init__(self, root_dir, aug_transform=None,
-                 img_transform=None, label_transform=None, configer=None):
+                 img_transform=None, configer=None):
         (self.img_list, self.json_list) = self.__list_dirs(root_dir)
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
-        self.label_transform = label_transform
-        self.pose_data_utilizer = PoseDataUtilizer(configer)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -38,15 +35,10 @@ class CPMDataLoader(data.Dataset):
         if self.aug_transform is not None:
             img, kpts, bboxes = self.aug_transform(img, kpts=kpts, bboxes=bboxes)
 
-        heatmap = self.pose_data_utilizer.generate_heatmap(kpts=kpts)
-
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        if self.label_transform is not None:
-            heatmap = self.label_transform(heatmap)
-
-        return img, heatmap
+        return img, kpts
 
     def __len__(self):
 

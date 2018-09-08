@@ -70,6 +70,6 @@ class PafGenerator(object):
 
         vecmap = torch.from_numpy(vecmap)
         if maskmap is not None:
-            vecmap = vecmap * maskmap
+            vecmap = vecmap * maskmap.unsqueeze(1)
 
         return vecmap
