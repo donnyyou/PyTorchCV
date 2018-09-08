@@ -54,7 +54,9 @@ class FCNSegmentorTest(object):
 
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
         for scale in self.configer.get('test', 'scale_search'):
-            image = self.blob_helper.make_input(image=ori_image, scale=scale)
+            image = self.blob_helper.make_input(image=ori_image,
+                                                input_size=self.configer.get('test', 'input_size'),
+                                                scale=scale)
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
                 if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
@@ -68,7 +70,12 @@ class FCNSegmentorTest(object):
             total_logits += results
 
         if self.configer.get('test', 'mirror'):
-            image = self.blob_helper.make_mirror_input(image=ori_image)
+            if self.configer.get('data', 'image_tool') == 'cv2':
+                image = cv2.flip(ori_image, 1)
+            else:
+                image = ori_image.transpose(Image.FLIP_LEFT_RIGHT)
+
+            image = self.blob_helper.make_input(image, input_size=self.configer.get('test', 'input_size'), scale=1.0)
             if self.configer.get('test', 'crop_test'):
                 crop_size = self.configer.get('test', 'crop_size')
                 if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
@@ -78,7 +85,7 @@ class FCNSegmentorTest(object):
             else:
                 results = self._predict(image)
 
-            results = cv2.resize(results[:,::-1],(ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
+            results = cv2.resize(results[:, ::-1], (ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
             total_logits += results
 
         label_map = np.argmax(total_logits, axis=-1)

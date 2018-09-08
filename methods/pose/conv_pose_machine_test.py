@@ -46,43 +46,31 @@ class ConvPoseMachineTest(object):
         self.pose_net.eval()
 
     def __test_img(self, image_path, save_path):
-        image_raw = ImageHelper.read_image(image_path,
+        Log.info('Image Path: {}'.format(image_path))
+        ori_image = ImageHelper.read_image(image_path,
                                            tool=self.configer.get('data', 'image_tool'),
                                            mode=self.configer.get('data', 'input_mode'))
-        inputs = ImageHelper.bgr2rgb(image_raw)
-        heatmap_avg = self.__get_heatmap(inputs)
-        all_peaks = self.__extract_heatmap_info(heatmap_avg)
-        image_save = self.__draw_key_point(all_peaks, image_raw)
-        cv2.imwrite(save_path, image_save)
 
-    def __get_heatmap(self, img_raw):
-        multiplier = [scale * self.configer.get('data', 'input_size')[0] / img_raw.shape[1]
-                      for scale in self.configer.get('test', 'scale_search')]
-
-        heatmap_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'heatmap_out')))
-
-        for i, scale in enumerate(multiplier):
-            img_test = cv2.resize(img_raw, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            img_test_pad, pad = PadImage(self.configer.get('network', 'stride'))(img_test)
-            img_test_pad = ToTensor()(img_test_pad)
-            img_test_pad = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                                     std=self.configer.get('trans_params', 'std'))(img_test_pad)
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(ori_image, mode=self.configer.get('data', 'input_mode'))
+        heatmap_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'heatmap_out')))
+        for i, scale in enumerate(self.configer.get('test', 'scale_search')):
+            image = self.blob_helper.make_input(ori_image,
+                                                input_size=self.configer.get('test', 'input_size'),
+                                                scale=scale)
             with torch.no_grad():
-                img_test_pad = img_test_pad.unsqueeze(0).to(self.device)
-                heatmap_out_list = self.pose_net(img_test_pad)
+                heatmap_out_list = self.pose_net(image)
+                heatmap_out = heatmap_out_list[-1]
 
-            heatmap_out = heatmap_out_list[-1]
+                # extract outputs, resize, and remove padding
+                heatmap = heatmap_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                heatmap = cv2.resize(heatmap, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
 
-            # extract outputs, resize, and remove padding
-            heatmap = heatmap_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            heatmap = cv2.resize(heatmap, (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            heatmap = heatmap[:img_test_pad.size(2) - pad[3], :img_test_pad.size(3) - pad[2], :]
+                heatmap_avg = heatmap_avg + heatmap / len(self.configer.get('test', 'scale_search'))
 
-            heatmap = cv2.resize(heatmap, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-            heatmap_avg = heatmap_avg + heatmap / len(multiplier)
-
-        return heatmap_avg
+        all_peaks = self.__extract_heatmap_info(heatmap_avg)
+        image_canvas = self.__draw_key_point(all_peaks, ori_img_bgr)
+        ImageHelper.save(image_canvas, save_path)
 
     def __extract_heatmap_info(self, heatmap_avg):
         all_peaks = []

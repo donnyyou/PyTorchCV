@@ -17,52 +17,18 @@ class BlobHelper(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def make_input_batch(self, image_list, scale=1.0):
+    def make_input_batch(self, image_list, input_size=None, scale=1.0):
         input_list = list()
-        for image_file in image_list:
-            input_list.append(self.make_input(image_file, scale=scale))
+        for image in image_list:
+            input_list.append(self.make_input(image, input_size=input_size, scale=scale))
 
         return torch.cat(input_list, 0)
 
-    def make_input(self, image_path=None, image=None, scale=1.0):
-        if image is None:
-            image = ImageHelper.read_image(image_path,
-                                           tool=self.configer.get('data', 'image_tool'),
-                                           mode=self.configer.get('data', 'input_mode'))
-
-        if self.configer.is_empty('test', 'test_input_size'):
+    def make_input(self, image=None, input_size=None, scale=1.0):
+        if input_size is None:
             in_width, in_height = ImageHelper.get_size(image)
         else:
-            in_width, in_height = self.configer.get('test', 'test_input_size')
-
-        image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
-        img_tensor = ToTensor()(image)
-        img_tensor = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                               mean=self.configer.get('trans_params', 'normalize')['mean'],
-                               std=self.configer.get('trans_params', 'normalize')['std'])(img_tensor)
-        img_tensor = img_tensor.unsqueeze(0).to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
-
-        return img_tensor
-
-    def make_mirror_input(self, image_path=None, image=None, scale=1.0):
-        if image is None:
-            image = ImageHelper.read_image(image_path,
-                                           tool=self.configer.get('data', 'image_tool'),
-                                           mode=self.configer.get('data', 'input_mode'))
-
-        if self.configer.get('data', 'image_tool') == 'cv2':
-            image = cv2.flip(image, 1)
-        else:
-            image = image.transpose(Image.FLIP_LEFT_RIGHT)
-
-        if self.configer.is_empty('test', 'test_input_size'):
-            in_width, in_height = ImageHelper.get_size(image)
-        else:
-            in_width, in_height = self.configer.get('test', 'test_input_size')
-            if not self.configer.is_empty('test', 'keep_scale') and self.configer.get('test', 'keep_scale'):
-                img_width, img_height = ImageHelper.get_size(image)
-                short_scale = max(in_width / img_width, in_height / img_height)
-                in_width, in_height = int(round(in_width * short_scale)), int(round(in_height * short_scale))
+            in_width, in_height = input_size
 
         image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
         img_tensor = ToTensor()(image)

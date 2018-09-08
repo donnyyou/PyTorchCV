@@ -58,16 +58,12 @@ class YOLOv3Test(object):
                                      mode=self.configer.get('data', 'input_mode'))
         ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
 
-        input_size = self.configer.get('data', 'input_size')
-        inputs = ImageHelper.resize(img, input_size, Image.CUBIC)
-        inputs = ToTensor()(inputs)
-        inputs = Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                           mean=self.configer.get('trans_params', 'normalize')['mean'],
-                           std=self.configer.get('trans_params', 'normalize')['std'])(inputs)
+        inputs = self.blob_helper.make_input(img,
+                                             input_size=self.configer.get('data', 'input_size'), scale=1.0)
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
-            _, detections = self.det_net(inputs)
+            _, _, detections = self.det_net(inputs)
 
         batch_detections = self.decode(detections, self.configer)
         json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)

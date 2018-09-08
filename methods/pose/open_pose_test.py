@@ -15,7 +15,6 @@ import os
 import cv2
 import numpy as np
 import torch
-from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
@@ -53,19 +52,46 @@ class OpenPoseTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_read_image(image_path))
-        ori_img_bgr = ImageHelper.bgr2rgb(ori_img_rgb)
-        paf_avg, heatmap_avg = self.__get_paf_and_heatmap(ori_img_rgb)
+        ori_image = ImageHelper.read_image(image_path,
+                                           tool=self.configer.get('data', 'image_tool'),
+                                           mode=self.configer.get('data', 'input_mode'))
+
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(ori_image, mode=self.configer.get('data', 'input_mode'))
+        heatmap_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'heatmap_out')))
+        paf_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'paf_out')))
+        multiplier = [scale * self.configer.get('test', 'input_size')[0] / ori_width
+                      for scale in self.configer.get('test', 'scale_search')]
+        stride = self.configer.get('network', 'stride')
+        for i, scale in enumerate(multiplier):
+            target_size = [math.ceil((ori_width * scale) / stride) * stride,
+                           math.ceil((ori_height * scale) / stride) * stride]
+            image = self.blob_helper.make_input(ori_image, input_size=target_size, scale=1.0)
+            with torch.no_grad():
+                paf_out_list, heatmap_out_list = self.pose_net(image)
+                paf_out = paf_out_list[-1]
+                heatmap_out = heatmap_out_list[-1]
+
+                # extract outputs, resize, and remove padding
+                heatmap = heatmap_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                heatmap = cv2.resize(heatmap, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+
+                paf = paf_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                paf = cv2.resize(paf, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+
+                heatmap_avg = heatmap_avg + heatmap / len(multiplier)
+                paf_avg = paf_avg + paf / len(multiplier)
+
         all_peaks = self.__extract_heatmap_info(heatmap_avg)
-        special_k, connection_all = self.__extract_paf_info(ori_img_rgb, paf_avg, all_peaks)
+        special_k, connection_all = self.__extract_paf_info(ori_img_bgr, paf_avg, all_peaks)
         subset, candidate = self.__get_subsets(connection_all, special_k, all_peaks)
-        json_dict = self.__get_info_tree(ori_img_rgb, subset, candidate)
+        json_dict = self.__get_info_tree(ori_img_bgr, subset, candidate)
 
         image_canvas = self.pose_parser.draw_points(ori_img_bgr.copy(), json_dict)
         image_canvas = self.pose_parser.link_points(image_canvas, json_dict)
 
-        cv2.imwrite(vis_path, image_canvas)
-        cv2.imwrite(raw_path, ori_img_bgr)
+        ImageHelper.save(image_canvas, vis_path)
+        ImageHelper.save(ori_img_bgr, raw_path)
         Log.info('Json Save Path: {}'.format(json_path))
         JsonHelper.save_file(json_dict, json_path)
 
@@ -101,46 +127,6 @@ class OpenPoseTest(object):
 
         json_dict['objects'] = object_list
         return json_dict
-
-    def __get_paf_and_heatmap(self, img_raw):
-        multiplier = [scale * self.configer.get('data', 'input_size')[0] / img_raw.shape[1]
-                      for scale in self.configer.get('test', 'scale_search')]
-
-        heatmap_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'heatmap_out')))
-        paf_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'paf_out')))
-
-        for i, scale in enumerate(multiplier):
-            img_test = cv2.resize(img_raw, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            img_test_pad, pad = PadImage(self.configer.get('network', 'stride'))(img_test)
-            pad_right = pad[2]
-            pad_down = pad[3]
-            img_test_pad = ToTensor()(img_test_pad)
-            img_test_pad = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                                     std=self.configer.get('trans_params', 'std'))(img_test_pad)
-            with torch.no_grad():
-                img_test_pad = img_test_pad.unsqueeze(0).to(self.device)
-                paf_out_list, heatmap_out_list = self.pose_net(img_test_pad)
-
-            paf_out = paf_out_list[-1]
-            heatmap_out = heatmap_out_list[-1]
-
-            # extract outputs, resize, and remove padding
-            heatmap = heatmap_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            heatmap = cv2.resize(heatmap,  (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            heatmap = heatmap[:img_test_pad.size(2) - pad_down, :img_test_pad.size(3) - pad_right, :]
-            heatmap = cv2.resize(heatmap, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-            paf = paf_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            paf = cv2.resize(paf, (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            paf = paf[:img_test_pad.size(2) - pad_down, :img_test_pad.size(3) - pad_right, :]
-            paf = cv2.resize(paf, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-            heatmap_avg = heatmap_avg + heatmap / len(multiplier)
-            paf_avg = paf_avg + paf / len(multiplier)
-
-        return paf_avg, heatmap_avg
 
     def __extract_heatmap_info(self, heatmap_avg):
         all_peaks = []
