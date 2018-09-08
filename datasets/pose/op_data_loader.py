@@ -54,23 +54,17 @@ class OPDataLoader(data.Dataset):
 
         width, height = maskmap.size
         maskmap = ImageHelper.resize(maskmap, (width // self.configer.get('network', 'stride'),
-                                               height // self.configer.get('network', 'stride')), Image.CUBIC)
+                                               height // self.configer.get('network', 'stride')), Image.NEAREST)
 
         maskmap = np.expand_dims(np.array(maskmap, dtype=np.float32), axis=2)
-
-        heatmap = self.pose_data_utilizer.generate_heatmap(kpts=kpts, mask=maskmap)
-
-        vecmap = self.pose_data_utilizer.generate_paf(kpts=kpts, mask=maskmap)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
         if self.label_transform is not None:
-            heatmap = self.label_transform(heatmap)
-            vecmap = self.label_transform(vecmap)
             maskmap = self.label_transform(maskmap)
 
-        return img, heatmap, maskmap, vecmap
+        return img, maskmap, kpts
 
     def __len__(self):
 
