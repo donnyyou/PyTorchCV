@@ -13,9 +13,11 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.data_transformer import DataTransformer
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
@@ -45,6 +47,7 @@ class SingleShotDetector(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
+        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -83,7 +86,14 @@ class SingleShotDetector(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
-        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              bboxes_list=batch_data[1],
+                                              labels_list=batch_data[2],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_labels = data_dict['labels']
             # Change the data type.
             inputs = self.module_utilizer.to_device(inputs)
 
@@ -135,8 +145,14 @@ class SingleShotDetector(object):
         self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for j, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(self.val_loader):
-                # Change the data type.
+            for j, batch_data in enumerate(self.val_loader):
+                data_dict = self.data_transformer(img_list=batch_data[0],
+                                                  bboxes_list=batch_data[1],
+                                                  labels_list=batch_data[2],
+                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+                inputs = data_dict['img']
+                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_labels = data_dict['labels']
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.

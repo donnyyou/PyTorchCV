@@ -13,14 +13,16 @@
       "batch_size": 8,
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [864, 864]
+        "input_size": [864, 864],
+        "align_method": "only_scale"
       }
     },
     "val": {
       "batch_size": 8,
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [2048, 1024]
+        "input_size": [2048, 1024],
+        "align_method": "only_scale"
       }
     },
     "test": {

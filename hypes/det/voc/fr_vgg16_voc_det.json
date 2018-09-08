@@ -14,90 +14,36 @@
       "keep_difficult": false,
       "workers": 8
     },
+    "train": {
+      "batch_size": 1,
+      "data_transformer": {
+        "size_mode": "random_size"
+      }
+    },
+    "val": {
+      "batch_size": 1,
+      "data_transformer": {
+        "size_mode": "random_size"
+      }
+    },
     "test": {
-      "test_input_size": [720, 720],
-      "scale_search": [0.5, 1.0, 1.5, 2.0],
-      "mirror": true
     },
     "train_trans": {
-      "saturation_ratio": 0.0,
-      "hue_ratio": 0.0,
-      "perm_ratio": 0.0,
-      "contrast_ratio": 0.0,
-      "pad_ratio":0.0,
-      "brightness_ratio": 0.0,
-      "blur_ratio": 0.0,
-      "hsv_ratio": 0.0,
       "flip_ratio": 0.5,
       "resize_ratio": 1.0,
-      "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
-                    "random_crop"]
+      "trans_seq": ["random_hflip", "random_resize"]
     },
     "val_trans": {
-      "saturation_ratio": 0.0,
-      "hue_ratio": 0.0,
-      "perm_ratio": 0.0,
-      "contrast_ratio": 0.0,
-      "pad_ratio":0.0,
-      "brightness_ratio": 0.0,
-      "blur_ratio": 0.0,
-      "hsv_ratio": 0.0,
-      "flip_ratio": 0.0,
       "resize_ratio": 1.0,
-      "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_resize",
-                    "random_crop"]
+      "trans_seq": ["random_hflip", "random_resize"]
     },
     "trans_params": {
-      "random_saturation": {
-        "lower": 0.5,
-        "upper": 1.5
-      },
-      "random_hue": {
-        "delta": 18
-      },
-      "random_contrast": {
-        "lower": 0.5,
-        "upper": 1.5
-      },
-      "random_pad": {
-        "up_scale_range": [1.0, 4.0]
-      },
-      "random_brightness": {
-        "shift_value": 32
-      },
-      "random_gauss_blur": {
-        "max_blur": 4
-      },
-      "random_hsv": {
-        "h_range": [0.7, 1.3],
-        "s_range": [0.7, 1.3],
-        "v_range": [0.7, 1.3]
-      },
       "random_hflip": {
         "swap_pair": []
       },
       "random_resize": {
         "method": "bound",
         "resize_bound": [600, 1000]
-      },
-      "random_rotate": {
-        "rotate_degree": 40
-      },
-      "random_crop":{
-        "crop_size": [720, 720],
-        "method": "random",
-        "grid":[3, 2],
-        "center_jitter": 20,
-        "allow_outside_center": false
-      },
-      "scale_and_pad": {
-        "method": "only_pad"
       },
       "normalize": {
         "div_value": 255,

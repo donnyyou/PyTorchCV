@@ -15,9 +15,10 @@ import torch
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.transforms import Normalize, ToTensor
+from datasets.tools.det_transforms import ResizeBoxes
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
+from methods.tools.data_transformer import DataTransformer
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
 from utils.helpers.image_helper import ImageHelper
@@ -40,6 +41,7 @@ class YOLOv3Test(object):
         self.det_data_loader = DetDataLoader(configer)
         self.yolo_target_generator = YOLOTargetGenerator(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.data_transformer = DataTransformer(configer)
         self.yolo_detection_layer = YOLODetectionLayer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
@@ -71,8 +73,8 @@ class YOLOv3Test(object):
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
                                                    conf_threshold=self.configer.get('vis', 'conf_threshold'))
-        cv2.imwrite(vis_path, image_canvas)
-        cv2.imwrite(raw_path, ori_img_bgr)
+        ImageHelper.save(ori_img_bgr, raw_path)
+        ImageHelper.save(image_canvas, vis_path)
 
         Log.info('Json Path: {}'.format(json_path))
         JsonHelper.save_file(json_dict, json_path)
@@ -198,7 +200,14 @@ class YOLOv3Test(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
-        for i, (inputs, batch_gt_bboxes, batch_gt_labels) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              bboxes_list=batch_data[1],
+                                              labels_list=batch_data[2],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+            inputs = data_dict['img']
+            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()
             for stride in self.configer.get('network', 'stride_list'):
