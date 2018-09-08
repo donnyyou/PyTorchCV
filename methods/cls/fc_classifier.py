@@ -16,6 +16,7 @@ from datasets.cls_data_loader import ClsDataLoader
 from loss.cls_loss_manager import ClsLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.data_transformer import DataTransformer
 from models.cls_model_manager import ClsModelManager
 from val.scripts.cls.cls_running_score import ClsRunningScore
 from utils.tools.average_meter import AverageMeter
@@ -38,6 +39,7 @@ class FCClassifier(object):
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
+        self.data_transformer = DataTransformer(configer)
 
         self.cls_net = None
         self.train_loader = None
@@ -71,7 +73,12 @@ class FCClassifier(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, (inputs, labels) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labels_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
@@ -119,7 +126,12 @@ class FCClassifier(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, (inputs, labels) in enumerate(self.val_loader):
+            for j, batch_data in enumerate(self.val_loader):
+                data_dict = self.data_transformer(img_list=batch_data[0],
+                                                  labels_list=batch_data[1],
+                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+                inputs = data_dict['img']
+                labels = data_dict['labels']
                 # Change the data type.
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
