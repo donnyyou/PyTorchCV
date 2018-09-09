@@ -54,7 +54,7 @@ class DetDataLoader(object):
                               aug_transform=self.aug_train_transform,
                               img_transform=self.img_transform,
                               configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
@@ -65,7 +65,7 @@ class DetDataLoader(object):
                              aug_transform=self.aug_train_transform,
                              img_transform=self.img_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
@@ -76,7 +76,7 @@ class DetDataLoader(object):
                                aug_transform=self.aug_train_transform,
                                img_transform=self.img_transform,
                                configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return trainloader
@@ -92,7 +92,7 @@ class DetDataLoader(object):
                               aug_transform=self.aug_val_transform,
                               img_transform=self.img_transform,
                               configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader
@@ -103,7 +103,7 @@ class DetDataLoader(object):
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader
@@ -114,7 +114,7 @@ class DetDataLoader(object):
                                aug_transform=self.aug_val_transform,
                                img_transform=self.img_transform,
                                configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=False,
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
 
             return valloader

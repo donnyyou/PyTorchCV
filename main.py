@@ -43,9 +43,9 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir', default=None, type=str,
                         dest='data:data_dir', help='The Directory of the data.')
     parser.add_argument('--train_batch_size', default=None, type=int,
-                        dest='data:train_batch_size', help='The batch size of training.')
+                        dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
-                        dest='data:val_batch_size', help='The batch size of validation.')
+                        dest='val:batch_size', help='The batch size of validation.')
 
     # ***********  Params for checkpoint.  **********
     parser.add_argument('--checkpoints_root', default=None, type=str,

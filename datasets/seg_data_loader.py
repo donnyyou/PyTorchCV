@@ -60,7 +60,7 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 drop_last=True, collate_fn=self._seg_collate)
 
@@ -72,7 +72,7 @@ class SegDataLoader(object):
                              aug_transform=self.aug_train_transform,
                              img_transform=self.img_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'train_batch_size'), shuffle=True,
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
 
             return trainloader
@@ -89,7 +89,7 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=True,
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 drop_last=True, collate_fn=self._seg_collate)
 
@@ -101,7 +101,7 @@ class SegDataLoader(object):
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('data', 'val_batch_size'), shuffle=True,
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
 
             return valloader

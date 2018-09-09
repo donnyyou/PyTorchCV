@@ -7,9 +7,7 @@
 import re
 import torch
 from torch import nn
-from torchvision.models import DenseNet
 
-from extensions.layers.syncbn.module import BatchNorm2d
 from models.backbones.backbone_selector import BackboneSelector
 
 
@@ -22,6 +20,7 @@ class SyncBNDenseASPP(nn.Module):
         self.configer = configer
         dropout0 = 0.1
         dropout1 = 0.1
+        from extensions.layers.syncbn.module import BatchNorm2d
 
         self.backbone = BackboneSelector(configer).get_backbone()
 
@@ -95,7 +94,7 @@ class _DenseAsppBlock(nn.Sequential):
 
     def __init__(self, input_num, num1, num2, dilation_rate, drop_out):
         super(_DenseAsppBlock, self).__init__()
-
+        from extensions.layers.syncbn.module import BatchNorm2d
         self.add_module('relu1', nn.ReLU(inplace=False)),
         self.add_module('conv1', nn.Conv2d(in_channels=input_num, out_channels=num1, kernel_size=1)),
 
@@ -114,35 +113,12 @@ class _DenseAsppBlock(nn.Sequential):
 
 class _Transition(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
+        from extensions.layers.syncbn.module import BatchNorm2d
         super(_Transition, self).__init__()
         self.add_module('relu', nn.ReLU(inplace=False))
         self.add_module('conv', nn.Conv2d(num_input_features, num_output_features, kernel_size=1, stride=1, bias=False))
         self.add_module('norm', BatchNorm2d(num_features=num_output_features)),
 
-
-def densenet121_pretrained(pretrained_dir=None, pretrained= True, **kwargs):
-    r"""Densenet-121 model from
-    `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
-                     **kwargs)
-    if pretrained:
-        # '.'s are no longer allowed in module names, but pervious _DenseLayer
-        # has keys 'norm.1', 'relu.1', 'conv.1', 'norm.2', 'relu.2', 'conv.2'.
-        # They are also in the checkpoints in model_urls. This pattern is used
-        # to find such keys.
-        pattern = re.compile(r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
-        state_dict = torch.load(pretrained_dir)
-        for key in list(state_dict.keys()):
-            res = pattern.match(key)
-            if res:
-                new_key = res.group(1) + res.group(2)
-                state_dict[new_key] = state_dict[key]
-                del state_dict[key]
-        model.load_state_dict(state_dict)
-    return model
 
 if __name__ == "__main__":
     model = SyncBNDenseASPP(12)
