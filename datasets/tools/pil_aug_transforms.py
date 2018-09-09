@@ -1227,7 +1227,7 @@ class PILAugCompose(object):
                     Log.error('Not Support Resize Method!')
                     exit(1)
 
-            if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_crop' in self.configer.get('val_trans', 'trans_seq'):
                 if self.configer.get('trans_params', 'random_crop')['method'] == 'random':
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
