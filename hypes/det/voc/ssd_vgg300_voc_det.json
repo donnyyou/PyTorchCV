@@ -20,6 +20,7 @@
     },
     "val": {
       "batch_size": 32,
+      "use_07_metric": true,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [300, 300],

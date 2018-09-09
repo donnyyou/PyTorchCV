@@ -58,7 +58,7 @@ class DetRunningScore(object):
             ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
         return ap
 
-    def _voc_eval(self, iou_threshold=0.5):
+    def _voc_eval(self, iou_threshold=0.5, use_07_metric=False):
 
         ap_list = list()
         rc_list = list()
@@ -121,7 +121,7 @@ class DetRunningScore(object):
             # avoid divide by zero in case the first detection matches a difficult
             # ground truth
             prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-            ap = self._voc_ap(rec, prec, use_07_metric=False)
+            ap = self._voc_ap(rec, prec, use_07_metric=use_07_metric)
             rc_list.append(rec)
             ap_list.append(ap)
             pr_list.append(prec)
@@ -146,7 +146,8 @@ class DetRunningScore(object):
 
     def get_mAP(self):
         # compute mAP by APs under different oks thresholds
-        rc_list, pr_list, ap_list = self._voc_eval()
+        use_07_metric = self.configer.get('val', 'use_07_metric')
+        rc_list, pr_list, ap_list = self._voc_eval(use_07_metric=use_07_metric)
         if self.num_positive[self.configer.get('data', 'num_classes') - 1] < 1:
             return sum(ap_list) / (self.configer.get('data', 'num_classes') - 1)
         else:
