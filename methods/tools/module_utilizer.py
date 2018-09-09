@@ -42,8 +42,7 @@ class ModuleUtilizer(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if not self.configer.is_empty('network', 'encoding_parallel')\
-                and self.configer.get('network', 'encoding_parallel'):
+        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
             if len(self.configer.get('gpu')) > 1:
                 from extensions.layers.syncbn.parallel import DataParallelModel
                 self.configer.update_value(['network', 'parallel'], True)
