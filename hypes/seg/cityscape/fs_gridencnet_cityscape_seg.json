@@ -56,7 +56,8 @@
       },
       "random_crop":{
         "crop_size": [864, 864],
-        "method": "random"
+        "method": "random",
+        "allow_outside_center": false
       },
       "normalize": {
         "div_value": 255,
