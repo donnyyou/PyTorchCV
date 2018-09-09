@@ -61,11 +61,11 @@ class DataTransformer(object):
                     w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
                     h_scale_ratio = w_scale_ratio
 
-                if kpts_list is not None and kpts_list.numel() > 0:
+                if kpts_list is not None and kpts_list[i].numel() > 0:
                     kpts_list[i][:, :, 0] *= w_scale_ratio
                     kpts_list[i][:, :, 1] *= h_scale_ratio
 
-                if bboxes_list is not None and bboxes_list.numel() > 0:
+                if bboxes_list is not None and bboxes_list[i].numel() > 0:
                     bboxes_list[i][:, 0::2] *= w_scale_ratio
                     bboxes_list[i][:, 1::2] *= h_scale_ratio
 
