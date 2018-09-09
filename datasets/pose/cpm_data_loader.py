@@ -9,9 +9,10 @@ from __future__ import division
 
 import os
 import numpy as np
+import torch
 import torch.utils.data as data
-from utils.helpers.json_helper import JsonHelper
 
+from utils.helpers.json_helper import JsonHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -35,6 +36,7 @@ class CPMDataLoader(data.Dataset):
         if self.aug_transform is not None:
             img, kpts, bboxes = self.aug_transform(img, kpts=kpts, bboxes=bboxes)
 
+        kpts = torch.from_numpy(kpts).float()
         if self.img_transform is not None:
             img = self.img_transform(img)
 

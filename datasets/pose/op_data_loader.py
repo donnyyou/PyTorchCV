@@ -54,6 +54,7 @@ class OPDataLoader(data.Dataset):
                                                height // self.configer.get('network', 'stride')), Image.NEAREST)
 
         maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
+        kpts = torch.from_numpy(kpts).float()
 
         if self.img_transform is not None:
             img = self.img_transform(img)

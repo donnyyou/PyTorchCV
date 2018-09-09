@@ -114,11 +114,11 @@ class DataTransformer(object):
                             polygons_list[i][object_id][polygon_id][0::2] += left_pad
                             polygons_list[i][object_id][polygon_id][1::2] += up_pad
 
-                if kpts_list is not None and kpts_list.numel() > 0:
+                if kpts_list is not None and kpts_list[i].numel() > 0:
                     kpts_list[i][:, :, 0] += left_pad
                     kpts_list[i][:, :, 1] += up_pad
 
-                if bboxes_list is not None and bboxes_list.numel() > 0:
+                if bboxes_list is not None and bboxes_list[i].numel() > 0:
                     bboxes_list[i][:, 0::2] += left_pad
                     bboxes_list[i][:, 1::2] += up_pad
 
