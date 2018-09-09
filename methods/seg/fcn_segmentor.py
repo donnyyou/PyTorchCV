@@ -63,8 +63,7 @@ class FCNSegmentor(object):
 
         self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
 
-        if not self.configer.is_empty('network', 'encoding_parallel') \
-                and self.configer.get('network', 'encoding_parallel'):
+        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
             self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
 
     def _get_parameters(self):
@@ -163,8 +162,7 @@ class FCNSegmentor(object):
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
-                if not self.configer.is_empty('network', 'encoding_parallel') \
-                        and self.configer.get('network', 'encoding_parallel'):
+                if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
                     tmp = []  # collect the data
                     for i in range(len(outputs)):
                         assert isinstance(outputs[i][0],torch.Tensor)

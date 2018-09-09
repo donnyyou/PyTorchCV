@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import math
 import torch
 import torch.nn as nn
 
@@ -48,7 +49,7 @@ class ModuleUtilizer(object):
                 self.configer.update_value(['network', 'parallel'], True)
                 return DataParallelModel(net)
             else:
-                self.configer.update_value(['network', 'encoding_parallel'], False)
+                self.configer.update_value(['network', 'syncbn'], False)
                 return net
 
         elif len(self.configer.get('gpu')) > 1:
@@ -172,7 +173,6 @@ class ModuleUtilizer(object):
                 modulenorm = p.grad.data.norm()
                 total_norm += modulenorm ** 2
 
-        import math
         total_norm = math.sqrt(total_norm)
 
         norm = max_grad / max(total_norm, max_grad)
