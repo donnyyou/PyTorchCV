@@ -51,8 +51,8 @@
         "swap_pair": []
       },
       "random_resize": {
-        "scale_min": 0.5,
-        "scale_max": 2.0
+        "method": "random",
+        "scale_range": [0.5, 2.0]
       },
       "random_crop":{
         "crop_size": [864, 864],
