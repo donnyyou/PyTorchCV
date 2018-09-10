@@ -17,3 +17,5 @@
 /extensions/apis/cocoapi/PythonAPI/build
 *.png
 *.jpg
+
+/docs/build

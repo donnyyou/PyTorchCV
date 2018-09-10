@@ -2,12 +2,14 @@
 
 :github_url: https://github.com/youansheng/PyTorchCV
 
-PyTorchCV Docs
+Docs for PyTorch-Based CV Framework.
 ========================
 
 Created by `Donny You <personal link>`_
 
-A PyTorch-Based Framework for Deep Learning in Computer Vision.
+PyTorchCV, a PyTorch-based framework for deep learning in computer vision, has implemented lots of deep learning
+based methods in computer vision, such as image classification, object detection, semantic segmentation, instance
+segmentation, pose estimation, and so on.
 
 
 .. toctree::
@@ -15,7 +17,7 @@ A PyTorch-Based Framework for Deep Learning in Computer Vision.
    :maxdepth: 1
    :caption: Notes
 
-   notes/into.rst
+   notes/install.rst
 
 .. toctree::
    :maxdepth: 1
@@ -44,6 +46,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 
-<a href="https://info.flagcounter.com/Hyjs">
-   <img src="https://s05.flagcounter.com/count2/Hyjs/bg_FFFFFF/txt_000000/border_CCCCCC/columns_2/maxflags_16/viewers_0/labels_1/pageviews_1/flags_0/percent_0/" alt="Flag Counter" border="0">
-</a>
