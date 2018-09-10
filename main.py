@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import time
 import argparse
 
 from methods.method_selector import MethodSelector
@@ -42,9 +43,9 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir', default=None, type=str,
                         dest='data:data_dir', help='The Directory of the data.')
     parser.add_argument('--train_batch_size', default=None, type=int,
-                        dest='data:train_batch_size', help='The batch size of training.')
+                        dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
-                        dest='data:val_batch_size', help='The batch size of validation.')
+                        dest='val:batch_size', help='The batch size of validation.')
 
     # ***********  Params for checkpoint.  **********
     parser.add_argument('--checkpoints_root', default=None, type=str,
@@ -63,18 +64,22 @@ if __name__ == "__main__":
                         dest='network:backbone', help='The base network of model.')
     parser.add_argument('--pretrained', type=str2bool, nargs='?', default=False,
                         dest='network:pretrained', help='Whether to use pretrained models.')
+    parser.add_argument('--pretrained_model', type=str, default=None,
+                        dest='network:pretrained_model', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
                         dest='network:resume', help='The path of checkpoints.')
     parser.add_argument('--resume_level', default='full', type=str,
                         dest='network:resume_level', help='The resume level of networks.')
 
-    # ***********  Params for lr policy.  **********
+    # ***********  Params for solver.  **********
+    parser.add_argument('--optim_method', default=None, type=str,
+                        dest='optim:optim_method', help='The optim method that used.')
     parser.add_argument('--base_lr', default=None, type=float,
                         dest='lr:base_lr', help='The learning rate.')
-    parser.add_argument('--lr_policy', default='step', type=str,
+    parser.add_argument('--lr_policy', default=None, type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
 
-    # ***********  Params for solver.  **********
+    # ***********  Params for display.  **********
     parser.add_argument('--max_epoch', default=None, type=int,
                         dest='solver:max_epoch', help='The max epoch of training.')
     parser.add_argument('--display_iter', default=None, type=int,
@@ -104,7 +109,11 @@ if __name__ == "__main__":
         os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(gpu_id) for gpu_id in configer.get('gpu'))
 
     project_dir = os.path.dirname(os.path.realpath(__file__))
-    configer.add_value(['project_dir'], project_dir)
+    configer.add_key_value(['project_dir'], project_dir)
+
+    log_file = configer.get('logging', 'log_file')
+    new_log_file = '{}_{}'.format(log_file, time.time())
+    configer.update_value(['logging', 'log_file'], new_log_file)
 
     Log.init(logfile_level=configer.get('logging', 'logfile_level'),
              stdout_level=configer.get('logging', 'stdout_level'),
@@ -127,8 +136,6 @@ if __name__ == "__main__":
     else:
         Log.error('Task: {} is not valid.'.format(configer.get('task')))
         exit(1)
-
-    model.init_model()
 
     if configer.get('phase') == 'train':
         model.train()

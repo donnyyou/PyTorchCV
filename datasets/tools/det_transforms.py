@@ -7,25 +7,34 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import torch
-from PIL import Image
+
+from utils.helpers.image_helper import ImageHelper
 
 
 class ResizeBoxes(object):
     def __init__(self):
         pass
 
-    def __call__(self, img, bboxes, labels):
-        assert isinstance(img, Image.Image)
-        if bboxes is not None and len(bboxes) > 0:
-            for i in range(len(bboxes)):
-                bboxes[i][0] /= img.size[0]
-                bboxes[i][1] /= img.size[1]
-                bboxes[i][2] /= img.size[0]
-                bboxes[i][3] /= img.size[1]
+    def __call__(self, batch_img, batch_bboxes_list):
+        batch_size, _, height, width = batch_img.size()
+        for i in range(batch_size):
+            if batch_bboxes_list[i].numel() > 0:
+                batch_bboxes_list[i][:, 0::2] /= width
+                batch_bboxes_list[i][:, 1::2] /= height
 
-            labels = torch.from_numpy(np.array(labels)).long()
-            bboxes = torch.from_numpy(np.array(bboxes)).float()
+        return batch_bboxes_list
 
-        return img, bboxes, labels
+
+class BoundResize(object):
+    def __init__(self, resize_bound=(600, 1000)):
+        self.resize_bound = resize_bound
+
+    def __call__(self, img):
+        img_size = ImageHelper.get_size(img)
+        scale1 = self.resize_bound[0] / min(img_size)
+        scale2 = self.resize_bound[1] / max(img_size)
+        scale = min(scale1, scale2)
+        target_size = [int(round(i*scale)) for i in img_size]
+        img = ImageHelper.resize(img, target_size=target_size)
+        return img, scale

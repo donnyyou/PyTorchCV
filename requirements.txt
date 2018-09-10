@@ -10,3 +10,6 @@ pyyaml
 visdom
 bs4
 html5lib
+ninja
+torch
+torchvision

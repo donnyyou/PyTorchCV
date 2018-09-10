@@ -12,8 +12,11 @@ import os
 import numpy as np
 import cv2
 import torch
+import time
+from PIL import Image
 
 from datasets.tools.transforms import DeNormalize
+from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as log
 
 
@@ -32,7 +35,12 @@ class DetVisualizer(object):
         """
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
-        image = image_in.copy()
+        if isinstance(image_in, Image.Image):
+            image = ImageHelper.rgb2bgr(ImageHelper.img2np(image_in))
+
+        else:
+            image = image_in.copy()
+
         if not os.path.exists(base_dir):
             log.error('Dir:{} not exists!'.format(base_dir))
             os.makedirs(base_dir)
@@ -45,7 +53,42 @@ class DetVisualizer(object):
         image = cv2.resize(image, tuple(self.configer.get('data', 'input_size')))
         cv2.imwrite(img_path, image)
 
-    def vis_ssd_encode(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
+    def vis_rois(self, inputs, indices_and_rois, rois_labels=None, name='default', sub_dir='rois'):
+        base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
+
+        if not os.path.exists(base_dir):
+            log.error('Dir:{} not exists!'.format(base_dir))
+            os.makedirs(base_dir)
+
+        for i in range(inputs.size(0)):
+            rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
+            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
+                                  std=self.configer.get('trans_params', 'normalize')['std'])(inputs[i])
+            ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
+            ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+            color_num = len(self.configer.get('details', 'color_list'))
+
+            for j in range(len(rois)):
+                label = 1 if rois_labels is None else rois_labels[j]
+                if label == 0:
+                    continue
+
+                class_name = self.configer.get('details', 'name_seq')[label - 1]
+                cv2.rectangle(ori_img,
+                                (int(rois[j][0]), int(rois[j][1])),
+                                (int(rois[j][2]), int(rois[j][3])),
+                                color=self.configer.get('details', 'color_list')[(label - 1) % color_num], thickness=3)
+                cv2.putText(ori_img, class_name,
+                            (int(rois[j][0]) + 5, int(rois[j][3]) - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
+                            color=self.configer.get('details', 'color_list')[(label - 1) % color_num], thickness=2)
+
+            img_path = os.path.join(base_dir, '{}_{}_{}.jpg'.format(name, i, time.time()))
+
+            cv2.imwrite(img_path, ori_img)
+
+    def vis_default_bboxes(self, ori_img_in, default_bboxes, labels, name='default', sub_dir='encode'):
         base_dir = os.path.join(self.configer.get('project_dir'), DET_DIR, sub_dir)
 
         if not os.path.exists(base_dir):
@@ -53,8 +96,9 @@ class DetVisualizer(object):
             os.makedirs(base_dir)
 
         if not isinstance(ori_img_in, np.ndarray):
-            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                  std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
+                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
+                                  std=self.configer.get('trans_params', 'normalize')['std'])(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
         else:
@@ -62,8 +106,8 @@ class DetVisualizer(object):
 
         assert labels.size(0) == default_bboxes.size(0)
 
-        default_bboxes = torch.cat([default_bboxes[:, :2] - default_bboxes[:, 2:] / 2,
-                                    default_bboxes[:, :2] + default_bboxes[:, 2:] / 2], 1)
+        bboxes = torch.cat([default_bboxes[:, :2] - default_bboxes[:, 2:] / 2,
+                            default_bboxes[:, :2] + default_bboxes[:, 2:] / 2], 1)
         height, width, _ = ori_img.shape
         for i in range(labels.size(0)):
             if labels[i] == 0:
@@ -73,16 +117,15 @@ class DetVisualizer(object):
             color_num = len(self.configer.get('details', 'color_list'))
 
             cv2.rectangle(ori_img,
-                          (int(default_bboxes[i][0] * width), int(default_bboxes[i][1] * width)),
-                          (int(default_bboxes[i][2] * height), int(default_bboxes[i][3] * height)),
+                          (int(bboxes[i][0] * width), int(bboxes[i][1] * height)),
+                          (int(bboxes[i][2] * width), int(bboxes[i][3] * height)),
                           color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=3)
 
             cv2.putText(ori_img, class_name,
-                        (int(default_bboxes[i][0] * width) + 5, int(default_bboxes[i][3] * height) - 5),
+                        (int(bboxes[i][0] * width) + 5, int(bboxes[i][3] * height) - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                         color=self.configer.get('details', 'color_list')[(labels[i] - 1) % color_num], thickness=2)
 
-        ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
         img_path = os.path.join(base_dir, '{}.jpg'.format(name))
 
         cv2.imwrite(img_path, ori_img)

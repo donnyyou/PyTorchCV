@@ -15,14 +15,15 @@ import os
 import cv2
 import numpy as np
 import torch
-from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.pose_transforms import PadImage
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.pose_model_manager import PoseModelManager
+from utils.layers.pose.paf_generator import PafGenerator
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
@@ -34,35 +35,67 @@ from vis.visualizer.pose_visualizer import PoseVisualizer
 class OpenPoseTest(object):
     def __init__(self, configer):
         self.configer = configer
-
+        self.blob_helper = BlobHelper(configer)
         self.pose_visualizer = PoseVisualizer(configer)
         self.pose_parser = PoseParser(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.heatmap_generator = HeatmapGenerator(configer)
+        self.paf_generator = PafGenerator(configer)
+        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
         self.pose_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_open_rgb(image_path))
-        ori_img_bgr = ImageHelper.bgr2rgb(ori_img_rgb)
-        paf_avg, heatmap_avg = self.__get_paf_and_heatmap(ori_img_rgb)
+        ori_image = ImageHelper.read_image(image_path,
+                                           tool=self.configer.get('data', 'image_tool'),
+                                           mode=self.configer.get('data', 'input_mode'))
+
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(ori_image, mode=self.configer.get('data', 'input_mode'))
+        heatmap_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'heatmap_out')))
+        paf_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'paf_out')))
+        multiplier = [scale * self.configer.get('test', 'input_size')[0] / ori_width
+                      for scale in self.configer.get('test', 'scale_search')]
+        stride = self.configer.get('network', 'stride')
+        for i, scale in enumerate(multiplier):
+            target_size = [math.ceil((ori_width * scale) / stride) * stride,
+                           math.ceil((ori_height * scale) / stride) * stride]
+            image = self.blob_helper.make_input(ori_image, input_size=target_size, scale=1.0)
+            with torch.no_grad():
+                paf_out_list, heatmap_out_list = self.pose_net(image)
+                paf_out = paf_out_list[-1]
+                heatmap_out = heatmap_out_list[-1]
+
+                # extract outputs, resize, and remove padding
+                heatmap = heatmap_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                heatmap = cv2.resize(heatmap, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+
+                paf = paf_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                paf = cv2.resize(paf, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+
+                heatmap_avg = heatmap_avg + heatmap / len(multiplier)
+                paf_avg = paf_avg + paf / len(multiplier)
+
         all_peaks = self.__extract_heatmap_info(heatmap_avg)
-        special_k, connection_all = self.__extract_paf_info(ori_img_rgb, paf_avg, all_peaks)
+        special_k, connection_all = self.__extract_paf_info(ori_img_bgr, paf_avg, all_peaks)
         subset, candidate = self.__get_subsets(connection_all, special_k, all_peaks)
-        json_dict = self.__get_info_tree(ori_img_rgb, subset, candidate)
+        json_dict = self.__get_info_tree(ori_img_bgr, subset, candidate)
 
         image_canvas = self.pose_parser.draw_points(ori_img_bgr.copy(), json_dict)
         image_canvas = self.pose_parser.link_points(image_canvas, json_dict)
 
-        cv2.imwrite(vis_path, image_canvas)
-        cv2.imwrite(raw_path, ori_img_bgr)
+        ImageHelper.save(image_canvas, vis_path)
+        ImageHelper.save(ori_img_bgr, raw_path)
         Log.info('Json Save Path: {}'.format(json_path))
         JsonHelper.save_file(json_dict, json_path)
 
@@ -73,7 +106,10 @@ class OpenPoseTest(object):
         json_dict['image_width'] = width
         object_list = list()
         for n in range(len(subset)):
-            if subset[n][-1] <= self.configer.get('vis', 'num_threshold'):
+            if subset[n][-1] < self.configer.get('vis', 'num_threshold'):
+                continue
+
+            if subset[n][-2] / subset[n][-1] < self.configer.get('vis', 'avg_threshold'):
                 continue
 
             object_dict = dict()
@@ -95,46 +131,6 @@ class OpenPoseTest(object):
 
         json_dict['objects'] = object_list
         return json_dict
-
-    def __get_paf_and_heatmap(self, img_raw):
-        multiplier = [scale * self.configer.get('data', 'input_size')[0] / img_raw.shape[1]
-                      for scale in self.configer.get('data', 'scale_search')]
-
-        heatmap_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'heatmap_out')))
-        paf_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'paf_out')))
-
-        for i, scale in enumerate(multiplier):
-            img_test = cv2.resize(img_raw, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            img_test_pad, pad = PadImage(self.configer.get('network', 'stride'))(img_test)
-            pad_right = pad[2]
-            pad_down = pad[3]
-            img_test_pad = ToTensor()(img_test_pad)
-            img_test_pad = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                                     std=self.configer.get('trans_params', 'std'))(img_test_pad)
-            with torch.no_grad():
-                img_test_pad = img_test_pad.unsqueeze(0).to(self.device)
-                paf_out_list, heatmap_out_list = self.pose_net(img_test_pad)
-
-            paf_out = paf_out_list[-1]
-            heatmap_out = heatmap_out_list[-1]
-
-            # extract outputs, resize, and remove padding
-            heatmap = heatmap_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            heatmap = cv2.resize(heatmap,  (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            heatmap = heatmap[:img_test_pad.size(2) - pad_down, :img_test_pad.size(3) - pad_right, :]
-            heatmap = cv2.resize(heatmap, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-            paf = paf_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            paf = cv2.resize(paf, (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            paf = paf[:img_test_pad.size(2) - pad_down, :img_test_pad.size(3) - pad_right, :]
-            paf = cv2.resize(paf, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-            heatmap_avg = heatmap_avg + heatmap / len(multiplier)
-            paf_avg = paf_avg + paf / len(multiplier)
-
-        return paf_avg, heatmap_avg
 
     def __extract_heatmap_info(self, heatmap_avg):
         all_peaks = []
@@ -159,6 +155,21 @@ class OpenPoseTest(object):
 
             peaks = zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0])  # note reverse
             peaks = list(peaks)
+
+            del_flag = [0 for i in range(len(peaks))]
+            for i in range(len(peaks)):
+                if del_flag[i] == 0:
+                    for j in range(i+1, len(peaks)):
+                        if max(abs(peaks[i][0] - peaks[j][0]), abs(peaks[i][1] - peaks[j][1])) <= 6:
+                            del_flag[j] = 1
+
+            new_peaks = list()
+            for i in range(len(peaks)):
+                if del_flag[i] == 0:
+                    new_peaks.append(peaks[i])
+
+            peaks = new_peaks
+
             peaks_with_score = [x + (map_ori[x[1], x[0]],) for x in peaks]
             ids = range(peak_counter, peak_counter + len(peaks))
             peaks_with_score_and_id = [peaks_with_score[i] + (ids[i],) for i in range(len(ids))]
@@ -175,7 +186,6 @@ class OpenPoseTest(object):
 
         for k in range(len(self.configer.get('details', 'limb_seq'))):
             score_mid = paf_avg[:, :, [k*2, k*2+1]]
-            # self.pose_visualizer.vis_paf(score_mid, img_raw, name='pa{}'.format(k))
             candA = all_peaks[self.configer.get('details', 'limb_seq')[k][0] - 1]
             candB = all_peaks[self.configer.get('details', 'limb_seq')[k][1] - 1]
             nA = len(candA)
@@ -294,35 +304,29 @@ class OpenPoseTest(object):
             json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
             raw_path = os.path.join(base_dir, 'raw', filename)
             vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            if not os.path.exists(os.path.dirname(json_path)):
-                os.makedirs(os.path.dirname(json_path))
-
-            if not os.path.exists(os.path.dirname(raw_path)):
-                os.makedirs(os.path.dirname(raw_path))
-
-            if not os.path.exists(os.path.dirname(vis_path)):
-                os.makedirs(os.path.dirname(vis_path))
+            FileHelper.make_dirs(json_path, is_file=True)
+            FileHelper.make_dirs(raw_path, is_file=True)
+            FileHelper.make_dirs(vis_path, is_file=True)
 
             self.__test_img(test_img, json_path, raw_path, vis_path)
 
         else:
             base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            if not os.path.exists(base_dir):
-                os.makedirs(base_dir)
+            FileHelper.make_dirs(base_dir)
 
+            img_count = 0
             for filename in FileHelper.list_dir(test_dir):
+                img_count += 1
+                if img_count > 1200:
+                    break
+
                 image_path = os.path.join(test_dir, filename)
                 json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
                 vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                if not os.path.exists(os.path.dirname(json_path)):
-                    os.makedirs(os.path.dirname(json_path))
-
-                if not os.path.exists(os.path.dirname(raw_path)):
-                    os.makedirs(os.path.dirname(raw_path))
-
-                if not os.path.exists(os.path.dirname(vis_path)):
-                    os.makedirs(os.path.dirname(vis_path))
+                FileHelper.make_dirs(json_path, is_file=True)
+                FileHelper.make_dirs(raw_path, is_file=True)
+                FileHelper.make_dirs(vis_path, is_file=True)
 
                 self.__test_img(image_path, json_path, raw_path, vis_path)
 
@@ -336,17 +340,23 @@ class OpenPoseTest(object):
         val_data_loader = self.pose_data_loader.get_valloader()
 
         count = 0
-        for i, (inputs, heatmap, maskmap, vecmap) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              kpts_list=batch_data[1],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+
+            inputs = data_dict['img']
+            maskmap = data_dict['maskmap']
+            input_size = [inputs.size(3), inputs.size(2)]
+            heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+            vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 10:
                     exit(1)
 
                 Log.info(heatmap.size())
-                ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                      std=self.configer.get('trans_params', 'std'))(inputs[j])
-                ori_img = ori_img.numpy().transpose(1, 2, 0).astype(np.uint8)
-                image_bgr = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
+                image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 mask_canvas = maskmap[j].repeat(3, 1, 1).numpy().transpose(1, 2, 0)
                 mask_canvas = (mask_canvas * 255).astype(np.uint8)
                 mask_canvas = cv2.resize(mask_canvas, (0, 0), fx=self.configer.get('network', 'stride'),

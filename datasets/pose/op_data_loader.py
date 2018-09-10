@@ -9,13 +9,12 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
+import torch
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
 from utils.helpers.json_helper import JsonHelper
 
-from datasets.pose.pose_data_utilizer import PoseDataUtilizer
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -23,21 +22,24 @@ from utils.tools.logger import Logger as Log
 class OPDataLoader(data.Dataset):
 
     def __init__(self, root_dir = None, aug_transform=None,
-                 img_transform=None, label_transform=None, configer=None):
+                 img_transform=None, configer=None):
 
         self.img_list, self.json_list, self.mask_list = self.__list_dirs(root_dir)
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
-        self.label_transform = label_transform
-        self.pose_data_utilizer = PoseDataUtilizer(configer)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
+        img = ImageHelper.read_image(self.img_list[index],
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
         if os.path.exists(self.mask_list[index]):
-            maskmap = ImageHelper.pil_open_p(self.mask_list[index])
+            maskmap = ImageHelper.read_image(self.mask_list[index],
+                                             tool=self.configer.get('data', 'image_tool'), mode='P')
         else:
-            maskmap = ImageHelper.np2img(np.ones((img.size[1], img.size[0]), dtype=np.uint8))
+            maskmap = np.ones((img.size[1], img.size[0]), dtype=np.uint8)
+            if self.configer.get('data', 'image_tool') == 'pil':
+                maskmap = ImageHelper.np2img(maskmap)
 
         kpts, bboxes = self.__read_json_file(self.json_list[index])
 
@@ -49,23 +51,15 @@ class OPDataLoader(data.Dataset):
 
         width, height = maskmap.size
         maskmap = ImageHelper.resize(maskmap, (width // self.configer.get('network', 'stride'),
-                                               height // self.configer.get('network', 'stride')), Image.CUBIC)
+                                               height // self.configer.get('network', 'stride')), Image.NEAREST)
 
-        maskmap = np.expand_dims(np.array(maskmap, dtype=np.float32), axis=2)
-
-        heatmap = self.pose_data_utilizer.generate_heatmap(kpts=kpts, mask=maskmap)
-
-        vecmap = self.pose_data_utilizer.generate_paf(kpts=kpts, mask=maskmap)
+        maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
+        kpts = torch.from_numpy(kpts).float()
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        if self.label_transform is not None:
-            heatmap = self.label_transform(heatmap)
-            vecmap = self.label_transform(vecmap)
-            maskmap = self.label_transform(maskmap)
-
-        return img, heatmap, maskmap, vecmap
+        return img, maskmap, kpts
 
     def __len__(self):
 
@@ -87,7 +81,7 @@ class OPDataLoader(data.Dataset):
             if 'bbox' in object:
                 bboxes.append(object['bbox'])
 
-        return kpts, bboxes
+        return np.array(kpts).astype(np.float32), np.array(bboxes).astype(np.float32)
 
     def __list_dirs(self, root_dir):
         img_list = list()

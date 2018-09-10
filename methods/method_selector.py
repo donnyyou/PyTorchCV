@@ -9,18 +9,16 @@ from __future__ import print_function
 
 from methods.cls.fc_classifier import FCClassifier
 from methods.cls.fc_classifier_test import FCClassifierTest
+from methods.det.faster_rcnn import FasterRCNN
+from methods.det.faster_rcnn_test import FastRCNNTest
 from methods.det.single_shot_detector import SingleShotDetector
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
-from methods.pose.associative_embedding import AssociativeEmbedding
-from methods.pose.associative_embedding_test import AssociativeEmbeddingTest
+from methods.det.yolov3 import YOLOv3
+from methods.det.yolov3_test import YOLOv3Test
 from methods.pose.conv_pose_machine import ConvPoseMachine
 from methods.pose.conv_pose_machine_test import ConvPoseMachineTest
 from methods.pose.open_pose import OpenPose
 from methods.pose.open_pose_test import OpenPoseTest
-from methods.pose.rpn_pose import RPNPose
-from methods.pose.rpn_pose_test import RPNPoseTest
-from methods.pose.capsule_pose import CapsulePose
-from methods.pose.capsule_pose_test import CapsulePoseTest
 from methods.seg.fcn_segmentor import FCNSegmentor
 from methods.seg.fcn_segmentor_test import FCNSegmentorTest
 from utils.tools.logger import Logger as Log
@@ -29,16 +27,10 @@ from utils.tools.logger import Logger as Log
 POSE_METHOD_DICT = {
     'open_pose': OpenPose,
     'conv_pose_machine': ConvPoseMachine,
-    'associative_embedding': AssociativeEmbedding,
-    'rpn_pose': RPNPose,
-    'capsule_pose': CapsulePose,
 }
 POSE_TEST_DICT = {
     'open_pose': OpenPoseTest,
     'conv_pose_machine': ConvPoseMachineTest,
-    'associative_embedding': AssociativeEmbeddingTest,
-    'rpn_pose': RPNPoseTest,
-    'capsule_pose': CapsulePoseTest,
 }
 
 SEG_METHOD_DICT = {
@@ -49,10 +41,14 @@ SEG_TEST_DICT = {
 }
 
 DET_METHOD_DICT = {
+    'faster_rcnn': FasterRCNN,
     'single_shot_detector': SingleShotDetector,
+    'yolov3': YOLOv3,
 }
 DET_TEST_DICT = {
+    'faster_rcnn': FastRCNNTest,
     'single_shot_detector': SingleShotDetectorTest,
+    'yolov3': YOLOv3Test,
 }
 
 CLS_METHOD_DICT = {

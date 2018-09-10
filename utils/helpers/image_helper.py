@@ -12,37 +12,86 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from  utils.tools.logger import Logger as Log
+from utils.tools.logger import Logger as Log
+
+
+PIL_INTER = [Image.NEAREST, Image.ANTIALIAS, Image.BILINEAR, Image.CUBIC]
+CV2_INTER = [cv2.INTER_NEAREST, cv2.INTER_LANCZOS4, cv2.INTER_LINEAR, cv2.INTER_CUBIC]
 
 
 class ImageHelper(object):
 
     @staticmethod
-    def cv2_open_bgr(image_path):
-        img_rgb = np.array(Image.open(image_path).convert('RGB'))
-        return ImageHelper.rgb2bgr(img_rgb)
+    def read_image(image_path, tool='pil', mode='RGB'):
+        if tool == 'pil':
+            return ImageHelper.pil_read_image(image_path, mode=mode)
+        elif tool == 'cv2':
+            return ImageHelper.cv2_read_image(image_path, mode=mode)
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
-    def cv2_open_p(image_path):
-        return np.array(Image.open(image_path).convert('P'))
+    def cv2_read_image(image_path, mode='RGB'):
+        img_bgr = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        if mode == 'RGB':
+            return ImageHelper.bgr2rgb(img_bgr)
+
+        elif mode == 'BGR':
+            return img_bgr
+
+        elif mode == 'P':
+            return ImageHelper.img2np(Image.open(image_path).convert('P'))
+
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
-    def pil_open_rgb(image_path):
-        return Image.open(image_path).convert('RGB')
+    def pil_read_image(image_path, mode='RGB'):
+        if mode == 'RGB':
+            return Image.open(image_path).convert('RGB')
 
-    @staticmethod
-    def pil_open_p(image_path):
-        return Image.open(image_path).convert('P')
+        elif mode == 'BGR':
+            img = Image.open(image_path).convert('RGB')
+            cv_img = ImageHelper.rgb2bgr(np.array(img))
+            return Image.fromarray(cv_img)
+
+        elif mode == 'P':
+            return Image.open(image_path).convert('P')
+
+        else:
+            Log.error('Not support mode {}'.format(mode))
+            exit(1)
 
     @staticmethod
     def rgb2bgr(img_rgb):
+        if isinstance(img_rgb, Image.Image):
+            img_bgr = ImageHelper.rgb2bgr(ImageHelper.img2np(img_rgb))
+            return ImageHelper.np2img(img_bgr)
+
         img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         return img_bgr
 
     @staticmethod
     def bgr2rgb(img_bgr):
+        if isinstance(img_bgr, Image.Image):
+            img_rgb = ImageHelper.bgr2rgb(ImageHelper.img2np(img_bgr))
+            return ImageHelper.np2img(img_rgb)
+
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         return img_rgb
+
+    @staticmethod
+    def get_cv2_bgr(img, mode='RGB'):
+        if isinstance(img, Image.Image):
+            img = ImageHelper.img2np(img)
+
+        if mode == 'RGB':
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            return img_bgr
+
+        return img
 
     @staticmethod
     def imshow(win_name, img, time=0):
@@ -51,19 +100,6 @@ class ImageHelper(object):
 
         cv2.imshow(win_name, img)
         cv2.waitKey(time)
-
-    @staticmethod
-    def draw_box(img, bbox, default_color=(255, 0, 255)):
-        if isinstance(img, Image.Image):
-            img = ImageHelper.rgb2bgr(ImageHelper.img2np(img))
-
-            cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                          color=default_color, thickness=3)
-            return ImageHelper.np2img(ImageHelper.bgr2rgb(img))
-
-        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                      color=default_color, thickness=3)
-        return img
 
     @staticmethod
     def np2img(arr):
@@ -79,22 +115,76 @@ class ImageHelper(object):
         return np.array(img)
 
     @staticmethod
-    def fig2np(fig):
-        fig.canvas.draw()
-        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        return data
+    def get_size(img):
+        if isinstance(img, Image.Image):
+            return img.size
+
+        elif isinstance(img, np.ndarray):
+            height, width, _ = img.shape
+            return [width, height]
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
 
     @staticmethod
-    def resize(img, target_size, interpolation):
+    def resize(img, target_size, interpolation=None):
         assert isinstance(target_size, (list, tuple))
+        interpolation = int(interpolation)
+
+        target_size = tuple(target_size)
+        if isinstance(img, Image.Image):
+            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER[interpolation])
+
+        elif isinstance(img, np.ndarray):
+            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER[interpolation])
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
+    def pil_resize(img, target_size, interpolation):
+        assert isinstance(target_size, (list, tuple))
+
+        target_size = tuple(target_size)
 
         if isinstance(img, Image.Image):
             return img.resize(target_size, interpolation)
 
         elif isinstance(img, np.ndarray):
-            pil_img = Image.fromarray(img, mode='P' if len(img.shape) == 2 else 'RGB')
-            return np.array(pil_img.resize(target_size, interpolation))
+            pil_img = ImageHelper.np2img(img)
+            return ImageHelper.img2np(pil_img.resize(target_size, interpolation))
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
+    def cv2_resize(img, target_size, interpolation):
+        assert isinstance(target_size, (list, tuple))
+
+        target_size = tuple(target_size)
+
+        if isinstance(img, Image.Image):
+            img = ImageHelper.img2np(img)
+            target_img = cv2.resize(img, target_size, interpolation=interpolation)
+            return ImageHelper.np2img(target_img)
+
+        elif isinstance(img, np.ndarray):
+            return cv2.resize(img, target_size, interpolation=interpolation)
+
+        else:
+            Log.error('Image type is invalid.')
+            exit(1)
+
+    @staticmethod
+    def save(img, save_path):
+        if isinstance(img, Image.Image):
+            img.save(save_path)
+
+        elif isinstance(img, np.ndarray):
+            cv2.imwrite(save_path, img)
 
         else:
             Log.error('Image type is invalid.')
@@ -111,6 +201,13 @@ class ImageHelper(object):
         buf = ImageHelper.fig2data(fig)
         h, w, d = buf.shape
         return Image.frombytes("RGBA", (w, h), buf.tostring())
+
+    @staticmethod
+    def fig2np(fig):
+        fig.canvas.draw()
+        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        return data
 
     @staticmethod
     def fig2data(fig):
@@ -142,13 +239,15 @@ class ImageHelper(object):
 
 if __name__ == "__main__":
     target_size = (368, 368)
-    image_path = '/home/donny/Projects/PytorchCV/val/samples/pose/coco/ski.jpg'
-    pil_img = ImageHelper.pil_open_rgb(image_path)
-    cv2_img = ImageHelper.cv2_open_bgr(image_path)
+    image_path = '/home/donny/Projects/PyTorchCV/val/samples/pose/coco/ski.jpg'
+    pil_img = ImageHelper.cv2_read_image(image_path)
+    pil_img = ImageHelper.np2img(pil_img)
+    cv2_img = ImageHelper.cv2_read_image(image_path)
+    ImageHelper.imshow('main', np.array(pil_img) - cv2_img)
 
-    pil_img = ImageHelper.resize(pil_img, target_size, interpolation=Image.CUBIC)
-    cv2_img = ImageHelper.resize(cv2_img, target_size, interpolation=Image.CUBIC)
-    cv2_img = ImageHelper.bgr2rgb(cv2_img)
+    pil_img = ImageHelper.cv2_resize(pil_img, target_size, interpolation=cv2.INTER_CUBIC)
+    cv2_img = ImageHelper.cv2_resize(cv2_img, target_size, interpolation=cv2.INTER_CUBIC)
+    # cv2_img = ImageHelper.bgr2rgb(cv2_img)
     ImageHelper.imshow('main', np.array(pil_img) - cv2_img)
     ImageHelper.imshow('main', pil_img)
     ImageHelper.imshow('main', cv2_img)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 
 
@@ -43,6 +43,7 @@ class NormalDensenetBackbone(nn.Module):
         return self.num_features
 
     def forward(self, x):
+        tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
         x = self.relu0(x)
@@ -50,20 +51,25 @@ class NormalDensenetBackbone(nn.Module):
 
         x = self.denseblock1(x)
         x = self.transition1(x)
+        tuple_features.append(x)
         x = self.transition1_pool(x)
 
         x = self.denseblock2(x)
         x = self.transition2(x)
+        tuple_features.append(x)
         x = self.transition2_pool(x)
 
         x = self.denseblock3(x)
         x = self.transition3(x)
+        tuple_features.append(x)
         x = self.transition3_pool(x)
 
         x = self.denseblock4(x)
 
         x = self.norm5(x)
-        return x
+        tuple_features.append(x)
+
+        return tuple_features
 
 
 class DilatedDensenetBackbone(nn.Module):
@@ -115,6 +121,7 @@ class DilatedDensenetBackbone(nn.Module):
         return self.num_features
 
     def forward(self, x):
+        tuple_features = list()
         x = self.conv0(x)
         x = self.norm0(x)
         x = self.relu0(x)
@@ -122,28 +129,35 @@ class DilatedDensenetBackbone(nn.Module):
 
         x = self.denseblock1(x)
         x = self.transition1(x)
+        tuple_features.append(x)
         x = self.transition1_pool(x)
 
         x = self.denseblock2(x)
         x = self.transition2(x)
+        tuple_features.append(x)
         if self.dilate_scale > 8:
             x = self.transition2_pool(x)
 
         x = self.denseblock3(x)
         x = self.transition3(x)
+        tuple_features.append(x)
         if self.dilate_scale > 16:
             x = self.transition3_pool(x)
 
         x = self.denseblock4(x)
 
         x = self.norm5(x)
-        return x
+        tuple_features.append(x)
+
+        return tuple_features
 
 
 class DenseNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.densenet_models = DenseNetModels(self.configer)
+        from models.backbones.densenet.syncbn_densenet_models import SyncBNDenseNetModels
+        self.syncbn_densenet_models = SyncBNDenseNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
@@ -157,6 +171,14 @@ class DenseNetBackbone(object):
 
         elif arch == 'densenet121_dilated16':
             orig_densenet = self.densenet_models.densenet121()
+            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
+
+        elif arch == 'syncbn_densenet121_dilated8':
+            orig_densenet = self.syncbn_densenet_models.densenet121()
+            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=8)
+
+        elif arch == 'syncbn_densenet121_dilated16':
+            orig_densenet = self.syncbn_densenet_models.densenet121()
             arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
 
         elif arch == 'densenet169':

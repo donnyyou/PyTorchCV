@@ -7,12 +7,11 @@
 export PYTHONPATH='/home/donny/Projects/PytorchCV'
 
 
-ORI_IMG_DIR='/home/donny/DataSet/DeepFashion/img_selected/img'
-ORI_LABEL_DIR='/home/donny/DataSet/DeepFashion/img_selected/anno'
-SAVE_DIR='/home/donny/DataSet/Fashion1'
+ROOT_DIR='/home/donny/DataSet/VOC/VOCdevkit'
+DATA_SET='VOC07'
+SAVE_DIR='/home/donny/DataSet/'${DATA_SET}'_DET'
 
 
-python2.7 voc_det_generator.py --ori_img_dir $ORI_IMG_DIR \
-                               --ori_label_dir $ORI_LABEL_DIR \
+python2.7 voc_det_generator.py --root_dir $ROOT_DIR \
                                --save_dir $SAVE_DIR \
-                               --val_interval 10
+                               --dataset $DATA_SET

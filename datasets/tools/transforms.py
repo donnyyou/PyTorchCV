@@ -10,6 +10,7 @@ from __future__ import print_function
 import numpy as np
 import torch
 from PIL import Image
+import collections
 
 
 class Normalize(object):
@@ -23,12 +24,13 @@ class Normalize(object):
     Returns:
         Tensor: Normalized tensor.
     """
-    def __init__(self, mean, std):
+    def __init__(self, div_value, mean, std):
+        self.div_value = div_value
         self.mean = mean
         self.std =std
 
     def __call__(self, inputs):
-        inputs = inputs.div(255)
+        inputs = inputs.div(self.div_value)
         for t, m, s in zip(inputs, self.mean, self.std):
             t.sub_(m).div_(s)
 
@@ -46,7 +48,8 @@ class DeNormalize(object):
     Returns:
         Tensor: Normalized tensor.
     """
-    def __init__(self, mean, std):
+    def __init__(self, div_value, mean, std):
+        self.div_value = div_value
         self.mean = mean
         self.std =std
 
@@ -55,7 +58,7 @@ class DeNormalize(object):
         for i in range(result.size(0)):
             result[i, :, :] = result[i, :, :] * self.std[i] + self.mean[i]
 
-        return result.mul_(255)
+        return result.mul_(self.div_value)
 
 
 class ToTensor(object):

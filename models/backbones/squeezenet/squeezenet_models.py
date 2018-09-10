@@ -140,8 +140,11 @@ class SqueezeNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = SqueezeNet()
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)
@@ -151,8 +154,11 @@ class SqueezeNetModels(object):
 
     def squeezenet_dilated8(self):
         model = DilatedSqueezeNet()
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)

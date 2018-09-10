@@ -16,13 +16,17 @@ import torch.nn.functional as F
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from datasets.tools.det_transforms import ResizeBoxes
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
+from methods.tools.data_transformer import DataTransformer
 from models.det_model_manager import DetModelManager
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.json_helper import JsonHelper
-from utils.layers.det.priorbox_layer import SSDPriorBoxLayer
+from utils.helpers.det_helper import DetHelper
+from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
+from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -31,38 +35,43 @@ from vis.visualizer.det_visualizer import DetVisualizer
 class SingleShotDetectorTest(object):
     def __init__(self, configer):
         self.configer = configer
-
+        self.blob_helper = BlobHelper(configer)
         self.det_visualizer = DetVisualizer(configer)
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.default_boxes = SSDPriorBoxLayer(configer)()
+        self.data_transformer = DataTransformer(configer)
+        self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
+        self.ssd_target_generator = SSDTargetGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
         self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        ori_img_rgb = ImageHelper.img2np(ImageHelper.pil_open_rgb(image_path))
-        ori_img_bgr = ImageHelper.rgb2bgr(ori_img_rgb)
-        inputs = ImageHelper.resize(ori_img_rgb, tuple(self.configer.get('data', 'input_size')), Image.CUBIC)
-        inputs = ToTensor()(inputs)
-        inputs = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                           std=self.configer.get('trans_params', 'std'))(inputs)
+        img = ImageHelper.read_image(image_path,
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
+
+        inputs = self.blob_helper.make_input(img,
+                                             input_size=self.configer.get('test', 'input_size'), scale=1.0)
 
         with torch.no_grad():
             inputs = inputs.unsqueeze(0).to(self.device)
-            bbox, cls = self.det_net(inputs)
+            feat_list, bbox, cls = self.det_net(inputs)
 
-        bbox = bbox.cpu().data.squeeze(0)
-        cls = F.softmax(cls.cpu().squeeze(0), dim=-1).data
-        boxes, lbls, scores = self.__decode(bbox, cls)
-        json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+        batch_detections = self.decode(bbox, cls,
+                                       self.ssd_priorbox_layer(feat_list, self.configer.get('test', 'input_size')),
+                                       self.configer)
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -74,63 +83,8 @@ class SingleShotDetectorTest(object):
         JsonHelper.save_file(json_dict, json_path)
         return json_dict
 
-    def __nms(self, bboxes, scores, mode='union'):
-        """Non maximum suppression.
-
-        Args:
-          bboxes(tensor): bounding boxes, sized [N,4].
-          scores(tensor): bbox scores, sized [N,].
-          threshold(float): overlap threshold.
-          mode(str): 'union' or 'min'.
-
-        Returns:
-          keep(tensor): selected indices.
-
-        Ref:
-          https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/nms/py_cpu_nms.py
-        """
-
-        x1 = bboxes[:, 0]
-        y1 = bboxes[:, 1]
-        x2 = bboxes[:, 2]
-        y2 = bboxes[:, 3]
-
-        areas = (x2 - x1) * (y2 - y1)
-        _, order = scores.sort(0, descending=True)
-
-        keep = []
-        while order.numel() > 0:
-            if order.numel() == 1:
-                keep.append(order.item())
-                break
-
-            i = order[0]
-            keep.append(i)
-            xx1 = x1[order[1:]].clamp(min=x1[i])
-            yy1 = y1[order[1:]].clamp(min=y1[i])
-            xx2 = x2[order[1:]].clamp(max=x2[i])
-            yy2 = y2[order[1:]].clamp(max=y2[i])
-
-            w = (xx2-xx1).clamp(min=0)
-            h = (yy2-yy1).clamp(min=0)
-            inter = w*h
-
-            if self.configer.get('nms', 'mode') == 'union':
-                ovr = inter / (areas[i] + areas[order[1:]] - inter)
-            elif self.configer.get('nms', 'mode') == 'min':
-                ovr = inter / areas[order[1:]].clamp(max=areas[i])
-            else:
-                raise TypeError('Unknown nms mode: %s.' % mode)
-
-            ids = (ovr <= self.configer.get('nms', 'overlap_threshold')).nonzero().squeeze()
-            if ids.numel() == 0:
-                break
-
-            order = order[ids + 1]
-
-        return torch.LongTensor(keep)
-
-    def __decode(self, loc, conf):
+    @staticmethod
+    def decode(bbox, conf, default_boxes, configer):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -142,54 +96,71 @@ class SingleShotDetectorTest(object):
           labels: (tensor) class labels, sized [#obj,1].
 
         """
+        loc = bbox.cpu()
+        if configer.get('phase') != 'debug':
+            conf = F.softmax(conf.cpu(), dim=-1)
+
+        default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
+
         variances = [0.1, 0.2]
-        wh = torch.exp(loc[:, 2:] * variances[1]) * self.default_boxes[:, 2:]
-        cxcy = loc[:, :2] * variances[0] * self.default_boxes[:, 2:] + self.default_boxes[:, :2]
-        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 1)  # [8732,4]
+        wh = torch.exp(loc[:, :, 2:] * variances[1]) * default_boxes[:, :, 2:]
+        cxcy = loc[:, :, :2] * variances[0] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
+        boxes = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        max_conf, labels = conf.max(1)  # [8732,1]
-        ids = labels.nonzero()
-        tmp = ids.cpu().numpy()
+        batch_size, num_priors, _ = boxes.size()
+        boxes = boxes.unsqueeze(2).repeat(1, 1, configer.get('data', 'num_classes'), 1)
+        boxes = boxes.contiguous().view(boxes.size(0), -1, 4)
 
-        if tmp.__len__() > 0:
-            # print('detected %d objs' % tmp.__len__())
-            ids = ids.squeeze(1)  # [#boxes,]
-            keep = self.__nms(boxes[ids], max_conf[ids])
+        # clip bounding box
+        boxes[:, :, 0::2] = boxes[:, :, 0::2].clamp(min=0, max=1.0)
+        boxes[:, :, 1::2] = boxes[:, :, 1::2].clamp(min=0, max=1.0)
 
-            pred_bboxes = boxes[ids][keep].cpu().numpy()
-            pred_bboxes = np.clip(pred_bboxes, 0, 1)
-            pred_labels = labels[ids][keep].cpu().numpy()
-            pred_confs = max_conf[ids][keep].cpu().numpy()
+        labels = torch.Tensor([i for i in range(configer.get('data', 'num_classes'))]).to(boxes.device)
+        labels = labels.view(1, 1, -1, 1).repeat(batch_size, num_priors, 1, 1).contiguous().view(batch_size, -1, 1)
+        max_conf = conf.contiguous().view(batch_size, -1, 1)
 
-            return pred_bboxes, pred_labels, pred_confs
+        # max_conf, labels = conf.max(2, keepdim=True)  # [b, 8732,1]
+        predictions = torch.cat((boxes, max_conf.float(), labels.float()), 2)
+        output = [None for _ in range(len(predictions))]
+        for image_i, image_pred in enumerate(predictions):
+            ids = labels[image_i].squeeze(1).nonzero().contiguous().view(-1,)
+            if ids.numel() == 0:
+                continue
 
-        else:
-            Log.info('None object detected!')
-            pred_bboxes = list()
-            pred_labels = list()
-            pred_confs = list()
-            return pred_bboxes, pred_labels, pred_confs
+            valid_preds = image_pred[ids]
+            valid_preds = valid_preds[valid_preds[:, 4] > configer.get('vis', 'conf_threshold')]
+            if valid_preds.numel() == 0:
+                continue
 
-    def __get_info_tree(self, box_list, label_list, conf, image_raw):
+            keep = DetHelper.cls_nms(valid_preds[:, :4],
+                                     scores=valid_preds[:, 4],
+                                     labels=valid_preds[:, 5],
+                                     nms_threshold=configer.get('nms', 'max_threshold'),
+                                     mode=configer.get('nms', 'mode'))
+
+            output[image_i] = valid_preds[keep]
+
+        return output
+
+    def __get_info_tree(self, detections, image_raw):
         height, width, _ = image_raw.shape
         json_dict = dict()
         object_list = list()
-        for bbox, label, cf in zip(box_list, label_list, conf):
-            if cf < self.configer.get('vis', 'conf_threshold'):
-                continue
+        if detections is not None:
+            for x1, y1, x2, y2, conf, cls_pred in detections:
+                object_dict = dict()
+                xmin = x1.cpu().item() * width
+                ymin = y1.cpu().item() * height
+                xmax = x2.cpu().item() * width
+                ymax = y2.cpu().item() * height
+                object_dict['bbox'] = [xmin, ymin, xmax, ymax]
+                object_dict['label'] = int(cls_pred.cpu().item()) - 1
+                object_dict['score'] = float('%.2f' % conf.cpu().item())
 
-            object_dict = dict()
-            xmin = bbox[0] * width
-            xmax = bbox[2] * width
-            ymin = bbox[1] * height
-            ymax = bbox[3] * height
-            object_dict['bbox'] = [xmin, ymin, xmax, ymax]
-            object_dict['label'] = label - 1
-            object_dict['score'] = float('%.2f' % cf)
-
-            object_list.append(object_dict)
+                object_list.append(object_dict)
 
         json_dict['objects'] = object_list
+
         return json_dict
 
     def test(self):
@@ -212,35 +183,24 @@ class SingleShotDetectorTest(object):
             json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
             raw_path = os.path.join(base_dir, 'raw', filename)
             vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            if not os.path.exists(os.path.dirname(json_path)):
-                os.makedirs(os.path.dirname(json_path))
-
-            if not os.path.exists(os.path.dirname(raw_path)):
-                os.makedirs(os.path.dirname(raw_path))
-
-            if not os.path.exists(os.path.dirname(vis_path)):
-                os.makedirs(os.path.dirname(vis_path))
+            FileHelper.make_dirs(json_path, is_file=True)
+            FileHelper.make_dirs(raw_path, is_file=True)
+            FileHelper.make_dirs(vis_path, is_file=True)
 
             self.__test_img(test_img, json_path, raw_path, vis_path)
 
         else:
             base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            if not os.path.exists(base_dir):
-                os.makedirs(base_dir)
+            FileHelper.make_dirs(base_dir)
 
             for filename in FileHelper.list_dir(test_dir):
                 image_path = os.path.join(test_dir, filename)
                 json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
                 raw_path = os.path.join(base_dir, 'raw', filename)
                 vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                if not os.path.exists(os.path.dirname(json_path)):
-                    os.makedirs(os.path.dirname(json_path))
-
-                if not os.path.exists(os.path.dirname(raw_path)):
-                    os.makedirs(os.path.dirname(raw_path))
-
-                if not os.path.exists(os.path.dirname(vis_path)):
-                    os.makedirs(os.path.dirname(vis_path))
+                FileHelper.make_dirs(json_path, is_file=True)
+                FileHelper.make_dirs(raw_path, is_file=True)
+                FileHelper.make_dirs(vis_path, is_file=True)
 
                 self.__test_img(image_path, json_path, raw_path, vis_path)
 
@@ -254,22 +214,36 @@ class SingleShotDetectorTest(object):
         val_data_loader = self.det_data_loader.get_valloader()
 
         count = 0
-        for i, (inputs, bboxes, labels) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              bboxes_list=batch_data[1],
+                                              labels_list=batch_data[2],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+            inputs = data_dict['img']
+            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_labels = data_dict['labels']
+            input_size = [inputs.size(3), inputs.size(2)]
+            feat_list = list()
+            for stride in self.configer.get('network', 'stride_list'):
+                feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
+
+            bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
+                                                       batch_gt_labels, input_size)
+            eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
+            labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
+                                                             self.configer.get('data', 'num_classes'))
+            batch_detections = self.decode(bboxes, labels_target,
+                                           self.ssd_priorbox_layer(feat_list, input_size), self.configer)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
                     exit(1)
 
-                ori_img_rgb = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                          std=self.configer.get('trans_params', 'std'))(inputs[j])
-                ori_img_rgb = ori_img_rgb.numpy().transpose(1, 2, 0).astype(np.uint8)
-                ori_img_bgr = cv2.cvtColor(ori_img_rgb, cv2.COLOR_RGB2BGR)
-                eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
-                labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
-                                                                 self.configer.get('data', 'num_classes'))
-                boxes, lbls, scores = self.__decode(bboxes[j], labels_target[j])
-                self.det_visualizer.vis_ssd_encode(ori_img_bgr, self.default_boxes, labels[j])
-                json_dict = self.__get_info_tree(boxes, lbls, scores, ori_img_rgb)
+                ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
+
+                self.det_visualizer.vis_default_bboxes(ori_img_bgr,
+                                                       self.ssd_priorbox_layer(feat_list, input_size), labels[j])
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
                                                            conf_threshold=self.configer.get('vis', 'conf_threshold'))

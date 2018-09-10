@@ -49,9 +49,9 @@ class OptimScheduler(object):
                                                  self.configer.get('lr', 'multistep')['stepvalue'],
                                                  gamma=self.configer.get('lr', 'multistep')['gamma'])
 
-        elif policy == 'lambda_erfnet':
-            lambda_erfnet = lambda epoch: pow((1 - ((epoch - 1) / self.configer.get('solver', 'max_epoch'))), 0.9)
-            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_erfnet)
+        elif policy == 'lambda_poly':
+            lambda_poly = lambda epoch: pow((1.0 - epoch / self.configer.get('solver', 'max_epoch')), 0.9)
+            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_poly)
 
         else:
             Log.error('Policy:{} is not valid.'.format(policy))

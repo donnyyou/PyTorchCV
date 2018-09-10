@@ -14,8 +14,8 @@ def getNetworkIp():
 IP = getNetworkIp()
 STATIC_SERVICE = "http://%s/imagesite" % IP
 
-DATASET_ROOT = '/data/DataSet'
-PROJECT_ROOT = '/home/deepmotion/Projects/PytorchCV'
+DATASET_ROOT = '/home/donny/DataSet'
+PROJECT_ROOT = '/home/donny/Projects/PyTorchCV'
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',

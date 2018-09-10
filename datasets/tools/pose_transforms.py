@@ -21,13 +21,15 @@ class PadImage(object):
         Returns:
             img: np.array object.
     """
-    def __init__(self, stride):
+    def __init__(self, stride, mean_value=(104, 117, 123)):
         self.stride = stride
+        self.mean_value = tuple(mean_value)
 
     def __call__(self, img):
-        img = Image.fromarray(img)
-        assert isinstance(img, Image.Image)
-        w, h = img.size
+        if isinstance(img, Image.Image):
+            w, h = img.size
+        else:
+            h, w, c = img.shape
 
         pad = 4 * [None]
         pad[0] = 0  # left
@@ -35,5 +37,11 @@ class PadImage(object):
         pad[2] = 0 if (w % self.stride == 0) else self.stride - (w % self.stride)  # right
         pad[3] = 0 if (h % self.stride == 0) else self.stride - (h % self.stride)  # down
 
-        img_padded = ImageOps.expand(img, tuple(pad), fill=0)  # confused.
+        if isinstance(img, Image.Image):
+            img_padded = ImageOps.expand(img, tuple(pad), fill=self.mean_value)  # confused.
+        else:
+            img_padded = np.zeros((h + pad[3], w + pad[2], c), dtype=img.dtype)
+            img_padded[:, :, :] = self.mean_value
+            img_padded[:h, :w, :] = img
+
         return img_padded, pad

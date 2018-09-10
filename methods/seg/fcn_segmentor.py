@@ -16,8 +16,10 @@ from datasets.seg_data_loader import SegDataLoader
 from loss.seg_loss_manager import SegLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.data_transformer import DataTransformer
 from models.seg_model_manager import SegModelManager
 from val.scripts.seg.seg_running_score import SegRunningScore
+from extensions.layers.syncbn.parallel import DataParallelCriterion
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from vis.visualizer.seg_visualizer import SegVisualizer
@@ -37,6 +39,7 @@ class FCNSegmentor(object):
         self.seg_visualizer = SegVisualizer(configer)
         self.seg_loss_manager = SegLossManager(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.data_transformer = DataTransformer(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -47,7 +50,9 @@ class FCNSegmentor(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
         self.seg_net = self.module_utilizer.load_net(self.seg_net)
 
@@ -56,11 +61,24 @@ class FCNSegmentor(object):
         self.train_loader = self.seg_data_loader.get_trainloader()
         self.val_loader = self.seg_data_loader.get_valloader()
 
-        self.pixel_loss = self.seg_loss_manager.get_seg_loss('cross_entropy_loss')
+        self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
+
+        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
+            self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_10 = []
+        params_dict = dict(self.seg_net.named_parameters())
+        for key, value in params_dict.items():
+            if 'backbone.' not in key:
+                lr_10.append(value)
+            else:
+                lr_1.append(value)
 
-        return self.seg_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 1.0}]
+        return params
 
     def __train(self):
         """
@@ -72,10 +90,15 @@ class FCNSegmentor(object):
         self.seg_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
-        self.configer.plus_one('epoch')
+
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, (inputs, targets) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labelmap_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            targets = data_dict['labelmap']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
 
@@ -115,14 +138,23 @@ class FCNSegmentor(object):
                self.configer.get('iters') % self.configer.get('solver', 'test_interval') == 0:
                 self.__val()
 
+        self.configer.plus_one('epoch')
+
     def __val(self):
         """
           Validation function during the train phase.
         """
         self.seg_net.eval()
         start_time = time.time()
-        with torch.no_grad():
-            for j, (inputs, targets) in enumerate(self.val_loader):
+
+        for j, batch_data in enumerate(self.val_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              labelmap_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            targets = data_dict['labelmap']
+
+            with torch.no_grad():
                 # Change the data type.
                 inputs, targets = self.module_utilizer.to_device(inputs, targets)
                 # Forward pass.
@@ -130,28 +162,38 @@ class FCNSegmentor(object):
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
-                self.val_losses.update(loss.item(), inputs.size(0))
-                self.seg_running_score.update(outputs.max(1)[1].unsqueeze(1).data, targets.data)
+                if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
+                    tmp = []  # collect the data
+                    for i in range(len(outputs)):
+                        assert isinstance(outputs[i][0],torch.Tensor)
+                        tmp.append(outputs[i][0]) # append the output tensor
 
-                # Update the vars of the val phase.
-                self.batch_time.update(time.time() - start_time)
-                start_time = time.time()
+                    pred = torch.cat(tmp, dim=0)
+                else:
+                    pred = outputs[0]
 
-            self.configer.update_value(['performace'], self.seg_running_score.get_mean_iou())
-            self.configer.update_value(['val_loss'], self.val_losses.avg)
-            self.module_utilizer.save_net(self.seg_net, metric='performance')
-            self.module_utilizer.save_net(self.seg_net, metric='val_loss')
+            self.val_losses.update(loss.item(), inputs.size(0))
+            self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
 
-            # Print the log info & reset the states.
-            Log.info(
-                'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
-                'Loss {loss.avg:.8f}\n'.format(
-                    batch_time=self.batch_time, loss=self.val_losses))
-            Log.info('Mean IOU: {}'.format(self.seg_running_score.get_mean_iou()))
-            self.batch_time.reset()
-            self.val_losses.reset()
-            self.seg_running_score.reset()
-            self.seg_net.train()
+            # Update the vars of the val phase.
+            self.batch_time.update(time.time() - start_time)
+            start_time = time.time()
+
+        self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
+        self.configer.update_value(['val_loss'], self.val_losses.avg)
+        self.module_utilizer.save_net(self.seg_net, metric='performance')
+        self.module_utilizer.save_net(self.seg_net, metric='val_loss')
+
+        # Print the log info & reset the states.
+        Log.info(
+            'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
+            'Loss {loss.avg:.8f}\n'.format(
+                batch_time=self.batch_time, loss=self.val_losses))
+        Log.info('Mean IOU: {}\n'.format(self.seg_running_score.get_mean_iou()))
+        self.batch_time.reset()
+        self.val_losses.reset()
+        self.seg_running_score.reset()
+        self.seg_net.train()
 
     def train(self):
         cudnn.benchmark = True

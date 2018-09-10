@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import math
 import torch
 import torch.nn as nn
 
@@ -21,28 +22,16 @@ class ModuleUtilizer(object):
         self.configer = configer
         self._init()
 
-    def __weights_init(self, m):
-        classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
-            if self.configer.get('network', 'init') == 'kaiming_normal':
-                nn.init.kaiming_normal_(m.weight.data)
-
-            elif self.configer.get('network', 'init') == 'xavier_normal':
-                nn.init.xavier_normal_(m.weight.data)
-
-            else:
-                Log.error('Invalid init method {}'.format(self.configer.get('network', 'init')))
-                exit(1)
-
     def _init(self):
-        self.configer.add_value(['iters'], 0)
-        self.configer.add_value(['last_iters'], 0)
-        self.configer.add_value(['epoch'], 0)
-        self.configer.add_value(['last_epoch'], 0)
-        self.configer.add_value(['max_performance'], 0.0)
-        self.configer.add_value(['performance'], 0.0)
-        self.configer.add_value(['min_val_loss'], 9999.0)
-        self.configer.add_value(['val_loss'], 9999.0)
+        self.configer.add_key_value(['iters'], 0)
+        self.configer.add_key_value(['last_iters'], 0)
+        self.configer.add_key_value(['epoch'], 0)
+        self.configer.add_key_value(['last_epoch'], 0)
+        self.configer.add_key_value(['max_performance'], 0.0)
+        self.configer.add_key_value(['performance'], 0.0)
+        self.configer.add_key_value(['min_val_loss'], 9999.0)
+        self.configer.add_key_value(['val_loss'], 9999.0)
+        self.configer.add_key_value(['network', 'parallel'], False)
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -50,42 +39,71 @@ class ModuleUtilizer(object):
         for i in range(len(params)):
             return_list.append(params[i].to(device))
 
-        return return_list
+        return return_list[0] if len(params) == 1 else return_list
+
+    def _make_parallel(self, net):
+        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
+            if len(self.configer.get('gpu')) > 1:
+                from extensions.layers.syncbn.parallel import DataParallelModel
+                self.configer.update_value(['network', 'parallel'], True)
+                return DataParallelModel(net)
+            else:
+                self.configer.update_value(['network', 'syncbn'], False)
+                return net
+
+        elif len(self.configer.get('gpu')) > 1:
+            self.configer.update_value(['network', 'parallel'], True)
+            return nn.DataParallel(net)
+
+        else:
+            return net
 
     def load_net(self, net):
-        net = nn.DataParallel(net)
+        if self.configer.get('gpu') is not None:
+            net = self._make_parallel(net)
+
         net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         if self.configer.get('network', 'resume') is not None:
-            if self.configer.get('network', 'resume_level') == 'full':
-                checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
-                if 'state_dict' not in checkpoint_dict:
-                    net.load_state_dict(checkpoint_dict)
+            checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
+            if 'state_dict' in checkpoint_dict:
+                checkpoint_dict = checkpoint_dict['state_dict']
+
+            if 'model' in checkpoint_dict:
+                checkpoint_dict = checkpoint_dict['model']
+
+            net_dict = net.state_dict()
+
+            not_match_list = list()
+            for key, value in checkpoint_dict.items():
+                if key.split('.')[0] == 'module':
+                    module_key = key
+                    norm_key = '.'.join(key.split('.')[1:])
                 else:
-                    net.load_state_dict(checkpoint_dict['state_dict'])
+                    module_key = 'module.{}'.format(key)
+                    norm_key = key
+
+                if self.configer.get('network', 'parallel'):
+                    key = module_key
+                else:
+                    key = norm_key
+
+                if net_dict[key].size() == value.size():
+                    net_dict[key] = value
+                else:
+                    not_match_list.append(key)
+
+            if self.configer.get('network', 'resume_level') == 'full':
+                assert len(not_match_list) == 0
 
             elif self.configer.get('network', 'resume_level') == 'part':
-                checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
-                load_dict = net.state_dict()
-                pretrained_dict = dict()
-                for key, value in checkpoint_dict['state_dict'].items():
-                    if key.split('.')[0] == 'module':
-                        key_in = key
+                Log.info('Not Matched Keys: {}'.format(not_match_list))
 
-                    else:
-                        key_in = 'module.{}'.format(key)
+            else:
+                Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
+                exit(1)
 
-                    if key_in in load_dict and load_dict[key_in].size() == value.size():
-                        pretrained_dict[key_in] = checkpoint_dict['state_dict'][key]
-
-                    else:
-                        Log.info('Key {} is not match!'.format(key_in))
-
-                load_dict.update(pretrained_dict)
-                net.load_state_dict(load_dict)
-
-        elif not self.configer.get('network', 'pretrained'):
-            net.apply(self.__weights_init)
+            net.load_state_dict(net_dict)
 
         return net
 
@@ -136,9 +154,31 @@ class ModuleUtilizer(object):
             Log.error('Metric: {} is invalid.'.format(metric))
             exit(1)
 
-    def freeze_bn(self, net):
+    def freeze_bn(self, net, syncbn=False):
         for m in net.modules():
-            if isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
                 m.eval()
+
+            if syncbn:
+                from extensions.layers.syncbn.module import BatchNorm2d, BatchNorm1d
+                if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
+                    m.eval()
+
+    def clip_grad(self, model, max_grad=10.):
+        """Computes a gradient clipping coefficient based on gradient norm."""
+        total_norm = 0
+        for p in model.parameters():
+            if p.requires_grad:
+                modulenorm = p.grad.data.norm()
+                total_norm += modulenorm ** 2
+
+        total_norm = math.sqrt(total_norm)
+
+        norm = max_grad / max(total_norm, max_grad)
+        for p in model.parameters():
+            if p.requires_grad:
+                p.grad.mul_(norm)
+
+
 
 

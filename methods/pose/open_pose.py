@@ -16,7 +16,10 @@ from datasets.pose_data_loader import PoseDataLoader
 from loss.pose_loss_manager import PoseLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.data_transformer import DataTransformer
 from models.pose_model_manager import PoseModelManager
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
+from utils.layers.pose.paf_generator import PafGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from vis.visualizer.pose_visualizer import PoseVisualizer
@@ -42,6 +45,9 @@ class OpenPose(object):
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
+        self.heatmap_generator = HeatmapGenerator(configer)
+        self.paf_generator = PafGenerator(configer)
+        self.data_transformer = DataTransformer(configer)
 
         self.pose_net = None
         self.train_loader = None
@@ -49,7 +55,9 @@ class OpenPose(object):
         self.optimizer = None
         self.scheduler = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
 
@@ -99,7 +107,17 @@ class OpenPose(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
-        for i, (inputs, heatmap, maskmap, vecmap) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              kpts_list=batch_data[1],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+
+            inputs = data_dict['img']
+            maskmap = data_dict['maskmap']
+            input_size = [inputs.size(3), inputs.size(2)]
+            heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+            vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, heatmap, maskmap, vecmap = self.module_utilizer.to_device(inputs, heatmap, maskmap, vecmap)
@@ -156,7 +174,16 @@ class OpenPose(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, (inputs, heatmap, maskmap, vecmap) in enumerate(self.val_loader):
+            for i, batch_data in enumerate(self.val_loader):
+                data_dict = self.data_transformer(img_list=batch_data[0],
+                                                  kpts_list=batch_data[1],
+                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+
+                inputs = data_dict['img']
+                maskmap = data_dict['maskmap']
+                input_size = [inputs.size(3), inputs.size(2)]
+                heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+                vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
                 # Change the data type.
                 inputs, heatmap, maskmap, vecmap = self.module_utilizer.to_device(inputs, heatmap, maskmap, vecmap)
 

@@ -8,20 +8,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.seg.erf_net import ERFNet
-from models.seg.deeplab_v3_plus import DeepLabV3Plus
-from models.seg.deeplab_v3_resnet import DeepLabV3
-from models.seg.large_kernel import GCN
-from models.seg.large_kernel_exfuse import GCNFuse
+from models.seg.semantic.syncbn_deeplabv3 import SyncBNDeepLabV3
+from models.seg.semantic.syncbn_pspnet import SyncBNPSPNet
+from models.seg.semantic.syncbn_gridencnet import SyncBNGridEncNet
+from models.seg.semantic.syncbn_embednet import SyncBNEmbedNet
+from models.seg.semantic.syncbn_denseassp import SyncBNDenseASPP
 from utils.tools.logger import Logger as Log
 
 
 SEG_MODEL_DICT = {
-    'erf_net': ERFNet,
-    'deeplabv3': DeepLabV3,
-    'deeplabv3_plus': DeepLabV3Plus,
-    'large_kernel': GCN,
-    'large_kernel_fuse': GCNFuse
+    'syncbn_deeplabv3': SyncBNDeepLabV3,
+    'syncbn_pspnet': SyncBNPSPNet,
+    'syncbn_grid_encnet': SyncBNGridEncNet,
+    'syncbn_embednet': SyncBNEmbedNet,
+    'syncbn_denseaspp': SyncBNDenseASPP
 }
 
 

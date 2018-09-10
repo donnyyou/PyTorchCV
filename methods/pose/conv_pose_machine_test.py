@@ -16,10 +16,11 @@ import torch
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.pose_transforms import PadImage
-from datasets.tools.transforms import Normalize, ToTensor, DeNormalize
+from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.blob_helper import BlobHelper
 from models.pose_model_manager import PoseModelManager
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
 from utils.tools.logger import Logger as Log
@@ -29,54 +30,49 @@ from vis.visualizer.pose_visualizer import PoseVisualizer
 class ConvPoseMachineTest(object):
     def __init__(self, configer):
         self.configer = configer
+        self.blob_helper = BlobHelper(configer)
         self.pose_vis = PoseVisualizer(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
+        self.data_transformer = DataTransformer(configer)
+        self.heatmap_generator = HeatmapGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
 
-    def init_model(self):
+        self._init_model()
+
+    def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
         self.pose_net = self.module_utilizer.load_net(self.pose_net)
         self.pose_net.eval()
 
     def __test_img(self, image_path, save_path):
-        image_raw = ImageHelper.cv2_open_bgr(image_path)
-        inputs = ImageHelper.bgr2rgb(image_raw)
-        heatmap_avg = self.__get_heatmap(inputs)
-        all_peaks = self.__extract_heatmap_info(heatmap_avg)
-        image_save = self.__draw_key_point(all_peaks, image_raw)
-        cv2.imwrite(save_path, image_save)
+        Log.info('Image Path: {}'.format(image_path))
+        ori_image = ImageHelper.read_image(image_path,
+                                           tool=self.configer.get('data', 'image_tool'),
+                                           mode=self.configer.get('data', 'input_mode'))
 
-    def __get_heatmap(self, img_raw):
-        multiplier = [scale * self.configer.get('data', 'input_size')[0] / img_raw.shape[1]
-                      for scale in self.configer.get('data', 'scale_search')]
-
-        heatmap_avg = np.zeros((img_raw.shape[0], img_raw.shape[1], self.configer.get('network', 'heatmap_out')))
-
-        for i, scale in enumerate(multiplier):
-            img_test = cv2.resize(img_raw, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            img_test_pad, pad = PadImage(self.configer.get('network', 'stride'))(img_test)
-            img_test_pad = ToTensor()(img_test_pad)
-            img_test_pad = Normalize(mean=self.configer.get('trans_params', 'mean'),
-                                     std=self.configer.get('trans_params', 'std'))(img_test_pad)
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(ori_image, mode=self.configer.get('data', 'input_mode'))
+        heatmap_avg = np.zeros((ori_height, ori_width, self.configer.get('network', 'heatmap_out')))
+        for i, scale in enumerate(self.configer.get('test', 'scale_search')):
+            image = self.blob_helper.make_input(ori_image,
+                                                input_size=self.configer.get('test', 'input_size'),
+                                                scale=scale)
             with torch.no_grad():
-                img_test_pad = img_test_pad.unsqueeze(0).to(self.device)
-                heatmap_out_list = self.pose_net(img_test_pad)
+                heatmap_out_list = self.pose_net(image)
+                heatmap_out = heatmap_out_list[-1]
 
-            heatmap_out = heatmap_out_list[-1]
+                # extract outputs, resize, and remove padding
+                heatmap = heatmap_out.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+                heatmap = cv2.resize(heatmap, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
 
-            # extract outputs, resize, and remove padding
-            heatmap = heatmap_out.data.squeeze().cpu().numpy().transpose(1, 2, 0)
-            heatmap = cv2.resize(heatmap, (0, 0), fx=self.configer.get('network', 'stride'),
-                                 fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
-            heatmap = heatmap[:img_test_pad.size(2) - pad[3], :img_test_pad.size(3) - pad[2], :]
+                heatmap_avg = heatmap_avg + heatmap / len(self.configer.get('test', 'scale_search'))
 
-            heatmap = cv2.resize(heatmap, (img_raw.shape[1], img_raw.shape[0]), interpolation=cv2.INTER_CUBIC)
-            heatmap_avg = heatmap_avg + heatmap / len(multiplier)
-
-        return heatmap_avg
+        all_peaks = self.__extract_heatmap_info(heatmap_avg)
+        image_canvas = self.__draw_key_point(all_peaks, ori_img_bgr)
+        ImageHelper.save(image_canvas, save_path)
 
     def __extract_heatmap_info(self, heatmap_avg):
         all_peaks = []
@@ -125,17 +121,22 @@ class ConvPoseMachineTest(object):
 
         val_data_loader = self.pose_data_loader.get_valloader()
 
-        for i, (inputs, heatmap) in enumerate(val_data_loader):
+        for i, batch_data in enumerate(val_data_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              kpts_list=batch_data[1],
+                                              trans_dict=self.configer.get('val', 'data_transformer'))
+
+            inputs = data_dict['img']
+            input_size = [inputs.size(3), inputs.size(2)]
+            heatmap = self.heatmap_generator(data_dict['kpts'], input_size)
+
             for j in range(inputs.size(0)):
-                ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                      std=self.configer.get('trans_params', 'std'))(inputs[j])
-                image_raw = ori_img.numpy().transpose(1, 2, 0)
-                image_raw = cv2.cvtColor(image_raw, cv2.COLOR_RGB2BGR)
+                image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 heatmap_avg = heatmap[j].numpy().transpose(1, 2, 0)
                 heatmap_avg = cv2.resize(heatmap_avg, (0, 0), fx=self.configer.get('network', 'stride'),
                                      fy=self.configer.get('network', 'stride'), interpolation=cv2.INTER_CUBIC)
                 all_peaks = self.__extract_heatmap_info(heatmap_avg)
-                image_save = self.__draw_key_point(all_peaks, image_raw)
+                image_save = self.__draw_key_point(all_peaks, image_bgr)
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_result.jpg'.format(i, j)), image_save)
 
     def test(self):
@@ -173,20 +174,4 @@ class ConvPoseMachineTest(object):
                     os.makedirs(os.path.dirname(save_path))
 
                 self.__test_img(image_path, save_path)
-
-    def __create_coco_submission(self, test_dir=None, base_dir=None):
-        pass
-
-    def create_submission(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'val/results/pose', self.configer.get('dataset'), 'submission')
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
-        test_dir = self.configer.get('test_dir')
-        if self.configer.get('dataset') == 'coco':
-            self.__create_coco_submission(test_dir)
-        else:
-            Log.error('Dataset: {} is not valid.'.format(self.configer.get('dataset')))
-            exit(1)
 

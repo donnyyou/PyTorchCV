@@ -7,6 +7,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,9 +17,9 @@ from torch.autograd import Variable
 from utils.tools.logger import Logger as Log
 
 
-class FocalLoss(nn.Module):
+class SSDFocalLoss(nn.Module):
     def __init__(self, configer):
-        super(FocalLoss, self).__init__()
+        super(SSDFocalLoss, self).__init__()
         self.num_classes = configer.get('data', 'num_classes')
 
     def _one_hot_embeding(self, labels):
@@ -97,10 +99,10 @@ class FocalLoss(nn.Module):
         return loss
 
 
-class MultiBoxLoss(nn.Module):
+class SSDMultiBoxLoss(nn.Module):
 
     def __init__(self, configer):
-        super(MultiBoxLoss, self).__init__()
+        super(SSDMultiBoxLoss, self).__init__()
         self.num_classes = configer.get('data', 'num_classes')
 
     def _cross_entropy_loss(self, x, y):
@@ -117,13 +119,6 @@ class MultiBoxLoss(nn.Module):
         xmax = x.data.max()
         log_sum_exp = torch.log(torch.sum(torch.exp(x - xmax), dim=1)) + xmax
         return log_sum_exp.view(-1, 1) - x.gather(1, y.view(-1, 1))
-
-    def test_cross_entropy_loss(self):
-        a = Variable(torch.randn(10, 4))
-        b = Variable(torch.ones(10).long())
-        loss = self.cross_entropy_loss(a, b)
-        print(loss.mean())
-        print(F.cross_entropy(a, b))
 
     def _hard_negative_mining(self, conf_loss, pos):
         """Return negative indices that is 3x the number as positive indices.
@@ -146,7 +141,6 @@ class MultiBoxLoss(nn.Module):
         num_pos = pos.long().sum(1)  # [N,1]
         num_neg = torch.clamp(3 * num_pos, min=1, max=num_boxes-1)  # [N,1]
         neg = rank < num_neg.unsqueeze(1).expand_as(rank)  # [N,8732]
-
         return neg
 
     def forward(self, loc_preds, loc_targets, conf_preds, conf_targets):
@@ -189,7 +183,7 @@ class MultiBoxLoss(nn.Module):
         pos_and_neg = (pos + neg).gt(0)
         preds = conf_preds[mask].view(-1, self.num_classes)  # [pos + neg,21]
         targets = conf_targets[pos_and_neg]                  # [pos + neg,]
-        conf_loss = F.cross_entropy(preds, targets, size_average=False)
+        conf_loss = F.cross_entropy(preds, targets, size_average=False, ignore_index=-1)
 
         if num_matched_boxes > 0:
             loc_loss = loc_loss / num_matched_boxes
@@ -200,3 +194,103 @@ class MultiBoxLoss(nn.Module):
         Log.debug("loc_loss: %f, cls_loss: %f" % (float(loc_loss.item()), float(conf_loss.item())))
 
         return loc_loss + conf_loss
+
+
+class YOLOv3Loss(nn.Module):
+    def __init__(self, configer):
+        super(YOLOv3Loss, self).__init__()
+        self.configer = configer
+        self.mse_loss = nn.MSELoss()
+        self.bce_loss = nn.BCELoss()
+
+    def forward(self, prediction, targets, objmask, noobjmask):
+        # Get outputs
+        x = prediction[..., 0]  # Center x
+        y = prediction[..., 1]  # Center y
+        w = prediction[..., 2]  # Width
+        h = prediction[..., 3]  # Height
+        conf = prediction[..., 4]  # Conf
+        pred_cls = prediction[..., 5:]  # Cls pred.
+
+        # Get targets
+        tx = targets[..., 0]  # Center x
+        ty = targets[..., 1]  # Center y
+        tw = targets[..., 2]  # Width
+        th = targets[..., 3]  # Height
+        tcls = targets[..., 5:]  # Cls pred.
+
+        #  losses.
+        loss_x = self.bce_loss(x * objmask, tx * objmask)
+        loss_y = self.bce_loss(y * objmask, ty * objmask)
+        loss_w = self.mse_loss(w * objmask, tw * objmask)
+        loss_h = self.mse_loss(h * objmask, th * objmask)
+        loss_conf = self.bce_loss(conf * objmask, objmask) + \
+                    0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
+        loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
+
+        #  total loss = losses * weight
+        loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               (loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+               loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
+
+        return loss * 3.0
+
+
+class FRLocLoss(nn.Module):
+    def __init__(self, configer):
+        super(FRLocLoss, self).__init__()
+        self.configer = configer
+
+    def forward(self, pred_locs, gt_locs, gt_labels, sigma):
+        pred_locs = pred_locs.contiguous().view(-1, pred_locs.size()[-1])
+        gt_locs = gt_locs.contiguous().view(-1, gt_locs.size()[-1])
+        in_weight = torch.zeros_like(gt_locs).to(gt_locs.device)
+        # Localization loss is calculated only for positive rois.
+        # NOTE:  unlike origin implementation,
+        # we don't need inside_weight and outside_weight, they can calculate by gt_label
+        in_weight[(gt_labels > 0).view(-1, 1).expand_as(in_weight)] = 1
+        loc_loss = self.smooth_l1_loss(pred_locs, gt_locs, in_weight, sigma)
+        # Normalize by total number of negtive and positive rois.
+        loc_loss /= max((gt_labels.float() >= 0).sum().float(), 1e-9)  # ignore gt_label==-1 for rpn_loss
+        return loc_loss
+
+    @staticmethod
+    def smooth_l1_loss(x, t, in_weight, sigma):
+        sigma2 = sigma ** 2
+        diff = in_weight * (x - t)
+        abs_diff = diff.abs()
+        flag = (abs_diff.data < (1. / sigma2)).float()
+        y = (flag * (sigma2 / 2.) * (diff ** 2) + (1 - flag) * (abs_diff - 0.5 / sigma2))
+        return y.sum()
+
+
+class FRLoss(nn.Module):
+
+    def __init__(self, configer):
+        super(FRLoss, self).__init__()
+        self.configer = configer
+        self.fr_loc_loss = FRLocLoss(configer)
+
+    def forward(self, output_list, target_list):
+        # output_list: rpn_locs, rpn_scores, roi_cls_locs, roi_scores
+        pred_rpn_locs, pred_rpn_scores, pred_roi_cls_locs, pred_roi_scores = output_list
+        gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_list
+        gt_rpn_labels = gt_rpn_labels.contiguous().view(-1)
+        pred_rpn_scores = pred_rpn_scores.contiguous().view(-1, 2)
+        rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
+                                        gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
+
+        # NOTE: default value of ignore_index is -100 ...
+        rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
+
+        roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
+                                        gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
+        roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels, ignore_index=-1)
+        # Log.info('rpn loc {}'.format(rpn_loc_loss))
+        # Log.info('rpn cls {}'.format(rpn_cls_loss))
+        # Log.info('roi loc {}'.format(roi_loc_loss))
+        # Log.info('roi cls {}'.format(roi_cls_loss))
+        rpn_loss = (rpn_loc_loss + rpn_cls_loss) * self.configer.get('network', 'loss_weights')['rpn_loss']
+        roi_loss = (roi_loc_loss + roi_cls_loss) * self.configer.get('network', 'loss_weights')['roi_loss']
+        return rpn_loss + roi_loss

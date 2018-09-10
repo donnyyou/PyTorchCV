@@ -16,6 +16,12 @@ from utils.tools.logger import Logger as Log
 class FileHelper(object):
 
     @staticmethod
+    def make_dirs(dir_path, is_file=False):
+        dir_name = FileHelper.dir_name(dir_path) if is_file else dir_path
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+
+    @staticmethod
     def dir_name(file_path):
         return os.path.dirname(file_path)
 

@@ -45,7 +45,7 @@ class Configer(object):
 
             for key, value in self.args_dict.items():
                 if self.is_empty(*key.split(':')):
-                    self.add_value(key.split(':'), value)
+                    self.add_key_value(key.split(':'), value)
                 elif value is not None:
                     self.update_value(key.split(':'), value)
 
@@ -89,63 +89,52 @@ class Configer(object):
 
         return False
 
-    def add_value(self, key_tuple, value):
-        if len(key_tuple) == 1 and key_tuple[0] not in self.params_root:
+    def add_key_value(self, key_tuple, value):
+        if not self.is_empty(*key_tuple):
+            Log.error('{} Key: {} existed!!!'.format(self._get_caller(), key_tuple))
+            exit(1)
+
+        if len(key_tuple) == 1:
             self.params_root[key_tuple[0]] = value
 
         elif len(key_tuple) == 2:
             if key_tuple[0] not in self.params_root:
                 self.params_root[key_tuple[0]] = dict()
-                self.params_root[key_tuple[0]][key_tuple[1]] = value
 
-            elif key_tuple[1] not in self.params_root[key_tuple[0]]:
-                self.params_root[key_tuple[0]][key_tuple[1]] = value
+            self.params_root[key_tuple[0]][key_tuple[1]] = value
 
-            else:
-                Log.error('{} Key: {} existed!!!'.format(self._get_caller(), key_tuple))
-                exit(1)
         else:
             Log.error('{} KeyError: {}.'.format(self._get_caller(), key_tuple))
             exit(1)
 
     def update_value(self, key_tuple, value):
-        if len(key_tuple) == 1:
-            if key_tuple[0] not in self.params_root:
-                Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
-                exit(1)
+        if self.is_empty(*key_tuple):
+            Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
+            exit(1)
 
+        if len(key_tuple) == 1 and not isinstance(self.params_root[key_tuple[0]], dict):
             self.params_root[key_tuple[0]] = value
 
         elif len(key_tuple) == 2:
-            if key_tuple[0] not in self.params_root or key_tuple[1] not in self.params_root[key_tuple[0]]:
-                Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
-                exit(1)
-
-            else:
-                self.params_root[key_tuple[0]][key_tuple[1]] = value
+            self.params_root[key_tuple[0]][key_tuple[1]] = value
 
         else:
             Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
             exit(1)
 
     def plus_one(self, *key):
-        if len(key) == 1:
-            if key[0] not in self.params_root:
-                Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key))
-                exit(1)
+        if self.is_empty(*key):
+            Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key))
+            exit(1)
 
+        if len(key) == 1 and not isinstance(self.params_root[key[0]], dict):
             self.params_root[key[0]] += 1
 
         elif len(key) == 2:
-            if key[0] not in self.params_root or key[1] not in self.params_root[key[0]]:
-                Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key))
-                exit(1)
-
-            else:
-                self.params_root[key[0]][key[1]] += 1
+            self.params_root[key[0]][key[1]] += 1
 
         else:
-            Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key))
+            Log.error('{} KeyError: {} !!!'.format(self._get_caller(), key))
             exit(1)
 
     def to_dict(self):
@@ -154,7 +143,7 @@ class Configer(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes', default='../../hypes/cls/flower/fc_flower_cls.json', type=str,
+    parser.add_argument('--hypes', default='../../hypes/cls/flower/fc_vgg19_flower_cls.json', type=str,
                         dest='hypes', help='The file of the hyper parameters.')
     parser.add_argument('--phase', default='train', type=str,
                         dest='phase', help='The phase of Pose Estimator.')
@@ -169,7 +158,7 @@ if __name__ == '__main__':
 
     configer = Configer(args_parser=args_parser)
 
-    configer.add_value(('project_dir', ), 'root')
+    configer.add_key_value(('project_dir',), 'root')
     configer.update_value(('project_dir', ), 'root1')
 
     print (configer.get('project_dir'))

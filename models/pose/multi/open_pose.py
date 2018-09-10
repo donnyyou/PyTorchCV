@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 
 
@@ -19,7 +19,7 @@ class OpenPose(nn.Module):
         super(OpenPose, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
-        self.pose_model = PoseModel(configer, in_channels=self.backbone.get_num_features())
+        self.pose_model = PoseModel(configer, self.backbone.get_num_features())
 
     def forward(self, x):
         x = self.backbone(x)
@@ -33,7 +33,7 @@ class PoseModel(nn.Module):
 
         self.configer = configer
         self.in_channels = in_channels
-        model_dict = self._get_model_dict()
+        model_dict = self._get_model_dict(self.configer, in_channels)
         self.model0 = model_dict['block_0']
         self.model1_1 = model_dict['block1_1']
         self.model2_1 = model_dict['block2_1']
@@ -52,11 +52,11 @@ class PoseModel(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.data.normal_(0, 0.01)
-                # init.kaiming_uniform_(m.weight.data)
                 if m.bias is not None:
                     m.bias.data.zero_()
 
-    def _make_layers(self, layer_dict):
+    @staticmethod
+    def _make_layers(layer_dict):
         layers = []
 
         for i in range(len(layer_dict) - 1):
@@ -78,12 +78,13 @@ class PoseModel(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _get_model_dict(self):
-        paf_out = self.configer.get('network', 'paf_out')
-        heatmap_out = self.configer.get('network', 'heatmap_out')
+    @staticmethod
+    def _get_model_dict(configer, in_channels):
+        paf_out = configer.get('network', 'paf_out')
+        heatmap_out = configer.get('network', 'heatmap_out')
         blocks = {}
 
-        block_0 = [{'conv4_3_CPM': [self.in_channels, 256, 3, 1, 1]}, {'conv4_4_CPM': [256, 128, 3, 1, 1]}]
+        block_0 = [{'conv4_3_CPM': [in_channels, 256, 3, 1, 1]}, {'conv4_4_CPM': [256, 128, 3, 1, 1]}]
 
         blocks['block1_1'] = [{'conv5_1_CPM_L1': [128, 128, 3, 1, 1]}, {'conv5_2_CPM_L1': [128, 128, 3, 1, 1]},
                               {'conv5_3_CPM_L1': [128, 128, 3, 1, 1]}, {'conv5_4_CPM_L1': [128, 512, 1, 1, 0]},
@@ -125,7 +126,7 @@ class PoseModel(nn.Module):
 
         for k in blocks:
             v = blocks[k]
-            models[k] = self._make_layers(v)
+            models[k] = PoseModel._make_layers(v)
 
         return models
 

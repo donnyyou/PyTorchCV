@@ -8,13 +8,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from loss.modules.det_modules import FocalLoss, MultiBoxLoss
+from loss.modules.det_modules import SSDFocalLoss, SSDMultiBoxLoss
+from loss.modules.det_modules import YOLOv3Loss
+from loss.modules.det_modules import FRLoss
 from utils.tools.logger import Logger as Log
 
 
 DET_LOSS_DICT = {
-    'focal_loss': FocalLoss,
-    'multibox_loss': MultiBoxLoss,
+    'ssd_focal_loss': SSDFocalLoss,
+    'ssd_multibox_loss': SSDMultiBoxLoss,
+    'yolov3_loss': YOLOv3Loss,
+    'fr_loss': FRLoss
 }
 
 

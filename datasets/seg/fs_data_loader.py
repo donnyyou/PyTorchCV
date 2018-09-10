@@ -28,19 +28,21 @@ class FSDataLoader(data.Dataset):
         return len(self.img_list)
 
     def __getitem__(self, index):
-        img = ImageHelper.pil_open_rgb(self.img_list[index])
-        label = ImageHelper.pil_open_p(self.label_list[index])
-
+        img = ImageHelper.read_image(self.img_list[index],
+                                     tool=self.configer.get('data', 'image_tool'),
+                                     mode=self.configer.get('data', 'input_mode'))
+        labelmap = ImageHelper.read_image(self.label_list[index],
+                                          tool=self.configer.get('data', 'image_tool'), mode='P')
         if self.aug_transform is not None:
-            img, label = self.aug_transform(img, label=label)
+            img, labelmap = self.aug_transform(img, labelmap=labelmap)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
 
         if self.label_transform is not None:
-            label = self.label_transform(label)
+            labelmap = self.label_transform(labelmap)
 
-        return img, label
+        return img, labelmap
 
     def __list_dirs(self, root_dir):
         img_list = list()
