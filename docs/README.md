@@ -1,7 +1,7 @@
 ### Installation
-    pip install sphinx
-    pip install sphinxcontrib-googleanalytics
-    pip install -e git://github.com/snide/sphinx_rtd_theme.git#egg=sphinx_rtd_theme
+    sudo pip install sphinx
+    sudo pip install sphinx-autobuild
+    sudo pip install sphinx_rtd_theme
 
 #### Auto Build
     sphinx-autobuild --open-browser source build\html
