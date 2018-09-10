@@ -66,8 +66,12 @@ class RoIPool2D(Module):
         self.scale = float(spatial_scale)
 
     # feat: BxCxHxW,  rois: Kx5 (batch_idx, xmin, ymin, xmax, ymax) without normalize
-    def forward(self, feat, rois):
-        output = ROIPoolFunction.apply(feat, rois, self.pool_h, self.pool_w, self.scale, self.training)
+    def forward(self, feat, rois, scale=None):
+        if scale is None:
+            output = ROIPoolFunction.apply(feat, rois, self.pool_h, self.pool_w, self.scale, self.training)
+        else:
+            output = ROIPoolFunction.apply(feat, rois, self.pool_h, self.pool_w, scale, self.training)
+
         return output
 
 

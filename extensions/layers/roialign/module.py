@@ -105,16 +105,25 @@ class RoIAlign2D(Module):
         self.spatial_scale = float(spatial_scale)
         self.sampling_ratio = int(sampling_ratio)
 
-    def forward(self, features, rois):
+    def forward(self, features, rois, scale=None):
         # features is a Variable/FloatTensor of size BxCxHxW
         # rois is a (optional: list of) Variable/FloatTensor IDX,Xmin,Ymin,Xmax,Ymax (normalized to [0,1])
         rois = preprocess_rois(rois)
-        output = RoIAlignFunction.apply(features,
-                                        rois,
-                                        self.pooled_height,
-                                        self.pooled_width,
-                                        self.spatial_scale,
-                                        self.sampling_ratio)
+        if scale is None:
+            output = RoIAlignFunction.apply(features,
+                                            rois,
+                                            self.pooled_height,
+                                            self.pooled_width,
+                                            self.spatial_scale,
+                                            self.sampling_ratio)
+        else:
+            output = RoIAlignFunction.apply(features,
+                                            rois,
+                                            self.pooled_height,
+                                            self.pooled_width,
+                                            scale,
+                                            self.sampling_ratio)
+
         return output
 
 
