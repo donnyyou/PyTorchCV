@@ -106,8 +106,12 @@ class DarkNetModels(object):
         """Constructs a darknet-21 model.
         """
         model = DarkNet([1, 1, 2, 2, 1])
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls['darknet21'])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['darknet21'])
+
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)
@@ -120,8 +124,12 @@ class DarkNetModels(object):
         """Constructs a darknet-53 model.
         """
         model = DarkNet([1, 2, 8, 8, 4])
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls['darknet53'])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['darknet53'])
+
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)

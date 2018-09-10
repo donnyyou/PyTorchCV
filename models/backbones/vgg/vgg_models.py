@@ -84,8 +84,12 @@ class VGGModels(object):
         """
         backbone = self.configer.get('network', 'backbone')
         model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=False)
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls[backbone.split('_')[0]])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls[backbone.split('_')[0]])
+
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)
@@ -96,8 +100,11 @@ class VGGModels(object):
     def vgg_bn(self, vgg_cfg=None):
         backbone = self.configer.get('network', 'backbone')
         model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=True)
-        if self.configer.get('network', 'pretrained'):
-            pretrained_dict = self.load_url(model_urls['{}_bn'.format(backbone.split('_')[0])])
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['{}_bn'.format(backbone.split('_')[0])])
             model_dict = model.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)

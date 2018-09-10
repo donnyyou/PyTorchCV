@@ -251,8 +251,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['resnet18']))
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['resnet18'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
@@ -262,8 +267,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['resnet34']))
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['resnet34'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
@@ -273,8 +283,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['resnet50']), strict=False)
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['resnet50'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
@@ -284,8 +299,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['resnet101']), strict=False)
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['resnet101'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
@@ -296,8 +316,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['resnet152']))
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['resnet152'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
@@ -307,8 +332,13 @@ class ResNetModels(object):
             pretrained (bool): If True, returns a model pre-trained on Places
         """
         model = CaffeResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
-        if self.configer.get('network', 'pretrained'):
-            model.load_state_dict(self.load_url(model_urls['caffe_resnet101']), strict=False)
+        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
+            if self.configer.get('network', 'pretrained_model') is not None:
+                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
+            else:
+                pretrained_dict = self.load_url(model_urls['caffe_resnet101'])
+
+            model.load_state_dict(pretrained_dict)
 
         return model
 
