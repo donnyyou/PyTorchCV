@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -101,6 +102,7 @@ class FasterRCNN(object):
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
+            img_scale = torch.from_numpy(np.array(batch_data[3]))
             inputs = data_dict['img']
             batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
@@ -111,7 +113,7 @@ class FasterRCNN(object):
             gt_bboxes, gt_num, gt_labels = self.module_utilizer.to_device(gt_bboxes, gt_nums, gt_labels)
             inputs = self.module_utilizer.to_device(inputs)
             # Forward pass.
-            feat_list, train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels)
+            feat_list, train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels, img_scale)
             gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list,
                                                                    batch_gt_bboxes, [inputs.size(3), inputs.size(2)])
             gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
@@ -165,6 +167,7 @@ class FasterRCNN(object):
                                                   bboxes_list=batch_data[1],
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
+                img_scale = torch.from_numpy(np.array(batch_data[3]))
                 inputs = data_dict['img']
                 batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
@@ -174,7 +177,7 @@ class FasterRCNN(object):
                 inputs = self.module_utilizer.to_device(inputs)
 
                 # Forward pass.
-                feat_list, train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels)
+                feat_list, train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels, img_scale)
                 rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels = train_group
 
                 gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list,

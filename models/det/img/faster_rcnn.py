@@ -97,17 +97,19 @@ class FasterRCNN(nn.Module):
         """
         input_size = [inputs[0].size(3), inputs[0].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
+            x, img_scale = inputs
             x = self.extractor(inputs[0])
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
-            indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
+            indices_and_rois, test_rois_num = self.roi(feat_list, rpn_locs, rpn_scores,
                                                        self.configer.get('rpn', 'n_test_pre_nms'),
-                                                       self.configer.get('rpn', 'n_test_post_nms'))
+                                                       self.configer.get('rpn', 'n_test_post_nms'),
+                                                       input_size, [img_scale])
             roi_cls_locs, roi_scores = self.head(x, indices_and_rois, input_size)
             return indices_and_rois, roi_cls_locs, roi_scores, test_rois_num
 
         elif self.configer.get('phase') == 'train' and not self.training:
-            x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
+            x, gt_bboxes, gt_bboxes_num, gt_labels, img_scale = inputs
             x = self.extractor(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
             test_indices_and_rois, test_rois_num = self.roi(feat_list, rpn_locs, rpn_scores,
@@ -120,7 +122,7 @@ class FasterRCNN(nn.Module):
             train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
                                                  self.configer.get('rpn', 'n_train_pre_nms'),
                                                  self.configer.get('rpn', 'n_train_post_nms'),
-                                                 input_size=input_size)
+                                                 input_size, img_scale)
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num,
@@ -136,14 +138,14 @@ class FasterRCNN(nn.Module):
             return feat_list, train_group, test_group
 
         elif self.configer.get('phase') == 'train' and self.training:
-            x, gt_bboxes, gt_bboxes_num, gt_labels = inputs
+            x, gt_bboxes, gt_bboxes_num, gt_labels, img_scale = inputs
             x = self.extractor(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
             train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
                                                  self.configer.get('rpn', 'n_train_pre_nms'),
                                                  self.configer.get('rpn', 'n_train_post_nms'),
-                                                 input_size=input_size)
+                                                 input_size, img_scale)
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
                                                                          gt_bboxes, gt_bboxes_num,
