@@ -60,6 +60,7 @@
       }
     },
     "rpn": {
+      "head_index_list": [0],
       "anchor_sizes_list": [
         [[128, 128], [256, 256], [512, 512]]
       ],
