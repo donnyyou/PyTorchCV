@@ -1,5 +1,5 @@
 # Don't use the --user flag for setup.py develop mode with virtualenv.
-DEV_USER_FLAG=$(shell python2 -c "import sys; print('' if hasattr(sys, 'real_prefix') else '--user')")
+DEV_USER_FLAG=$(shell python -c "import sys; print('' if hasattr(sys, 'real_prefix') else '--user')")
 
 .PHONY: default
 default: dev
