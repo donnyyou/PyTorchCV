@@ -279,6 +279,7 @@ class RandomContrast(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
+        img = img.astype(np.float32)
         img *= random.uniform(self.lower, self.upper)
         img = np.clip(img, 0, 255).astype(np.uint8)
 
