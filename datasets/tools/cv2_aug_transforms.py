@@ -212,7 +212,7 @@ class RandomSaturation(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
+        img = img.astype(np.float32)
         img[:, :, 1] *= random.uniform(self.lower, self.upper)
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         img = np.clip(img, 0, 255).astype(np.uint8)
@@ -234,7 +234,7 @@ class RandomHue(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
+        img = img.astype(np.float32)
         img[:, :, 0] += random.uniform(-self.delta, self.delta)
         img[:, :, 0][img[:, :, 0] > 360] -= 360
         img[:, :, 0][img[:, :, 0] < 0] += 360
