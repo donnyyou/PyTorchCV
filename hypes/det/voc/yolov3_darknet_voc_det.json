@@ -4,7 +4,7 @@
     "method": "yolov3",
     "data": {
       "num_classes": 20,
-      "data_dir": "/home/donny/DataSet/VOC07+12_DET",
+      "data_dir": "~/DataSet/VOC07+12_DET",
       "image_tool": "pil",
       "input_mode": "RGB",
       "keep_difficult": false,

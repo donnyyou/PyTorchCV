@@ -7,7 +7,7 @@
       "val_batch_size": 6,
       "input_size": [300, 300],
       "num_classes": 81,
-      "data_dir": "/home/donny/DataSet/COCO_DET",
+      "data_dir": "~/DataSet/COCO_DET",
       "workers": 8
     },
     "test": {

@@ -6,7 +6,7 @@
       "image_tool": "pil",
       "input_mode": "RGB",
       "num_classes": 19,
-      "data_dir": "/home/donny/DataSet/CityScape",
+      "data_dir": "~/DataSet/CityScape",
       "workers": 8
     },
    "train": {

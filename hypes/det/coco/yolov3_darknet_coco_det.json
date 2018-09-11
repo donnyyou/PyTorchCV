@@ -8,7 +8,7 @@
       "train_input_size": [416, 416],
       "val_input_size": [416, 416],
       "num_classes": 80,
-      "data_dir": "/home/donny/DataSet/COCO_DET",
+      "data_dir": "~/DataSet/COCO_DET",
       "workers": 8
     },
     "test": {
