@@ -103,7 +103,7 @@ class FasterRCNN(nn.Module):
             indices_and_rois, test_rois_num = self.roi(rpn_locs, rpn_scores,
                                                        self.configer.get('rpn', 'n_test_pre_nms'),
                                                        self.configer.get('rpn', 'n_test_post_nms'))
-            roi_cls_locs, roi_scores = self.head(x, indices_and_rois)
+            roi_cls_locs, roi_scores = self.head(x, indices_and_rois, input_size)
             return indices_and_rois, roi_cls_locs, roi_scores, test_rois_num
 
         elif self.configer.get('phase') == 'train' and not self.training:
@@ -114,7 +114,7 @@ class FasterRCNN(nn.Module):
                                                             self.configer.get('rpn', 'n_test_pre_nms'),
                                                             self.configer.get('rpn', 'n_test_post_nms'),
                                                             input_size=input_size)
-            test_roi_cls_locs, test_roi_scores = self.head(x, test_indices_and_rois)
+            test_roi_cls_locs, test_roi_scores = self.head(x, test_indices_and_rois, input_size)
 
             test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
             train_indices_and_rois, _ = self.roi(feat_list, rpn_locs, rpn_scores,
@@ -126,7 +126,7 @@ class FasterRCNN(nn.Module):
                                                                          gt_bboxes, gt_bboxes_num,
                                                                          gt_labels, input_size)
 
-            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
+            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois, input_size)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
@@ -149,7 +149,7 @@ class FasterRCNN(nn.Module):
                                                                          gt_bboxes, gt_bboxes_num,
                                                                          gt_labels, input_size)
 
-            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois)
+            sample_roi_locs, sample_roi_scores = self.head(x, sample_rois, input_size)
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
@@ -208,7 +208,7 @@ class RoIHead(nn.Module):
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
 
-    def forward(self, x, indices_and_rois):
+    def forward(self, x, indices_and_rois, input_size):
         """Forward the chain.
         We assume that there are :math:`N` batches.
         Args:
@@ -223,7 +223,8 @@ class RoIHead(nn.Module):
                 which bounding boxes correspond to. Its shape is :math:`(R',)`.
         """
         # in case roi_indices is  ndarray
-        pool = self.roi_process_layer(x, indices_and_rois)
+        scale = x.size(2) / input_size[1]
+        pool = self.roi_process_layer(x, indices_and_rois, scale)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)
         roi_cls_locs = self.cls_loc(fc7)
