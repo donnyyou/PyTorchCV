@@ -23,6 +23,12 @@ except AttributeError:
 
 ext_modules = [
     Extension(
+        name='extensions.layers.iou.src.cython_iou',
+        sources=['extensions/layers/iou/src/cython_iou.pyx'],
+        extra_compile_args=['-Wno-cpp'],
+        include_dirs=[numpy_include]
+    ),
+    Extension(
         name='extensions.layers.nms.src.cython_nms',
         sources=['extensions/layers/nms/src/cython_nms.pyx'],
         extra_compile_args=['-Wno-cpp'],
