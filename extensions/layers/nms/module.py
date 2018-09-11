@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
-# NMS layer for Detection.
 
 
 from __future__ import absolute_import
@@ -17,12 +16,20 @@ class NMS(object):
     def __init__(self):
         pass
 
-    def __call__(self, dets, threshold):
+    def __call__(self, bboxes, scores, max_threshold=0.3):
         """Apply classic DPM-style greedy NMS."""
+        if not isinstance(bboxes, np.ndarray):
+            bboxes = bboxes.numpy()
+            scores = scores.numpy()
+
+        bboxes = bboxes.reshape(-1, 4)
+        scores = scores.reshape(-1, 1)
+
+        dets = np.concatenate((bboxes, scores), 1)
         if dets.shape[0] == 0:
             return []
 
-        return cython_nms.nms(dets, threshold)
+        return cython_nms.nms(dets, max_threshold)
 
 
 class SoftNMS(object):
@@ -30,8 +37,17 @@ class SoftNMS(object):
         self.sigma = sigma
         self.method = method
 
-    def __call__(self, dets, overlap_threshold=0.3, score_threshold = 0.001):
+    def __call__(self, bboxes, scores, max_threshold=0.3, score_threshold=0.001):
         """Apply the soft NMS algorithm from https://arxiv.org/abs/1704.04503."""
+        if not isinstance(bboxes, np.ndarray):
+            bboxes = bboxes.numpy()
+            scores = scores.numpy()
+
+        bboxes = bboxes.reshape(-1, 4)
+        scores = scores.reshape(-1, 1)
+
+        dets = np.concatenate((bboxes, scores), 1)
+
         if dets.shape[0] == 0:
             return dets, []
 
@@ -41,8 +57,8 @@ class SoftNMS(object):
         dets, keep = cython_nms.soft_nms(
             np.ascontiguousarray(dets, dtype=np.float32),
             np.float32(self.sigma),
-            np.float32(overlap_threshold),
+            np.float32(max_threshold),
             np.float32(score_threshold),
             np.uint8(methods[self.method])
         )
-        return dets, keep
+        return keep

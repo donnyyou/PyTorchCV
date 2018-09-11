@@ -9,8 +9,8 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-import torch.nn.functional as F
 
+from extensions.layers.nms.module import NMS
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
@@ -140,9 +140,12 @@ class FRRoiGenerator(object):
 
             # unNOTE: somthing is wrong here!
             # TODO: remove cuda.to_gpu
-            keep = DetHelper.nms(rois,
-                                 scores=tmp_scores,
-                                 nms_threshold=self.configer.get('rpn', 'nms_threshold'))
+            keep = NMS()(rois,
+                         scores=tmp_scores,
+                         max_threshold=self.configer.get('rpn', 'nms_threshold'))
+            # keep = DetHelper.nms(rois,
+            #                      scores=tmp_scores,
+            #                      nms_threshold=self.configer.get('rpn', 'nms_threshold'))
             if n_post_nms > 0:
                 keep = keep[:n_post_nms]
 
