@@ -33,6 +33,7 @@ class FRDataLoader(data.Dataset):
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
 
+        img_size = ImageHelper.get_size(img)
         bboxes, labels = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None:
@@ -41,10 +42,14 @@ class FRDataLoader(data.Dataset):
         labels = torch.from_numpy(labels).long()
         bboxes = torch.from_numpy(bboxes).float()
 
+        scale1 = 600 / min(img_size)
+        scale2 = 1000 / max(img_size)
+        scale = min(scale1, scale2)
+
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, bboxes, labels
+        return img, bboxes, labels, scale
 
     def __len__(self):
 
