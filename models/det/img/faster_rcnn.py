@@ -115,7 +115,7 @@ class FasterRCNN(nn.Module):
             test_indices_and_rois, test_rois_num = self.roi(feat_list, rpn_locs, rpn_scores,
                                                             self.configer.get('rpn', 'n_test_pre_nms'),
                                                             self.configer.get('rpn', 'n_test_post_nms'),
-                                                            input_size=input_size)
+                                                            input_size, img_scale)
             test_roi_cls_locs, test_roi_scores = self.head(x, test_indices_and_rois, input_size)
 
             test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
