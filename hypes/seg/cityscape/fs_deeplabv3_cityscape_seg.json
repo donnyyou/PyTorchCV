@@ -102,7 +102,7 @@
     "solver": {
       "display_iter": 20,
       "test_interval": 300,
-      "max_epoch": 300
+      "max_epoch": 200
     },
     "optim": {
       "optim_method": "adam",
