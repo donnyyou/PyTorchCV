@@ -102,7 +102,7 @@ class FasterRCNN(object):
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
-            img_scale = torch.from_numpy(np.array(batch_data[3]))
+            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
             inputs = data_dict['img']
             batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
@@ -167,7 +167,7 @@ class FasterRCNN(object):
                                                   bboxes_list=batch_data[1],
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
-                img_scale = torch.from_numpy(np.array(batch_data[3]))
+                img_scale = torch.from_numpy(np.array(batch_data[3])).float()
                 inputs = data_dict['img']
                 batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
