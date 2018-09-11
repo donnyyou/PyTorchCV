@@ -101,8 +101,8 @@ class FRRoiGenerator(object):
         dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
         dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
 
-        dst_bbox = dst_bbox.cpu()
-        score = score.cpu()
+        dst_bbox = dst_bbox.cpu().detach()
+        score = score.cpu().detach()
         # cls_prob = F.softmax(score, dim=-1)
         rpn_fg_scores = score[:, :, 1]
 
