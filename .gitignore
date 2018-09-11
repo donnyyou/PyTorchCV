@@ -17,5 +17,8 @@
 /extensions/apis/cocoapi/PythonAPI/build
 *.png
 *.jpg
+/build
+/dist
+/*.egg-info
 
 /docs/build

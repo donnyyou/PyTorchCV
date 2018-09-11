@@ -9,7 +9,7 @@ from __future__ import print_function
 
 from Cython.Build import cythonize
 from setuptools import Extension
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import numpy as np
 
@@ -31,7 +31,7 @@ ext_modules = [
 ]
 
 setup(
-    name='nms',
+    name='extensions',
     packages=['extensions'],
     ext_modules=cythonize(ext_modules)
 )
