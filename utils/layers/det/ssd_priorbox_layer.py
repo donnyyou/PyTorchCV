@@ -27,8 +27,8 @@ class SSDPriorBoxLayer(object):
         img_w, img_h = input_size
         feature_map_w = [feat.size(3) for feat in feat_list]
         feature_map_h = [feat.size(2) for feat in feat_list]
-        stride_w_list = [int(round(img_w / feat_w)) for feat_w in feature_map_w]
-        stride_h_list = [int(round(img_h / feat_h)) for feat_h in feature_map_h]
+        stride_w_list = [img_w / feat_w for feat_w in feature_map_w]
+        stride_h_list = [img_h / feat_h for feat_h in feature_map_h]
 
         anchor_boxes_list = list()
         for i in range(len(feat_list)):
@@ -69,8 +69,8 @@ class SSDPriorBoxLayer(object):
             anchor_bases = torch.FloatTensor(np.array(boxes))
             assert anchor_bases.size(0) == self.configer.get('gt', 'num_anchor_list')[i]
             anchors = anchor_bases.contiguous().view(1, -1, 4).repeat(fm_h * fm_w, 1, 1).contiguous().view(-1, 4)
-            grid_len_h = np.arange(0, feature_map_h[i] * stride_h_list[i], stride_h_list[i])
-            grid_len_w = np.arange(0, feature_map_w[i] * stride_w_list[i], stride_w_list[i])
+            grid_len_h = np.arange(0, img_h, stride_h_list[i])
+            grid_len_w = np.arange(0, img_w, stride_w_list[i])
             a, b = np.meshgrid(grid_len_w, grid_len_h)
 
             x_offset = torch.FloatTensor(a).view(-1, 1)
