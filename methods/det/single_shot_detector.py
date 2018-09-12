@@ -168,7 +168,7 @@ class SingleShotDetector(object):
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,
                                                                  self.ssd_priorbox_layer(feat_list, input_size),
-                                                                 self.configer)
+                                                                 self.configer, input_size)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 # batch_pred_bboxes = self._get_gt_object_list(batch_gt_bboxes, batch_gt_labels)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
