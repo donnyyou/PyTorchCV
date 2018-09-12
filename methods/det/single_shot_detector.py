@@ -92,7 +92,8 @@ class SingleShotDetector(object):
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             # Change the data type.
             inputs = self.module_utilizer.to_device(inputs)
@@ -151,7 +152,8 @@ class SingleShotDetector(object):
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
                 inputs = data_dict['img']
-                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_bboxes = data_dict['bboxes']
+                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]

@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import os
 import cv2
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -242,8 +243,10 @@ class FastRCNNTest(object):
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
+            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
 
             input_size = [inputs.size(3), inputs.size(2)]
@@ -258,7 +261,7 @@ class FastRCNNTest(object):
             test_indices_and_rois, _ = self.fr_roi_generator(feat_list, gt_rpn_locs, gt_rpn_scores,
                                                              self.configer.get('rpn', 'n_test_pre_nms'),
                                                              self.configer.get('rpn', 'n_test_post_nms'),
-                                                             input_size)
+                                                             input_size, img_scale)
 
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
             sample_rois, gt_roi_locs, gt_roi_labels = self.roi_sampler(test_indices_and_rois,

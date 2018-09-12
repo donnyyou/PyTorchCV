@@ -27,30 +27,34 @@ class FRPriorBoxLayer(object):
 
         feature_map_w = [feat.size(3) for feat in feat_list]
         feature_map_h = [feat.size(2) for feat in feat_list]
+        stride_w_list = [int(round(img_w / feat_w)) for feat_w in feature_map_w]
+        stride_h_list = [int(round(img_h / feat_h)) for feat_h in feature_map_h]
+
         anchor_boxes_list = list()
         for i in range(len(feat_list)):
             fm_w = feature_map_w[i]
             fm_h = feature_map_h[i]
+            stride_offset_w, stride_offset_h = 0.5 * stride_w_list[i], 0.5 * stride_h_list[i]
             boxes = []
             anchor_sizes = self.configer.get('rpn', 'anchor_sizes_list')[i]
             for j in range(len(anchor_sizes)):
-                s_w = anchor_sizes[j][0] / img_w
-                s_h = anchor_sizes[j][1] / img_h
-                boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w, s_h))
+                s_w = anchor_sizes[j][0]
+                s_h = anchor_sizes[j][1]
+                boxes.append((stride_offset_w, stride_offset_h, s_w, s_h))
 
                 for ar in self.configer.get('rpn', 'aspect_ratio_list')[i]:
-                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
-                    boxes.append((0.5 / fm_w, 0.5 / fm_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
+                    boxes.append((stride_offset_w, stride_offset_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
+                    boxes.append((stride_offset_w, stride_offset_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
 
             anchor_bases = torch.FloatTensor(np.array(boxes))
             assert anchor_bases.size(0) == self.configer.get('rpn', 'num_anchor_list')[i]
             anchors = anchor_bases.contiguous().view(1, -1, 4).repeat(fm_h * fm_w, 1, 1).contiguous().view(-1, 4)
-            grid_len_h = np.arange(fm_h)
-            grid_len_w = np.arange(fm_w)
+            grid_len_h = np.arange(0, feature_map_h[i] * stride_h_list[i], stride_h_list[i])
+            grid_len_w = np.arange(0, feature_map_w[i] * stride_w_list[i], stride_w_list[i])
             a, b = np.meshgrid(grid_len_w, grid_len_h)
 
-            x_offset = torch.FloatTensor(a).view(-1, 1).div(fm_w)
-            y_offset = torch.FloatTensor(b).view(-1, 1).div(fm_h)
+            x_offset = torch.FloatTensor(a).view(-1, 1)
+            y_offset = torch.FloatTensor(b).view(-1, 1)
 
             x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous()
             x_y_offset = x_y_offset.repeat(1, self.configer.get('rpn', 'num_anchor_list')[i]).contiguous().view(-1, 2)
@@ -59,6 +63,7 @@ class FRPriorBoxLayer(object):
 
         anchor_boxes = torch.cat(anchor_boxes_list, 0)
         if self.clip:
-            anchor_boxes.clamp_(min=0., max=1.)
+            anchor_boxes[:, 0::2].clamp_(min=0., max=img_w - 1)
+            anchor_boxes[:, 1::2].clamp_(min=0., max=img_h - 1)
 
         return anchor_boxes

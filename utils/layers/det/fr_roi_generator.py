@@ -96,10 +96,10 @@ class FRRoiGenerator(object):
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
-        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
+        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1]).clamp_(min=0, max=input_size[1]-1)
+        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3]).clamp_(min=0, max=input_size[1]-1)
 
         dst_bbox = dst_bbox.cpu().detach()
         score = score.cpu().detach()

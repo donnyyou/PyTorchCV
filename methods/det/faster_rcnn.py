@@ -104,7 +104,8 @@ class FasterRCNN(object):
                                               trans_dict=self.configer.get('train', 'data_transformer'))
             img_scale = torch.from_numpy(np.array(batch_data[3])).float()
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
@@ -169,7 +170,8 @@ class FasterRCNN(object):
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
                 img_scale = torch.from_numpy(np.array(batch_data[3])).float()
                 inputs = data_dict['img']
-                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_bboxes = data_dict['bboxes']
+                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
