@@ -15,7 +15,6 @@ import torch
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.data_transformer import DataTransformer
@@ -206,7 +205,7 @@ class YOLOv3Test(object):
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()

@@ -16,7 +16,6 @@ from datasets.seg.fs_data_loader import FSDataLoader
 from datasets.seg.mr_data_loader import MRDataLoader
 import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
-import datasets.tools.seg_transforms as seg_trans
 import datasets.tools.transforms as trans
 from utils.tools.logger import Logger as Log
 
@@ -49,8 +48,8 @@ class SegDataLoader(object):
                             std=self.configer.get('trans_params', 'normalize')['std']), ])
 
         self.label_transform = trans.Compose([
-            seg_trans.ToLabel(),
-            seg_trans.ReLabel(255, self.configer.get('data', 'num_classes')), ])
+            trans.ToLabel(),
+            trans.ReLabel(255, self.configer.get('data', 'num_classes')), ])
 
     def get_trainloader(self):
         if self.configer.get('method') == 'fcn_segmentor':

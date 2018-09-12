@@ -44,10 +44,10 @@ class YOLOTargetGenerator(object):
             for b in range(batch_size):
                 for t in range(batch_gt_bboxes[b].size(0)):
                     # Convert to position relative to box
-                    gx = (batch_gt_bboxes[b][t, 0] + batch_gt_bboxes[b][t, 2]) / 2.0 * in_w
-                    gy = (batch_gt_bboxes[b][t, 1] + batch_gt_bboxes[b][t, 3]) / 2.0 * in_h
-                    gw = (batch_gt_bboxes[b][t, 2] - batch_gt_bboxes[b][t, 0]) * in_w
-                    gh = (batch_gt_bboxes[b][t, 3] - batch_gt_bboxes[b][t, 1]) * in_h
+                    gx = (batch_gt_bboxes[b][t, 0] + batch_gt_bboxes[b][t, 2]) / (2.0 * input_size[0]) * in_w
+                    gy = (batch_gt_bboxes[b][t, 1] + batch_gt_bboxes[b][t, 3]) / (2.0 * input_size[1]) * in_h
+                    gw = (batch_gt_bboxes[b][t, 2] - batch_gt_bboxes[b][t, 0]) / input_size[0] * in_w
+                    gh = (batch_gt_bboxes[b][t, 3] - batch_gt_bboxes[b][t, 1]) /input_size[1] * in_h
                     if gw * gh == 0 or gx >= in_w or gy >= in_h:
                         continue
 

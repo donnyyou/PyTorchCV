@@ -14,7 +14,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
 from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer

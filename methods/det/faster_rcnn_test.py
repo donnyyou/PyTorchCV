@@ -15,8 +15,7 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
-from datasets.tools.det_transforms import BoundResize
+from datasets.tools.transforms import BoundResize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.data_transformer import DataTransformer
