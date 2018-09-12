@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import torch
+from PIL import Image
 
 from utils.helpers.image_helper import ImageHelper
 
@@ -36,5 +36,5 @@ class BoundResize(object):
         scale2 = self.resize_bound[1] / max(img_size)
         scale = min(scale1, scale2)
         target_size = [int(round(i*scale)) for i in img_size]
-        img = ImageHelper.resize(img, target_size=target_size)
+        img = ImageHelper.resize(img, target_size=target_size, interpolation=Image.CUBIC)
         return img, scale

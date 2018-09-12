@@ -66,9 +66,8 @@ class FastRCNNTest(object):
         img, scale = BoundResize()(img)
         inputs = self.blob_helper.make_input(img, scale=1.0)
         with torch.no_grad():
-            inputs = inputs.unsqueeze(0).to(self.device)
             # Forward pass.
-            test_group = self.det_net(inputs)
+            test_group = self.det_net(inputs, scale)
 
             test_indices_and_rois, test_roi_locs, test_roi_scores, test_rois_num = test_group
 
