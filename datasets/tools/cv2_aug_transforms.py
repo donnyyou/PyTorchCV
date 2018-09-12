@@ -211,8 +211,8 @@ class RandomSaturation(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         img = img.astype(np.float32)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         img[:, :, 1] *= random.uniform(self.lower, self.upper)
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         img = np.clip(img, 0, 255).astype(np.uint8)
@@ -233,8 +233,8 @@ class RandomHue(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         img = img.astype(np.float32)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         img[:, :, 0] += random.uniform(-self.delta, self.delta)
         img[:, :, 0][img[:, :, 0] > 360] -= 360
         img[:, :, 0][img[:, :, 0] < 0] += 360
@@ -1216,6 +1216,9 @@ class CV2AugCompose(object):
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
 
+        if self.configer.get('data', 'input_mode') == 'RGB':
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
         if self.split == 'train':
             for trans_key in self.configer.get('train_trans', 'trans_seq'):
                 (img, labelmap, maskmap, kpts,
@@ -1227,6 +1230,9 @@ class CV2AugCompose(object):
                 (img, labelmap, maskmap, kpts,
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
                                                                            kpts, bboxes, labels, polygons)
+
+        if self.configer.get('data', 'input_mode') == 'RGB':
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'n', 'n', 'n']):
             return img
