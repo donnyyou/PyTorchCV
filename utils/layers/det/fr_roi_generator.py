@@ -114,8 +114,8 @@ class FRRoiGenerator(object):
             tmp_dst_bbox = dst_bbox[i]
             tmp_scores = rpn_fg_scores[i]
             # Remove predicted boxes with either height or width < threshold.
-            ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
-            hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
+            ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0] + 1
+            hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1] + 1
             min_size = self.configer.get('rpn', 'min_size')
             keep = (hs >= img_scale[i] * min_size) & (ws >= img_scale[i] * min_size)
             rois = tmp_dst_bbox[keep]
