@@ -118,7 +118,7 @@
                    "sheep", "sofa", "train", "tvmonitor"]
     },
     "checkpoints": {
-      "checkpoints_name": "fr_caffe_vgg16_voc_det",
+      "checkpoints_name": "fr_aug_vgg16_voc_det",
       "checkpoints_dir": "checkpoints/det/voc",
       "save_iters": 5000
     },
@@ -134,7 +134,7 @@
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/det/fr_caffe_vgg16_voc_det.log",
+      "log_file": "./log/det/fr_aug_vgg16_voc_det.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
