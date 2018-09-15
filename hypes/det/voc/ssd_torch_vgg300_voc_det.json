@@ -158,6 +158,6 @@
       "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.05
+      "conf_threshold": 0.01
     }
 }
