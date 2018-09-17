@@ -1,4 +1,4 @@
-## PyTorchCV: A PyTorch-Based Framework for Deep Learning in Computer Vision
+# PyTorchCV: A PyTorch-Based Framework for Deep Learning in Computer Vision
 ```
 @misc{CV2018,
   author =       {Donny You (youansheng@gmail.com)},
@@ -10,7 +10,7 @@
 This repository provides source code for some deep learning based cv problems. We'll do our best to keep this repository up to date.  If you do find a problem about this repository, please raise it as an issue. We will fix it immediately.
 
 
-### Implemented Papers
+## Implemented Papers
 
 - [Image Classification](https://github.com/youansheng/PyTorchCV/tree/master/methods/cls)
     - VGG: Very Deep Convolutional Networks for Large-Scale Image Recognition
@@ -41,7 +41,7 @@ This repository provides source code for some deep learning based cv problems. W
     - Mask R-CNN
 
 
-### Performances with PyTorchCV
+## Performances with PyTorchCV
 
 #### Object Detection
 - SSD: Single Shot MultiBox Detector
@@ -61,7 +61,7 @@ This repository provides source code for some deep learning based cv problems. W
 - YOLOv3: An Incremental Improvement
 
 
-### Commands with PyTorchCV
+## Commands with PyTorchCV
 
 Take OpenPose as an example.
 - Train the openpose model
@@ -99,7 +99,7 @@ python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
                 --gpu 0
 ```
 
-### Examples with PyTorchCV
+## Examples with PyTorchCV
 
 <div align="center">
 
