@@ -906,7 +906,7 @@ class RandomDetCrop(object):
                 overlap = self.jaccard_numpy(current_boxes, rect)
 
                 # is min and max overlap constraint satisfied? if not try again
-                if overlap.min() < min_iou and max_iou < overlap.max():
+                if overlap.min() < min_iou or max_iou < overlap.max():
                     continue
 
                 # cut the crop from the image
