@@ -40,9 +40,8 @@
       "brightness_ratio": 0.5,
       "flip_ratio": 0.5,
       "crop_ratio": 1.0,
-      "rotate_ratio": 1.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_perm", "random_hflip", "random_pad", "random_crop", "random_rotate"]
+                    "random_perm", "random_hflip", "random_pad", "random_crop"]
     },
     "val_trans": {
       "trans_seq": []
