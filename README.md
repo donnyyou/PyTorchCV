@@ -44,16 +44,16 @@ This repository provides source code for some deep learning based cv problems. W
 ## Performances with PyTorchCV
 
 #### Object Detection
-- SSD: Single Shot MultiBox Detector
+- [SSD: Single Shot MultiBox Detector](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json)
 
 | Model | Training data  | Testing data | mAP | FPS  |
 |--------|:---------:|:------:|:------:|:------:|
 | [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.699 | - |
 | [SSD-300 Ours](https://drive.google.com/open?id=0B0qPCUZ-3YwWT1RCLVZNN3RTVEU) | VOC07+12 trainval | VOC07 test | 0.837 | - |
 
-- Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks
+- [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json)
 
-| Model | Training data  | Testing data | mAP | FPS  |
+| Model |  Training data  | Testing data | mAP | FPS  |
 |--------|:---------:|:------:|:------:|:------:|
 | [Faster R-CNN Origin](https://github.com/rbgirshick/py-faster-rcnn) | VOC07 trainval | VOC07 test | 0.699 | - |
 | [Faster R-CNN Ours](https://drive.google.com/open?id=15SfklRiI1McVWEq9EAceznK-9sxXSQR4) | VOC07 trainval | VOC07 test | 0.706 | - |
