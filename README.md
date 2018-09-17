@@ -2,7 +2,7 @@
 ```
 @misc{CV2018,
   author =       {Donny You (youansheng@gmail.com)},
-  howpublished = {\url{https://github.com/youansheng/PytorchCV}},
+  howpublished = {\url{https://github.com/youansheng/PyTorchCV}},
   year =         {2018}
 }
 ```
@@ -100,11 +100,11 @@ python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
 
 <div align="center">
 
-<img src="static/imgs/pose_coco_000000319721_vis.png" width="500px"/>
+<img src="val/examples/pose/coco/000000319721_vis.png" width="500px"/>
 
 <p> Example output of <b>VGG19-OpenPose</b></p>
 
-<img src="static/imgs/pose_coco_000000475191_vis.png" width="500px"/>
+<img src="val/examples/pose/coco/000000475191_vis.png" width="500px"/>
 
 <p> Example output of <b>VGG19-OpenPose</b></p>
 
