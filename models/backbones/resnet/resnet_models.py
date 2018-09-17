@@ -253,6 +253,7 @@ class ResNetModels(object):
         model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['resnet18'])
@@ -269,6 +270,7 @@ class ResNetModels(object):
         model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['resnet34'])
@@ -285,6 +287,7 @@ class ResNetModels(object):
         model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['resnet50'])
@@ -301,6 +304,7 @@ class ResNetModels(object):
         model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['resnet101'])
@@ -318,6 +322,7 @@ class ResNetModels(object):
         model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['resnet152'])
@@ -334,6 +339,7 @@ class ResNetModels(object):
         model = CaffeResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['caffe_resnet101'])

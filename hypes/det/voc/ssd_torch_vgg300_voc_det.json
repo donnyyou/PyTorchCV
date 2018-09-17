@@ -1,9 +1,9 @@
 {
     "dataset": "voc",
     "task": "det",
-    "method": "yolov3",
+    "method": "single_shot_detector",
     "data": {
-      "num_classes": 20,
+      "num_classes": 21,
       "data_dir": "~/DataSet/VOC07+12_DET",
       "image_tool": "pil",
       "input_mode": "RGB",
@@ -11,24 +11,24 @@
       "workers": 8
     },
     "train": {
-      "batch_size": 16,
+      "batch_size": 32,
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [416, 416],
+        "input_size": [300, 300],
         "align_method": "only_scale"
       }
     },
     "val": {
-      "batch_size": 16,
+      "batch_size": 32,
       "use_07_metric": true,
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [416, 416],
+        "input_size": [300, 300],
         "align_method": "only_scale"
       }
     },
     "test": {
-      "input_size": [416, 416],
+      "input_size": [300, 300],
       "scale_search": [1.0]
     },
     "train_trans": {
@@ -38,11 +38,10 @@
       "contrast_ratio": 0.5,
       "pad_ratio":0.5,
       "brightness_ratio": 0.5,
-      "blur_ratio": 0.5,
       "flip_ratio": 0.5,
       "crop_ratio": 1.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_pad", "random_crop"]
+                    "random_perm", "random_hflip", "random_pad", "random_crop"]
     },
     "val_trans": {
       "trans_seq": []
@@ -71,9 +70,11 @@
       "random_hflip": {
         "swap_pair": []
       },
+      "random_rotate": {
+        "rotate_degree": 10
+      },
       "random_crop":{
-        "crop_size": [1024, 512],
-        "method": "grid",
+        "method": "det",
         "grid":[3, 2],
         "center_jitter": 20
       },
@@ -85,12 +86,12 @@
       }
     },
     "gt": {
-      "anchors_list": [
-        [[116, 90], [156, 198], [373, 326]],
-        [[30, 61], [62, 45], [59, 119]],
-        [[10, 13], [16, 30], [33, 23]]
-      ],
-      "iou_threshold": 0.5
+      "anchor_method": "ssd",
+      "iou_threshold": 0.5,
+      "num_anchor_list": [4, 6, 6, 6, 4, 4],
+      "feature_maps_wh": [[38, 38], [19, 19], [10, 10], [5, 5], [3, 3], [1, 1]],
+      "cur_anchor_sizes": [30, 60, 111, 162, 213, 264, 315],
+      "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
     },
     "details": {
       "color_list": [[255, 170, 30], [0, 0, 70], [244, 35, 232]],
@@ -104,24 +105,21 @@
                    "sheep", "sofa", "train", "tvmonitor"]
     },
     "checkpoints": {
-      "checkpoints_name": "yolov3_darknet_voc_det",
+      "checkpoints_name": "ssd_vgg300_voc_det",
       "checkpoints_dir": "checkpoints/det/voc",
-      "save_iters": 3000
+      "save_iters": 5000
     },
     "network":{
-      "backbone": "darknet53",
-      "model_name": "darknet_yolov3",
-      "stride_list": [32, 16, 8],
-      "loss_weights": {
-        "coord_loss": 2.5,
-        "obj_loss": 1.0,
-        "cls_loss": 1.0
-      }
+      "backbone": "vgg16_bn",
+      "model_name": "vgg300_ssd",
+      "num_feature_list": [512, 1024, 512, 256, 256, 256],
+      "stride_list": [8, 16, 30, 60, 100, 300],
+      "head_index_list": [0, 1, 2, 3, 4, 5]
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/det/yolov3_darknet_voc_det.log",
+      "log_file": "./log/det/ssd_vgg300_voc_det.log",
       "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
@@ -134,13 +132,13 @@
       },
       "multistep": {
         "gamma": 0.1,
-        "stepvalue": [100, 120]
+        "stepvalue": [156, 195, 234]
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 3000,
-      "max_epoch": 150
+      "test_interval": 5000,
+      "max_epoch": 235
     },
     "optim": {
       "optim_method": "sgd",
@@ -150,15 +148,15 @@
         "weight_decay": 0.0001
       },
       "sgd":{
-        "weight_decay": 0.00004,
+        "weight_decay": 0.0005,
         "momentum": 0.9
       }
     },
     "nms": {
       "mode": "union",
-      "max_threshold": 0.4
+      "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.2
+      "conf_threshold": 0.01
     }
 }

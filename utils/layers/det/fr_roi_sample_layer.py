@@ -40,10 +40,10 @@ class FRRoiSampleLayer(object):
             temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]].clone()
 
             for j in range(gt_bboxes_num[i]):
-                temp_gt_bboxes[j, 0] = (temp_gt_bboxes[j, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-                temp_gt_bboxes[j, 1] = (temp_gt_bboxes[j, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
-                temp_gt_bboxes[j, 2] = (temp_gt_bboxes[j, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-                temp_gt_bboxes[j, 3] = (temp_gt_bboxes[j, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
+                temp_gt_bboxes[j, 0] = (temp_gt_bboxes[j, 0]).clamp_(min=0, max=input_size[0]-1)
+                temp_gt_bboxes[j, 1] = (temp_gt_bboxes[j, 1]).clamp_(min=0, max=input_size[1]-1)
+                temp_gt_bboxes[j, 2] = (temp_gt_bboxes[j, 2]).clamp_(min=0, max=input_size[0]-1)
+                temp_gt_bboxes[j, 3] = (temp_gt_bboxes[j, 3]).clamp_(min=0, max=input_size[1]-1)
 
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')

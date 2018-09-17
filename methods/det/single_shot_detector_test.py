@@ -16,7 +16,6 @@ import torch.nn.functional as F
 from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.data_transformer import DataTransformer
@@ -65,13 +64,12 @@ class SingleShotDetectorTest(object):
                                              input_size=self.configer.get('test', 'input_size'), scale=1.0)
 
         with torch.no_grad():
-            inputs = inputs.unsqueeze(0).to(self.device)
             feat_list, bbox, cls = self.det_net(inputs)
 
         batch_detections = self.decode(bbox, cls,
                                        self.ssd_priorbox_layer(feat_list, self.configer.get('test', 'input_size')),
-                                       self.configer)
-        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr)
+                                       self.configer, [inputs.size(3), inputs.size(2)])
+        json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr, [inputs.size(3), inputs.size(2)])
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
@@ -84,7 +82,7 @@ class SingleShotDetectorTest(object):
         return json_dict
 
     @staticmethod
-    def decode(bbox, conf, default_boxes, configer):
+    def decode(bbox, conf, default_boxes, configer, input_size):
         """Transform predicted loc/conf back to real bbox locations and class labels.
 
         Args:
@@ -112,8 +110,8 @@ class SingleShotDetectorTest(object):
         boxes = boxes.contiguous().view(boxes.size(0), -1, 4)
 
         # clip bounding box
-        boxes[:, :, 0::2] = boxes[:, :, 0::2].clamp(min=0, max=1.0)
-        boxes[:, :, 1::2] = boxes[:, :, 1::2].clamp(min=0, max=1.0)
+        boxes[:, :, 0::2] = boxes[:, :, 0::2].clamp(min=0, max=input_size[0] - 1)
+        boxes[:, :, 1::2] = boxes[:, :, 1::2].clamp(min=0, max=input_size[1] - 1)
 
         labels = torch.Tensor([i for i in range(configer.get('data', 'num_classes'))]).to(boxes.device)
         labels = labels.view(1, 1, -1, 1).repeat(batch_size, num_priors, 1, 1).contiguous().view(batch_size, -1, 1)
@@ -142,17 +140,18 @@ class SingleShotDetectorTest(object):
 
         return output
 
-    def __get_info_tree(self, detections, image_raw):
+    def __get_info_tree(self, detections, image_raw, input_size):
         height, width, _ = image_raw.shape
+        in_width, in_height = input_size
         json_dict = dict()
         object_list = list()
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = x1.cpu().item() * width
-                ymin = y1.cpu().item() * height
-                xmax = x2.cpu().item() * width
-                ymax = y2.cpu().item() * height
+                xmin = x1.cpu().item() / in_width * width
+                ymin = y1.cpu().item() / in_height * height
+                xmax = x2.cpu().item() / in_width * width
+                ymax = y2.cpu().item() / in_height * height
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item()) - 1
                 object_dict['score'] = float('%.2f' % conf.cpu().item())
@@ -220,7 +219,8 @@ class SingleShotDetectorTest(object):
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()
@@ -233,7 +233,7 @@ class SingleShotDetectorTest(object):
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), -1,
                                                              self.configer.get('data', 'num_classes'))
             batch_detections = self.decode(bboxes, labels_target,
-                                           self.ssd_priorbox_layer(feat_list, input_size), self.configer)
+                                           self.ssd_priorbox_layer(feat_list, input_size), self.configer, input_size)
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 20:
@@ -243,7 +243,7 @@ class SingleShotDetectorTest(object):
 
                 self.det_visualizer.vis_default_bboxes(ori_img_bgr,
                                                        self.ssd_priorbox_layer(feat_list, input_size), labels[j])
-                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr, input_size)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
                                                            conf_threshold=self.configer.get('vis', 'conf_threshold'))

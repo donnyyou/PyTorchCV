@@ -142,6 +142,7 @@ class SqueezeNetModels(object):
         model = SqueezeNet()
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
@@ -156,6 +157,7 @@ class SqueezeNetModels(object):
         model = DilatedSqueezeNet()
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['squeezenet1_1'])

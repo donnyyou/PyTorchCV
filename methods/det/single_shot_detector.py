@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -92,7 +91,8 @@ class SingleShotDetector(object):
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             # Change the data type.
             inputs = self.module_utilizer.to_device(inputs)
@@ -151,7 +151,8 @@ class SingleShotDetector(object):
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
                 inputs = data_dict['img']
-                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_bboxes = data_dict['bboxes']
+                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
@@ -167,7 +168,7 @@ class SingleShotDetector(object):
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,
                                                                  self.ssd_priorbox_layer(feat_list, input_size),
-                                                                 self.configer)
+                                                                 self.configer, input_size)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 # batch_pred_bboxes = self._get_gt_object_list(batch_gt_bboxes, batch_gt_labels)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)

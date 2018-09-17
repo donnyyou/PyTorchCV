@@ -211,8 +211,8 @@ class RandomSaturation(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
+        img = img.astype(np.float32)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
         img[:, :, 1] *= random.uniform(self.lower, self.upper)
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         img = np.clip(img, 0, 255).astype(np.uint8)
@@ -233,8 +233,8 @@ class RandomHue(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
+        img = img.astype(np.float32)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
         img[:, :, 0] += random.uniform(-self.delta, self.delta)
         img[:, :, 0][img[:, :, 0] > 360] -= 360
         img[:, :, 0][img[:, :, 0] < 0] += 360
@@ -279,6 +279,7 @@ class RandomContrast(object):
         if random.random() > self.ratio:
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
+        img = img.astype(np.float32)
         img *= random.uniform(self.lower, self.upper)
         img = np.clip(img, 0, 255).astype(np.uint8)
 
@@ -882,16 +883,6 @@ class RandomDetCrop(object):
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left + w), int(top + h)])
 
-                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
-                overlap = self.jaccard_numpy(bboxes, rect)
-
-                # is min and max overlap constraint satisfied? if not try again
-                if overlap.min() < min_iou and max_iou < overlap.max():
-                    continue
-
-                # cut the crop from the image
-                current_img = img[rect[1]:rect[3], rect[0]:rect[2], :]
-
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
 
@@ -910,6 +901,16 @@ class RandomDetCrop(object):
 
                 # take only matching gt boxes
                 current_boxes = bboxes[mask, :].copy()
+
+                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
+                overlap = self.jaccard_numpy(current_boxes, rect)
+
+                # is min and max overlap constraint satisfied? if not try again
+                if overlap.min() < min_iou or max_iou < overlap.max():
+                    continue
+
+                # cut the crop from the image
+                current_img = img[rect[1]:rect[3], rect[0]:rect[2], :]
 
                 # take only matching gt labels
                 current_labels = labels[mask]
@@ -1215,6 +1216,9 @@ class CV2AugCompose(object):
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
 
+        if self.configer.get('data', 'input_mode') == 'RGB':
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
         if self.split == 'train':
             for trans_key in self.configer.get('train_trans', 'trans_seq'):
                 (img, labelmap, maskmap, kpts,
@@ -1226,6 +1230,9 @@ class CV2AugCompose(object):
                 (img, labelmap, maskmap, kpts,
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
                                                                            kpts, bboxes, labels, polygons)
+
+        if self.configer.get('data', 'input_mode') == 'RGB':
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'n', 'n', 'n']):
             return img

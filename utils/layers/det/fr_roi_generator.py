@@ -54,7 +54,7 @@ class FRRoiGenerator(object):
         self.configer = configer
         self.fr_priorbox_layer = FRPriorBoxLayer(self.configer)
 
-    def __call__(self, feat_list, loc, score, n_pre_nms, n_post_nms, input_size):
+    def __call__(self, feat_list, loc, score, n_pre_nms, n_post_nms, input_size, img_scale):
         """input should  be ndarray
         Propose RoIs.
         Inputs :obj:`loc, score, anchor` refer to the same anchor when indexed
@@ -96,10 +96,10 @@ class FRRoiGenerator(object):
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
 
-        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2] * input_size[0]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
-        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3] * input_size[1]).clamp_(min=0, max=input_size[1]-1)
+        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2]).clamp_(min=0, max=input_size[0]-1)
+        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1]).clamp_(min=0, max=input_size[1]-1)
+        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3]).clamp_(min=0, max=input_size[1]-1)
 
         dst_bbox = dst_bbox.cpu().detach()
         score = score.cpu().detach()
@@ -114,10 +114,10 @@ class FRRoiGenerator(object):
             tmp_dst_bbox = dst_bbox[i]
             tmp_scores = rpn_fg_scores[i]
             # Remove predicted boxes with either height or width < threshold.
-            ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0]
-            hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1]
+            ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0] + 1
+            hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1] + 1
             min_size = self.configer.get('rpn', 'min_size')
-            keep = (hs >= min_size) & (ws >= min_size)
+            keep = (hs >= img_scale[i] * min_size) & (ws >= img_scale[i] * min_size)
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.

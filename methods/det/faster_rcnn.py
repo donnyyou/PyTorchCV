@@ -9,11 +9,11 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
 from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -101,8 +101,10 @@ class FasterRCNN(object):
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
+            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
@@ -111,7 +113,7 @@ class FasterRCNN(object):
             gt_bboxes, gt_num, gt_labels = self.module_utilizer.to_device(gt_bboxes, gt_nums, gt_labels)
             inputs = self.module_utilizer.to_device(inputs)
             # Forward pass.
-            feat_list, train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels)
+            feat_list, train_group = self.det_net(inputs, gt_bboxes, gt_num, gt_labels, img_scale)
             gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list,
                                                                    batch_gt_bboxes, [inputs.size(3), inputs.size(2)])
             gt_rpn_locs, gt_rpn_labels = self.module_utilizer.to_device(gt_rpn_locs, gt_rpn_labels)
@@ -165,8 +167,10 @@ class FasterRCNN(object):
                                                   bboxes_list=batch_data[1],
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
+                img_scale = torch.from_numpy(np.array(batch_data[3])).float()
                 inputs = data_dict['img']
-                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_bboxes = data_dict['bboxes']
+                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
@@ -174,7 +178,7 @@ class FasterRCNN(object):
                 inputs = self.module_utilizer.to_device(inputs)
 
                 # Forward pass.
-                feat_list, train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels)
+                feat_list, train_group, test_group = self.det_net(inputs, gt_bboxes, gt_nums, gt_labels, img_scale)
                 rpn_locs, rpn_scores, sample_roi_locs, sample_roi_scores, gt_roi_bboxes, gt_roi_labels = train_group
 
                 gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list,
@@ -194,7 +198,7 @@ class FasterRCNN(object):
                                                        test_rois_num,
                                                        self.configer,
                                                        [inputs.size(3), inputs.size(2)])
-                batch_pred_bboxes = self.__get_object_list(batch_detections, [inputs.size(3), inputs.size(2)])
+                batch_pred_bboxes = self.__get_object_list(batch_detections)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
                 # Update the vars of the val phase.
@@ -228,16 +232,16 @@ class FasterRCNN(object):
         target_bboxes_num = torch.Tensor(len_arr).long()
         return target_bboxes, target_bboxes_num, target_labels
 
-    def __get_object_list(self, batch_detections, input_size):
+    def __get_object_list(self, batch_detections):
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_pred in detections:
-                    xmin = x1.cpu().item() / input_size[0]
-                    ymin = y1.cpu().item() / input_size[1]
-                    xmax = x2.cpu().item() / input_size[0]
-                    ymax = y2.cpu().item() / input_size[1]
+                    xmin = x1.cpu().item()
+                    ymin = y1.cpu().item()
+                    xmax = x2.cpu().item()
+                    ymax = y2.cpu().item()
                     cf = conf.cpu().item()
                     cls_pred = int(cls_pred.cpu().item()) - 1
                     object_list.append([xmin, ymin, xmax, ymax, cls_pred, float('%.2f' % cf)])

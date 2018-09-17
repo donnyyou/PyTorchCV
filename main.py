@@ -104,6 +104,8 @@ if __name__ == "__main__":
     args_parser = parser.parse_args()
 
     configer = Configer(args_parser=args_parser)
+    abs_data_dir = os.path.expanduser(configer.get('data', 'data_dir'))
+    configer.update_value(['data', 'data_dir'], abs_data_dir)
 
     if configer.get('gpu') is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(gpu_id) for gpu_id in configer.get('gpu'))

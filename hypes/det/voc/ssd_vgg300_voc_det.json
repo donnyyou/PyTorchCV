@@ -4,8 +4,8 @@
     "method": "single_shot_detector",
     "data": {
       "num_classes": 21,
-      "data_dir": "/home/donny/DataSet/VOC07+12_DET",
-      "image_tool": "pil",
+      "data_dir": "~/DataSet/VOC07+12_DET",
+      "image_tool": "cv2",
       "input_mode": "RGB",
       "keep_difficult": false,
       "workers": 8
@@ -42,7 +42,7 @@
       "flip_ratio": 0.5,
       "crop_ratio": 1.0,
       "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_gauss_blur", "random_perm", "random_hflip", "random_pad", "random_crop"]
+                    "random_perm", "random_hflip", "random_pad", "random_crop"]
     },
     "val_trans": {
       "trans_seq": []
@@ -77,10 +77,10 @@
         "center_jitter": 20
       },
       "normalize": {
-        "div_value": 255,
-        "mean_value": [124, 116, 104],
-        "mean": [0.485, 0.456, 0.406],
-        "std": [0.229, 0.224, 0.225]
+        "div_value": 1,
+        "mean_value": [123, 117, 104],
+        "mean": [123, 117, 104],
+        "std": [1.0, 1.0, 1.0]
       }
     },
     "gt": {

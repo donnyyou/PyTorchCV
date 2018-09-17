@@ -927,16 +927,6 @@ class RandomDetCrop(object):
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left+w), int(top+h)])
 
-                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
-                overlap = self.jaccard_numpy(bboxes, rect)
-
-                # is min and max overlap constraint satisfied? if not try again
-                if overlap.min() < min_iou and max_iou < overlap.max():
-                    continue
-
-                # cut the crop from the image
-                current_img = img.crop((left, top, left + w, top + h))
-
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
 
@@ -955,6 +945,16 @@ class RandomDetCrop(object):
 
                 # take only matching gt boxes
                 current_boxes = bboxes[mask, :].copy()
+
+                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
+                overlap = self.jaccard_numpy(current_boxes, rect)
+
+                # is min and max overlap constraint satisfied? if not try again
+                if overlap.min() < min_iou or max_iou < overlap.max():
+                    continue
+
+                # cut the crop from the image
+                current_img = img.crop((left, top, left + w, top + h))
 
                 # take only matching gt labels
                 current_labels = labels[mask]

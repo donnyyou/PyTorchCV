@@ -52,6 +52,7 @@ class SyncBNDenseNetModels(object):
             pattern = re.compile(
                 r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['densenet121'])
@@ -82,6 +83,7 @@ class SyncBNDenseNetModels(object):
             pattern = re.compile(
                 r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['densenet169'])
@@ -112,6 +114,7 @@ class SyncBNDenseNetModels(object):
             pattern = re.compile(
                 r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['densenet201'])
@@ -142,6 +145,7 @@ class SyncBNDenseNetModels(object):
             pattern = re.compile(
                 r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['densenet161'])

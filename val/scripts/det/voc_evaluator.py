@@ -51,8 +51,8 @@ class VOCEvaluator(object):
                 for object in info_tree['objects']:
                     # 0-indexing
                     object_list.append([shotname, object['label'], object['score'],
-                                        int(object['bbox'][0]), int(object['bbox'][1]),
-                                        int(object['bbox'][2]), int(object['bbox'][3])])
+                                        int(object['bbox'][0]) + 1, int(object['bbox'][1]) + 1,
+                                        int(object['bbox'][2]) + 1, int(object['bbox'][3]) + 1])
 
         file_header_list = list()
         for i in range(len(self.configer.get('details', 'name_seq'))):

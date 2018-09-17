@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
 from loss.det_loss_manager import DetLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -103,7 +102,7 @@ class YOLOv3(object):
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
 
@@ -163,7 +162,7 @@ class YOLOv3(object):
                                                   labels_list=batch_data[2],
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
                 inputs = data_dict['img']
-                batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+                batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.

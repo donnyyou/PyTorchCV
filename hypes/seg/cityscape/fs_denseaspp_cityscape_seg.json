@@ -6,7 +6,7 @@
       "image_tool": "pil",
       "input_mode": "RGB",
       "num_classes": 19,
-      "data_dir": "/home/donny/DataSet/CityScape",
+      "data_dir": "~/DataSet/CityScape",
       "workers": 8
     },
    "train": {
@@ -106,7 +106,7 @@
     "solver": {
       "display_iter": 20,
       "test_interval": 300,
-      "max_epoch": 300
+      "max_epoch": 200
     },
     "optim": {
       "optim_method": "adam",

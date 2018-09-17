@@ -86,6 +86,7 @@ class VGGModels(object):
         model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=False)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls[backbone.split('_')[0]])
@@ -102,6 +103,7 @@ class VGGModels(object):
         model = VGG(cfg_name=backbone, vgg_cfg=vgg_cfg, bn=True)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['{}_bn'.format(backbone.split('_')[0])])

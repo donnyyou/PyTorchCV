@@ -7,7 +7,7 @@
       "train_batch_size": 20,
       "val_batch_size": 20,
       "input_size": [128, 128],
-      "data_dir": "/data/DataSet/Flower",
+      "data_dir": "~/DataSet/Flower",
       "workers": 8
     },
     "test": {

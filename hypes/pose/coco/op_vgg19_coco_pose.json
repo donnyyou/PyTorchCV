@@ -4,7 +4,7 @@
     "method": "open_pose",
     "data": {
       "num_keypoints": 18,
-      "data_dir": "/home/donny/DataSet/COCO_MASK",
+      "data_dir": "~/DataSet/COCO_MASK",
       "image_tool": "pil",
       "input_mode": "RGB",
       "workers": 8

@@ -181,6 +181,7 @@ class MobileNetModels(object):
         model = MobileNetV2()
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['mobilenetv2'])
@@ -200,6 +201,7 @@ class MobileNetModels(object):
         model = MobileNetV2Dilated8()
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
+                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['mobilenetv2'])

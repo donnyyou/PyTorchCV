@@ -10,7 +10,8 @@ from __future__ import print_function
 import numpy as np
 import torch
 from PIL import Image
-import collections
+
+from utils.helpers.image_helper import ImageHelper
 
 
 class Normalize(object):
@@ -84,6 +85,40 @@ class ToTensor(object):
         return inputs.float()
 
 
+class ToLabel(object):
+    def __call__(self, inputs):
+        return torch.from_numpy(np.array(inputs)).long()
+
+
+class ReLabel(object):
+    """
+      255 indicate the background, relabel 255 to some value.
+    """
+    def __init__(self, olabel, nlabel):
+        self.olabel = olabel
+        self.nlabel = nlabel
+
+    def __call__(self, inputs):
+        assert isinstance(inputs, torch.LongTensor), 'tensor needs to be LongTensor'
+
+        inputs[inputs == self.olabel] = self.nlabel
+        return inputs
+
+
+class BoundResize(object):
+    def __init__(self, resize_bound=(600, 1000)):
+        self.resize_bound = resize_bound
+
+    def __call__(self, img):
+        img_size = ImageHelper.get_size(img)
+        scale1 = self.resize_bound[0] / min(img_size)
+        scale2 = self.resize_bound[1] / max(img_size)
+        scale = min(scale1, scale2)
+        target_size = [int(round(i*scale)) for i in img_size]
+        img = ImageHelper.resize(img, target_size=target_size, interpolation=Image.CUBIC)
+        return img, scale
+
+
 class Compose(object):
 
     def __init__(self, transforms):
@@ -94,3 +129,7 @@ class Compose(object):
             inputs = t(inputs)
 
         return inputs
+
+
+
+

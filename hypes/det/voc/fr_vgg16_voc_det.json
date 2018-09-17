@@ -3,14 +3,10 @@
     "task": "det",
     "method": "faster_rcnn",
     "data": {
-      "train_batch_size": 1,
-      "val_batch_size": 1,
-      "train_input_size": [720, 720],
-      "val_input_size": [720, 720],
       "num_classes": 21,
-      "data_dir": "/home/donny/DataSet/VOC07+12_DET",
-      "image_tool": "pil",
-      "input_mode": "RGB",
+      "data_dir": "~/DataSet/VOC07_DET",
+      "image_tool": "cv2",
+      "input_mode": "BGR",
       "keep_difficult": false,
       "workers": 8
     },
@@ -36,7 +32,7 @@
     },
     "val_trans": {
       "resize_ratio": 1.0,
-      "trans_seq": ["random_hflip", "random_resize"]
+      "trans_seq": ["random_resize"]
     },
     "trans_params": {
       "random_hflip": {
@@ -47,13 +43,14 @@
         "resize_bound": [600, 1000]
       },
       "normalize": {
-        "div_value": 255,
-        "mean_value": [124, 116, 104],
-        "mean": [0.485, 0.456, 0.406],
-        "std": [0.229, 0.224, 0.225]
+        "div_value": 1.0,
+        "mean_value": [123, 116, 103],
+        "mean": [122.7717, 115.9465, 102.9801],
+        "std": [1.0, 1.0, 1.0]
       }
     },
     "rpn": {
+      "head_index_list": [0],
       "anchor_sizes_list": [
         [[128, 128], [256, 256], [512, 512]]
       ],
@@ -127,13 +124,13 @@
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
-        "step_size": 15
+        "step_size": 9
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 20
+      "max_epoch": 15
     },
     "optim": {
       "optim_method": "sgd",
@@ -149,10 +146,10 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.3
+      "overlap_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.05
+      "conf_threshold": 0.01
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

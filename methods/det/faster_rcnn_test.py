@@ -10,12 +10,12 @@ from __future__ import print_function
 
 import os
 import cv2
+import numpy as np
 import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.det_transforms import ResizeBoxes
-from datasets.tools.det_transforms import BoundResize
+from datasets.tools.transforms import BoundResize
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.data_transformer import DataTransformer
@@ -66,9 +66,8 @@ class FastRCNNTest(object):
         img, scale = BoundResize()(img)
         inputs = self.blob_helper.make_input(img, scale=1.0)
         with torch.no_grad():
-            inputs = inputs.unsqueeze(0).to(self.device)
             # Forward pass.
-            test_group = self.det_net(inputs)
+            test_group = self.det_net(inputs, scale)
 
             test_indices_and_rois, test_roi_locs, test_roi_scores, test_rois_num = test_group
 
@@ -175,10 +174,10 @@ class FastRCNNTest(object):
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = min(x1.cpu().item() / scale, width)
-                ymin = min(y1.cpu().item() / scale, height)
-                xmax = min(x2.cpu().item() / scale, width)
-                ymax = min(y2.cpu().item() / scale, height)
+                xmin = min(x1.cpu().item() / scale, width - 1)
+                ymin = min(y1.cpu().item() / scale, height - 1)
+                xmax = min(x2.cpu().item() / scale, width - 1)
+                ymax = min(y2.cpu().item() / scale, height - 1)
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item()) - 1
                 object_dict['score'] = float('%.2f' % conf.cpu().item())
@@ -243,8 +242,10 @@ class FastRCNNTest(object):
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
+            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
             inputs = data_dict['img']
-            batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
+            batch_gt_bboxes = data_dict['bboxes']
+            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
 
             input_size = [inputs.size(3), inputs.size(2)]
@@ -259,7 +260,7 @@ class FastRCNNTest(object):
             test_indices_and_rois, _ = self.fr_roi_generator(feat_list, gt_rpn_locs, gt_rpn_scores,
                                                              self.configer.get('rpn', 'n_test_pre_nms'),
                                                              self.configer.get('rpn', 'n_test_post_nms'),
-                                                             input_size)
+                                                             input_size, img_scale)
 
             gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
             sample_rois, gt_roi_locs, gt_roi_labels = self.roi_sampler(test_indices_and_rois,
