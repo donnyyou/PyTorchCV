@@ -44,8 +44,8 @@ class ImageNetClsGenerator(object):
 
         img_count = 0
         for i in range(NUM_OF_CLASSES):
-            train_folder = os.path.join(self.args.ori_img_dir, 'train', imagenet_class_dict[str(i)])
-            val_folder = os.path.join(self.args.ori_img_dir, 'val', imagenet_class_dict[str(i)])
+            train_folder = os.path.join(self.args.ori_img_dir, 'train', imagenet_class_dict[str(i)][0])
+            val_folder = os.path.join(self.args.ori_img_dir, 'val', imagenet_class_dict[str(i)][0])
 
             for image_file in os.listdir(train_folder):
                 img_count += 1

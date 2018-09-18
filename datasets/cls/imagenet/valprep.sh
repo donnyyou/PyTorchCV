@@ -1,4 +1,9 @@
-mkdir -p n01440764	
+if [ -d n01440764 ]; then
+    echo 'Already processed!!!'
+    exit 0
+fi
+
+mkdir -p n01440764
 mkdir -p n01443537	
 mkdir -p n01484850	
 mkdir -p n01491361	
