@@ -55,7 +55,7 @@ class ImageNetClsGenerator(object):
 
                 train_json_list.append(img_dict)
                 shutil.copy(os.path.join(train_folder, image_file),
-                            os.path.join(self.val_image_dir, image_file))
+                            os.path.join(self.train_image_dir, image_file))
 
             for image_file in os.listdir(val_folder):
                 img_count += 1
