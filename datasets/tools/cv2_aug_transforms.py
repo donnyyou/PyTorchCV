@@ -945,58 +945,68 @@ class CV2AugCompose(object):
 
         self.transforms = dict()
         if self.split == 'train':
-            if 'random_saturation' in self.configer.get('train_trans', 'trans_seq'):
+            shuffle_train_trans = []
+            if not self.configer.is_empty('train_trans', 'shuffle_trans_seq'):
+                if isinstance(self.configer.get('train_trans', 'shuffle_trans_seq')[0], list):
+                    train_trans_seq_list = self.configer.get('train_trans', 'shuffle_trans_seq')
+                    for train_trans_seq in train_trans_seq_list:
+                        shuffle_train_trans += train_trans_seq
+
+                else:
+                    shuffle_train_trans = self.configer.get('train_trans', 'shuffle_trans_seq')
+
+            if 'random_saturation' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_saturation'] = RandomSaturation(
                     lower=self.configer.get('trans_params', 'random_saturation')['lower'],
                     upper=self.configer.get('trans_params', 'random_saturation')['upper'],
                     saturation_ratio=self.configer.get('train_trans', 'saturation_ratio')
                 )
 
-            if 'random_hue' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_hue' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_hue'] = RandomHue(
                     delta=self.configer.get('trans_params', 'random_hue')['delta'],
                     hue_ratio=self.configer.get('train_trans', 'hue_ratio')
                 )
 
-            if 'random_perm' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_perm' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_perm'] = RandomPerm(
                     perm_ratio=self.configer.get('train_trans', 'perm_ratio')
                 )
 
-            if 'random_contrast' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_contrast' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_contrast'] = RandomContrast(
                     lower=self.configer.get('trans_params', 'random_contrast')['lower'],
                     upper=self.configer.get('trans_params', 'random_contrast')['upper'],
                     contrast_ratio=self.configer.get('train_trans', 'contrast_ratio')
                 )
 
-            if 'random_pad' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_pad' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_pad'] = RandomPad(
                     up_scale_range=self.configer.get('trans_params', 'random_pad')['up_scale_range'],
                     pad_ratio=self.configer.get('train_trans', 'pad_ratio'),
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
-            if 'random_shift' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_shift' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_shift'] = RandomShift(
                     shift_pixel=self.configer.get('trans_params', 'random_shift')['shift_pixel'],
                     shift_ratio=self.configer.get('train_trans', 'shift_ratio'),
                     mean=self.configer.get('trans_params', 'normalize')['mean_value']
                 )
 
-            if 'random_brightness' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_brightness' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_brightness'] = RandomBrightness(
                     shift_value=self.configer.get('trans_params', 'random_brightness')['shift_value'],
                     brightness_ratio=self.configer.get('train_trans', 'brightness_ratio')
                 )
 
-            if 'random_hflip' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_hflip' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_hflip'] = RandomHFlip(
                     swap_pair=self.configer.get('trans_params', 'random_hflip')['swap_pair'],
                     flip_ratio=self.configer.get('train_trans', 'flip_ratio')
                 )
 
-            if 'random_resize' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_resize' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 if self.configer.get('trans_params', 'random_resize')['method'] == 'random':
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('trans_params', 'random_resize')['method'],
@@ -1023,7 +1033,7 @@ class CV2AugCompose(object):
                     Log.error('Not Support Resize Method!')
                     exit(1)
 
-            if 'random_crop' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 if self.configer.get('trans_params', 'random_crop')['method'] == 'random':
                     self.transforms['random_crop'] = RandomCrop(
                         crop_size=self.configer.get('trans_params', 'random_crop')['crop_size'],
@@ -1067,7 +1077,7 @@ class CV2AugCompose(object):
                     Log.error('Not Support Crop Method!')
                     exit(1)
 
-            if 'random_rotate' in self.configer.get('train_trans', 'trans_seq'):
+            if 'random_rotate' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_rotate'] = RandomRotate(
                     max_degree=self.configer.get('trans_params', 'random_rotate')['rotate_degree'],
                     rotate_ratio=self.configer.get('train_trans', 'rotate_ratio'),

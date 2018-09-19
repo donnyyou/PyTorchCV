@@ -210,17 +210,14 @@ class SingleShotDetectorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.det_data_loader.get_valloader()
-
         count = 0
-        for i, batch_data in enumerate(val_data_loader):
+        for i, batch_data in enumerate(self.det_data_loader.get_trainloader()):
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
-            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()

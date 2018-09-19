@@ -40,8 +40,8 @@
       "brightness_ratio": 0.5,
       "flip_ratio": 0.5,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_perm", "random_hflip", "random_pad", "random_crop"]
+      "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
+      "trans_seq": ["random_hflip", "random_crop"]
     },
     "val_trans": {
       "trans_seq": []
@@ -59,7 +59,7 @@
         "upper": 1.5
       },
       "random_pad": {
-        "up_scale_range": [1.0, 4.0]
+        "up_scale_range": [2.0, 2.0]
       },
       "random_brightness": {
         "shift_value": 32
