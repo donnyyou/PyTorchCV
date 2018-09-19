@@ -927,6 +927,51 @@ class RandomDetCrop(object):
                 return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, polygons
 
 
+class Resize(object):
+    """Resize the given numpy.ndarray to random size and aspect ratio.
+    Args:
+        scale_min: the min scale to resize.
+        scale_max: the max scale to resize.
+    """
+
+    def __init__(self, target_size=None):
+        self.target_size = target_size
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
+        assert isinstance(img, np.ndarray)
+        assert labelmap is None or isinstance(labelmap, np.ndarray)
+        assert maskmap is None or isinstance(maskmap, np.ndarray)
+
+        height, width, channels = img.shape
+        target_width, target_height = self.target_size
+
+        w_scale_ratio = target_width / width
+        h_scale_ratio = target_height / height
+
+        if kpts is not None and kpts.size > 0:
+            kpts[:, :, 0] *= w_scale_ratio
+            kpts[:, :, 1] *= h_scale_ratio
+
+        if bboxes is not None and bboxes.size > 0:
+            bboxes[:, 0::2] *= w_scale_ratio
+            bboxes[:, 1::2] *= h_scale_ratio
+
+        if polygons is not None:
+            for object_id in range(len(polygons)):
+                for polygon_id in range(len(polygons[object_id])):
+                    polygons[object_id][polygon_id][0::2] *= w_scale_ratio
+                    polygons[object_id][polygon_id][1::2] *= h_scale_ratio
+
+        img = cv2.resize(img, self.target_size, interpolation=cv2.INTER_CUBIC)
+        if labelmap is not None:
+            labelmap = cv2.resize(labelmap, self.target_size, interpolation=cv2.INTER_NEAREST)
+
+        if maskmap is not None:
+            maskmap = cv2.resize(maskmap, self.target_size, interpolation=cv2.INTER_NEAREST)
+
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
+
+
 class CV2AugCompose(object):
     """Composes several transforms together.
 

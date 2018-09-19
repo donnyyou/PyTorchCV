@@ -181,5 +181,5 @@ class ShuffleNetV2(nn.Module):
 if __name__ == "__main__":
     """Testing
     """
-    model = ShuffleNetV2()
+    model = ShuffleNetV2(None)
     print(model)
