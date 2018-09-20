@@ -374,7 +374,7 @@ class RandomResizedCrop(object):
     """
 
     def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR):
-        self.size = (size, size)
+        self.size = size
         self.interpolation = interpolation
         self.scale = scale
         self.ratio = ratio
@@ -425,7 +425,7 @@ class RandomResizedCrop(object):
         assert labelmap is None and maskmap is None and kpts is None and bboxes is None and labels is None
         i, j, h, w = self.get_params(img, self.scale, self.ratio)
         img = img.crop((j, i, j + w, i + h))
-        img = img.resize(self.size[::-1], self.interpolation)
+        img = img.resize(self.size, self.interpolation)
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 

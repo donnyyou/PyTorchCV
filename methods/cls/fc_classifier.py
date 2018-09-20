@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -79,6 +80,7 @@ class FCClassifier(object):
                                               trans_dict=self.configer.get('train', 'data_transformer'))
             inputs = data_dict['img']
             labels = data_dict['labels']
+            labels = torch.from_numpy(np.array(labels)).long()
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
@@ -132,6 +134,7 @@ class FCClassifier(object):
                                                   trans_dict=self.configer.get('val', 'data_transformer'))
                 inputs = data_dict['img']
                 labels = data_dict['labels']
+                labels = torch.from_numpy(np.array(labels)).long()
                 # Change the data type.
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
