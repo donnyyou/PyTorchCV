@@ -71,6 +71,19 @@ class SingleShotDetector(object):
 
         return self.det_net.parameters()
 
+    def warm_lr(self):
+        """Sets the learning rate
+        # Adapted from PyTorch Imagenet example:
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+        """
+        warm_epoch = self.configer.get('lr', 'warm')['warm_epoch']
+        warm_lr = self.configer.get('lr', 'warm')['warm_lr']
+        if self.configer.get('epoch') < warm_epoch:
+            lr = warm_lr + (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('epoch') / warm_epoch
+
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = lr
+
     def __train(self):
         """
           Train function of every epoch during train phase.
@@ -83,6 +96,9 @@ class SingleShotDetector(object):
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
+
+        if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
+            self.warm_lr()
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, batch_data in enumerate(self.train_loader):
