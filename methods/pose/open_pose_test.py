@@ -342,7 +342,8 @@ class OpenPoseTest(object):
         count = 0
         for i, batch_data in enumerate(val_data_loader):
             data_dict = self.data_transformer(img_list=batch_data[0],
-                                              kpts_list=batch_data[1],
+                                              maskmap_list=batch_data[1],
+                                              kpts_list=batch_data[2],
                                               trans_dict=self.configer.get('val', 'data_transformer'))
 
             inputs = data_dict['img']

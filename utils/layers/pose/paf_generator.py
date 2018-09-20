@@ -30,7 +30,7 @@ class PafGenerator(object):
 
         for batch_id in range(batch_size):
             cnt = np.zeros((len(vec_pair), height // stride, width // stride), dtype=np.int32)
-            height, width, channel = cnt.shape
+            channel, height, width = cnt.shape
             for j in range(len(gt_kpts[batch_id])):
                 for i in range(channel):
                     a = vec_pair[i][0] - 1
@@ -38,10 +38,10 @@ class PafGenerator(object):
                     if gt_kpts[batch_id][j][a][2] < 0 or gt_kpts[batch_id][j][b][2] < 0:
                         continue
 
-                    ax = (gt_kpts[batch_id][j][a][0] - start) * 1.0 / stride
-                    ay = (gt_kpts[batch_id][j][a][1] - start) * 1.0 / stride
-                    bx = (gt_kpts[batch_id][j][b][0] - start) * 1.0 / stride
-                    by = (gt_kpts[batch_id][j][b][1] - start) * 1.0 / stride
+                    ax = (gt_kpts[batch_id][j][a][0].item() - start) * 1.0 / stride
+                    ay = (gt_kpts[batch_id][j][a][1].item() - start) * 1.0 / stride
+                    bx = (gt_kpts[batch_id][j][b][0].item() - start) * 1.0 / stride
+                    by = (gt_kpts[batch_id][j][b][1].item() - start) * 1.0 / stride
 
                     bax = bx - ax
                     bay = by - ay

@@ -168,7 +168,7 @@ class RandomHFlip(object):
             kpts[:, :, 0] = width - 1 - kpts[:, :, 0]
 
             for pair in self.swap_pair:
-                temp_point = kpts[:, pair[0] - 1]
+                temp_point = np.copy(kpts[:, pair[0] - 1])
                 kpts[:, pair[0] - 1] = kpts[:, pair[1] - 1]
                 kpts[:, pair[1] - 1] = temp_point
 
@@ -366,20 +366,20 @@ class RandomResize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_range=(0.75, 1.25), input_size=None,
+    def __init__(self, scale_range=(0.75, 1.25), target_size=None,
                  resize_bound=None, method='random', resize_ratio=0.5):
         self.scale_range = scale_range
         self.resize_bound = resize_bound
         self.method = method
         self.ratio = resize_ratio
 
-        if input_size is not None:
-            if isinstance(input_size, int):
-                self.input_size = (input_size, input_size)
-            elif isinstance(input_size, (list, tuple)) and len(input_size) == 2:
-                self.input_size = input_size
+        if target_size is not None:
+            if isinstance(target_size, int):
+                self.input_size = (target_size, target_size)
+            elif isinstance(target_size, (list, tuple)) and len(target_size) == 2:
+                self.input_size = target_size
             else:
-                raise TypeError('Got inappropriate size arg: {}'.format(input_size))
+                raise TypeError('Got inappropriate size arg: {}'.format(target_size))
         else:
             self.input_size = None
 
@@ -435,7 +435,7 @@ class RandomResize(object):
             scale_ratio = 1.0
 
         if kpts is not None and kpts.size > 0:
-            kpts *= scale_ratio
+            kpts[:, :, :2] *= scale_ratio
 
         if bboxes is not None and bboxes.size > 0:
             bboxes *= scale_ratio
@@ -818,7 +818,7 @@ class RandomFocusCrop(object):
         img = ImageOps.expand(img,
                               border=(-offset_left, -offset_up,
                                       self.size[0] + offset_left - w, self.size[1] + offset_up - h),
-                              fill=self.mean)
+                              fill=tuple(self.mean))
         img = img.crop((0, 0, self.size[0], self.size[1]))
 
         if maskmap is not None:
@@ -1118,7 +1118,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('trans_params', 'random_resize')['method'],
                         scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
-                        input_size=self.configer.get('data', 'train_input_size'),
+                        target_size=self.configer.get('trans_params', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('train_trans', 'resize_ratio')
                     )
 
@@ -1263,7 +1263,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('trans_params', 'random_resize')['method'],
                         scale_range=self.configer.get('trans_params', 'random_resize')['scale_range'],
-                        input_size=self.configer.get('data', 'val_input_size'),
+                        target_size=self.configer.get('trans_params', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('val_trans', 'resize_ratio')
                     )
 
