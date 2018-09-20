@@ -108,7 +108,7 @@
       "save_iters": 5000
     },
     "network":{
-      "backbone": "vgg16_bn",
+      "backbone": "vgg16",
       "model_name": "vgg300_ssd",
       "num_feature_list": [512, 1024, 512, 256, 256, 256],
       "stride_list": [8, 16, 30, 60, 100, 300],
