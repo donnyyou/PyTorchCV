@@ -23,7 +23,7 @@ class HeatmapGenerator(object):
         width, height = input_size
         width = self.configer.get('data', 'input_size')[0]
         stride = self.configer.get('network', 'stride')
-        num_keypoints = self.configer.get('data', 'num_keypoints')
+        num_keypoints = self.configer.get('data', 'num_kpts')
         sigma = self.configer.get('heatmap', 'sigma')
         method = self.configer.get('heatmap', 'method')
         batch_size = len(gt_kpts)

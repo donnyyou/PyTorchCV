@@ -77,7 +77,7 @@ class OPDataLoader(data.Dataset):
         bboxes = list()
 
         for object in json_dict['objects']:
-            kpts.append(object['keypoints'])
+            kpts.append(object['kpts'])
             if 'bbox' in object:
                 bboxes.append(object['bbox'])
 

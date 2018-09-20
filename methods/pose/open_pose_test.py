@@ -113,18 +113,18 @@ class OpenPoseTest(object):
                 continue
 
             object_dict = dict()
-            object_dict['keypoints'] = np.zeros((self.configer.get('data', 'num_keypoints'), 3)).tolist()
-            for j in range(self.configer.get('data', 'num_keypoints')):
+            object_dict['kpts'] = np.zeros((self.configer.get('data', 'num_kpts'), 3)).tolist()
+            for j in range(self.configer.get('data', 'num_kpts')):
                 index = subset[n][j]
                 if index == -1:
-                    object_dict['keypoints'][j][0] = -1
-                    object_dict['keypoints'][j][1] = -1
-                    object_dict['keypoints'][j][2] = -1
+                    object_dict['kpts'][j][0] = -1
+                    object_dict['kpts'][j][1] = -1
+                    object_dict['kpts'][j][2] = -1
 
                 else:
-                    object_dict['keypoints'][j][0] = candidate[index.astype(int)][0]
-                    object_dict['keypoints'][j][1] = candidate[index.astype(int)][1]
-                    object_dict['keypoints'][j][2] = 1
+                    object_dict['kpts'][j][0] = candidate[index.astype(int)][0]
+                    object_dict['kpts'][j][1] = candidate[index.astype(int)][1]
+                    object_dict['kpts'][j][2] = 1
 
             object_dict['score'] = subset[n][-2]
             object_list.append(object_dict)
@@ -136,7 +136,7 @@ class OpenPoseTest(object):
         all_peaks = []
         peak_counter = 0
 
-        for part in range(self.configer.get('data', 'num_keypoints')):
+        for part in range(self.configer.get('data', 'num_kpts')):
             map_ori = heatmap_avg[:, :, part]
             map_gau = gaussian_filter(map_ori, sigma=3)
 
@@ -237,7 +237,7 @@ class OpenPoseTest(object):
     def __get_subsets(self, connection_all, special_k, all_peaks):
         # last number in each row is the total parts number of that person
         # the second last number in each row is the score of the overall configuration
-        subset = -1 * np.ones((0, self.configer.get('data', 'num_keypoints') + 2))
+        subset = -1 * np.ones((0, self.configer.get('data', 'num_kpts') + 2))
         candidate = np.array([item for sublist in all_peaks for item in sublist])
 
         for k in self.configer.get('details', 'mini_tree'):
@@ -275,7 +275,7 @@ class OpenPoseTest(object):
 
                     # if find no partA in the subset, create a new subset
                     elif not found:
-                        row = -1 * np.ones(self.configer.get('data', 'num_keypoints') + 2)
+                        row = -1 * np.ones(self.configer.get('data', 'num_kpts') + 2)
                         row[indexA] = partAs[i]
                         row[indexB] = partBs[i]
                         row[-1] = 2

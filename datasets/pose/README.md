@@ -19,7 +19,7 @@ The json format for Pose Estimation below. visible=-1, invisible & unlabeled; vi
     "objects": [
         {
             "bbox": [x_left_up, y_left_up, x_right_bottom, y_right_bottom],
-            "keypoints": [
+            "kpts": [
                 [x, y, visible],
                  ...
              ]

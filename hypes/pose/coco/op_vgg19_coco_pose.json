@@ -3,8 +3,8 @@
     "task": "pose",
     "method": "open_pose",
     "data": {
-      "num_keypoints": 18,
-      "data_dir": "~/DataSet/COCO_MASK",
+      "num_kpts": 18,
+      "data_dir": "~/DataSet/COCO_KPTS",
       "image_tool": "pil",
       "input_mode": "RGB",
       "workers": 8
