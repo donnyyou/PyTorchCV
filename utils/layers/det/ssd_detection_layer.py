@@ -34,6 +34,14 @@ class SSDDetectionLayer(nn.Module):
                 nn.Conv2d(self.num_features[i], self.num_anchors[i] * self.num_classes, kernel_size=3, padding=1)
             )
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight.data)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
     def forward(self, feat_list):
         y_locs = []
         y_confs = []
