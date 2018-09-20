@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import collections
 import random
-
+import math
 import cv2
 import matplotlib
 import numpy as np
@@ -858,6 +858,7 @@ class RandomDetCrop(object):
             # sample a patch s.t. MIN jaccard w/ obj in .1,.3,.4,.7,.9
             (0.1, None),
             (0.3, None),
+            (0.5, None),
             (0.7, None),
             (0.9, None),
             # randomly sample a patch
@@ -888,7 +889,7 @@ class RandomDetCrop(object):
                   (box_a[:, 3] - box_a[:, 1]))  # [A,B]
         area_b = ((box_b[2] - box_b[0]) *
                   (box_b[3] - box_b[1]))  # [A,B]
-        union = area_a  # + area_b - inter
+        union = area_a + area_b - inter
         return inter / union  # [A,B]
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
@@ -914,19 +915,25 @@ class RandomDetCrop(object):
 
             # max trails (50)
             for _ in range(50):
-
-                w = random.randint(int(0.3 * width), width)
-                h = random.randint(int(0.3 * height), height)
-
-                # aspect ratio constraint b/t .5 & 2
-                if h / w < 0.5 or h / w > 2:
-                    continue
+                scale = random.uniform(0.3, 1.)
+                min_ratio = max(0.5, scale * scale)
+                max_ratio = min(2.0, 1. / scale / scale)
+                ratio = math.sqrt(random.uniform(min_ratio, max_ratio))
+                w = int(scale * ratio * width)
+                h = int((scale / ratio) * height)
 
                 left = random.randint(0, width - w)
                 top = random.randint(0, height - h)
 
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left+w), int(top+h)])
+
+                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
+                overlap = self.jaccard_numpy(bboxes, rect)
+
+                # is min and max overlap constraint satisfied? if not try again
+                if overlap.min() < min_iou or max_iou < overlap.max():
+                    continue
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
@@ -947,13 +954,6 @@ class RandomDetCrop(object):
                 # take only matching gt boxes
                 current_boxes = bboxes[mask, :].copy()
 
-                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
-                overlap = self.jaccard_numpy(bboxes, rect)
-
-                # is min and max overlap constraint satisfied? if not try again
-                if overlap.min() < min_iou or max_iou < overlap.max():
-                    continue
-
                 # cut the crop from the image
                 current_img = img.crop((left, top, left + w, top + h))
 
@@ -970,20 +970,6 @@ class RandomDetCrop(object):
                                                   rect[2:])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
-
-                pad_width = int((width - w) * random.uniform(0.5, 1.5))
-                pad_height = int((height - h) * random.uniform(0.5, 1.5))
-
-                left_pad = random.randint(0, pad_width)  # pad_left
-                up_pad = random.randint(0, pad_height)  # pad_up
-                right_pad = pad_width - left_pad  # pad_right
-                down_pad = pad_height - up_pad  # pad_down
-
-                current_img = ImageOps.expand(current_img, (left_pad, up_pad, right_pad, down_pad), fill=tuple(self.mean))
-
-                if current_boxes is not None and current_boxes.size > 0:
-                    current_boxes[:, 0::2] += left_pad
-                    current_boxes[:, 1::2] += up_pad
 
                 return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, polygons
 

@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import collections
 import random
-
+import math
 import cv2
 import numpy as np
 
@@ -813,6 +813,7 @@ class RandomDetCrop(object):
             # sample a patch s.t. MIN jaccard w/ obj in .1,.3,.4,.7,.9
             (0.1, None),
             (0.3, None),
+            (0.5, None),
             (0.7, None),
             (0.9, None),
             # randomly sample a patch
@@ -869,19 +870,25 @@ class RandomDetCrop(object):
 
             # max trails (50)
             for _ in range(50):
-
-                w = random.randint(int(0.3 * width), width)
-                h = random.randint(int(0.3 * height), height)
-
-                # aspect ratio constraint b/t .5 & 2
-                if h / w < 0.5 or h / w > 2:
-                    continue
+                scale = random.uniform(0.3, 1.)
+                min_ratio = max(0.5, scale * scale)
+                max_ratio = min(2.0, 1. / scale / scale)
+                ratio = math.sqrt(random.uniform(min_ratio, max_ratio))
+                w = int(scale * ratio * width)
+                h = int((scale / ratio) * height)
 
                 left = random.randint(0, width - w)
                 top = random.randint(0, height - h)
 
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left + w), int(top + h)])
+
+                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
+                overlap = self.jaccard_numpy(bboxes, rect)
+
+                # is min and max overlap constraint satisfied? if not try again
+                if overlap.min() < min_iou or max_iou < overlap.max():
+                    continue
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
@@ -902,12 +909,6 @@ class RandomDetCrop(object):
                 # take only matching gt boxes
                 current_boxes = bboxes[mask, :].copy()
 
-                # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
-                overlap = self.jaccard_numpy(current_boxes, rect)
-
-                # is min and max overlap constraint satisfied? if not try again
-                if overlap.min() < min_iou or max_iou < overlap.max():
-                    continue
 
                 # cut the crop from the image
                 current_img = img[rect[1]:rect[3], rect[0]:rect[2], :]
@@ -1275,7 +1276,16 @@ class CV2AugCompose(object):
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         if self.split == 'train':
-            for trans_key in self.configer.get('train_trans', 'trans_seq'):
+            shuffle_trans_seq = []
+            if not self.configer.is_empty('train_trans', 'shuffle_trans_seq'):
+                if isinstance(self.configer.get('train_trans', 'shuffle_trans_seq')[0], list):
+                    shuffle_trans_seq_list = self.configer.get('train_trans', 'shuffle_trans_seq')
+                    shuffle_trans_seq = shuffle_trans_seq_list[random.randint(0, len(shuffle_trans_seq_list))]
+                else:
+                    shuffle_trans_seq = self.configer.get('train_trans', 'shuffle_trans_seq')
+                    random.shuffle(shuffle_trans_seq)
+
+            for trans_key in (shuffle_trans_seq + self.configer.get('train_trans', 'trans_seq')):
                 (img, labelmap, maskmap, kpts,
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
                                                                            kpts, bboxes, labels, polygons)

@@ -6,7 +6,7 @@
       "num_classes": 21,
       "data_dir": "~/DataSet/VOC07+12_DET",
       "image_tool": "cv2",
-      "input_mode": "RGB",
+      "input_mode": "BGR",
       "keep_difficult": false,
       "workers": 8
     },
@@ -41,8 +41,8 @@
       "blur_ratio": 0.5,
       "flip_ratio": 0.5,
       "crop_ratio": 1.0,
-      "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_perm", "random_hflip", "random_pad", "random_crop"]
+      "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"]
     },
     "val_trans": {
       "trans_seq": []
@@ -78,8 +78,8 @@
       },
       "normalize": {
         "div_value": 1,
-        "mean_value": [123, 117, 104],
-        "mean": [123, 117, 104],
+        "mean_value": [104, 117, 123],
+        "mean": [104.0, 117.0, 123.0],
         "std": [1.0, 1.0, 1.0]
       }
     },
@@ -155,6 +155,6 @@
       "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.05
+      "conf_threshold": 0.01
     }
 }
