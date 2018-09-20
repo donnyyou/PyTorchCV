@@ -26,22 +26,27 @@
     "test": {
     },
     "train_trans": {
-      "flip_ratio": 0.5,
-      "resize_ratio": 1.0,
-      "trans_seq": ["random_hflip", "random_resize"]
-    },
-    "val_trans": {
-      "resize_ratio": 1.0,
-      "trans_seq": ["random_resize"]
-    },
-    "trans_params": {
+      "trans_seq": ["random_hflip", "random_resize"],
       "random_hflip": {
+        "ratio": 0.5,
         "swap_pair": []
       },
       "random_resize": {
+        "ratio": 1.0,
         "method": "bound",
         "resize_bound": [600, 1000]
-      },
+      }
+    },
+    "val_trans": {
+      "trans_seq": ["random_resize"],
+      "random_resize": {
+        "ratio": 1.0,
+        "method": "bound",
+        "resize_bound": [600, 1000]
+      }
+    },
+    "trans_params": {
+
       "normalize": {
         "div_value": 1.0,
         "mean_value": [123, 116, 103],
