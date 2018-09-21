@@ -154,7 +154,8 @@ class FCClassifier(object):
             # Print the log info & reset the states.
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))
             Log.info('TestLoss = {loss.avg:.8f}'.format(loss=self.val_losses))
-            Log.info('Top1 ACC = {acc.avg:.8f}\n'.format(acc=self.cls_running_score.get_top1_acc()))
+            Log.info('Top1 ACC = {}'.format(self.cls_running_score.get_top1_acc()))
+            Log.info('Top5 ACC = {}'.format(self.cls_running_score.get_top5_acc()))
             self.batch_time.reset()
             self.val_losses.reset()
             self.cls_running_score.reset()

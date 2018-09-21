@@ -10,20 +10,19 @@
       "workers": 8
     },
     "train": {
-      "batch_size": 32,
+      "batch_size": 1024,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [224, 224],
-        "align_method": "only_scale"
+        "align_method": "only_pad"
       }
     },
     "val": {
-      "batch_size": 32,
-      "use_07_metric": true,
+      "batch_size": 1024,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [224, 224],
-        "align_method": "only_scale"
+        "align_method": "only_pad"
       }
     },
     "test": {
@@ -65,7 +64,7 @@
     "checkpoints": {
       "checkpoints_name": "fc_shufflenetv2_imagenet_cls",
       "checkpoints_dir": "checkpoints/cls/imagenet",
-      "save_iters": 10000
+      "save_iters": 500
     },
 
     "network":{
@@ -81,27 +80,27 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.00005,
+      "base_lr": 0.5,
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
-        "step_size": 400
+        "step_size": 30
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 1000,
-      "max_epoch": 1000
+      "test_interval": 500,
+      "max_epoch": 250
     },
     "optim": {
-      "optim_method": "adam",
+      "optim_method": "sgd",
       "adam": {
         "betas": [0.9, 0.999],
         "eps": 1e-08,
         "weight_decay": 0.0001
       },
       "sgd":{
-        "weight_decay": 0.0001,
+        "weight_decay": 0.0005,
         "momentum": 0.9
       }
     },

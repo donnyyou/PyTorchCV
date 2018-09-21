@@ -167,6 +167,12 @@ class ShuffleNetV2(nn.Module):
         self.classifier = nn.Sequential(nn.Linear(self.stage_out_channels[-1],
                                                   self.configer.get('data', 'num_classes')))
 
+        for name, m in self.named_modules():
+            if any(map(lambda x: isinstance(m, x), [nn.Linear, nn.Conv1d, nn.Conv2d])):
+                nn.init.kaiming_uniform_(m.weight, mode='fan_in')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.maxpool(x)
