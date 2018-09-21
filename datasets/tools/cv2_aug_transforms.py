@@ -935,19 +935,31 @@ class Resize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, target_size=None):
+    def __init__(self, target_size=None, min_side_length=None, max_side_length=None):
         self.target_size = target_size
+        self.min_side_length = min_side_length
+        self.max_side_length = max_side_length
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, np.ndarray)
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
-        height, width, channels = img.shape
-        target_width, target_height = self.target_size
+        width, height = img.size
+        if self.target_size is not None:
+            target_size = self.target_size
+            w_scale_ratio = self.target_size[0] / width
+            h_scale_ratio = self.target_size[1] / height
 
-        w_scale_ratio = target_width / width
-        h_scale_ratio = target_height / height
+        elif self.min_side_length is not None:
+            scale_ratio = self.min_side_length / min(width, height)
+            w_scale_ratio, h_scale_ratio = scale_ratio, scale_ratio
+            target_size = [int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio))]
+
+        else:
+            scale_ratio = self.max_side_length / max(width, height)
+            w_scale_ratio, h_scale_ratio = scale_ratio, scale_ratio
+            target_size = [int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio))]
 
         if kpts is not None and kpts.size > 0:
             kpts[:, :, 0] *= w_scale_ratio
@@ -963,12 +975,12 @@ class Resize(object):
                     polygons[object_id][polygon_id][0::2] *= w_scale_ratio
                     polygons[object_id][polygon_id][1::2] *= h_scale_ratio
 
-        img = cv2.resize(img, self.target_size, interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img, target_size, interpolation=cv2.INTER_CUBIC)
         if labelmap is not None:
-            labelmap = cv2.resize(labelmap, self.target_size, interpolation=cv2.INTER_NEAREST)
+            labelmap = cv2.resize(labelmap, target_size, interpolation=cv2.INTER_NEAREST)
 
         if maskmap is not None:
-            maskmap = cv2.resize(maskmap, self.target_size, interpolation=cv2.INTER_NEAREST)
+            maskmap = cv2.resize(maskmap, target_size, interpolation=cv2.INTER_NEAREST)
 
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
@@ -1130,6 +1142,20 @@ class CV2AugCompose(object):
                     mean=self.configer.get('normalize', 'mean_value')
                 )
 
+            if 'resize' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
+                if 'target_size' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        target_size=self.configer.get('train_trans', 'resize')['target_size']
+                    )
+                if 'min_side_length' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        min_side_length=self.configer.get('train_trans', 'resize')['min_side_length']
+                    )
+                if 'max_side_length' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        max_side_length=self.configer.get('train_trans', 'resize')['max_side_length']
+                    )
+
         else:
             if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_saturation'] = RandomSaturation(
@@ -1259,6 +1285,20 @@ class CV2AugCompose(object):
                     rotate_ratio=self.configer.get('val_trans', 'random_rotate')['ratio'],
                     mean=self.configer.get('normalize', 'mean_value')
                 )
+
+            if 'resize' in self.configer.get('val_trans', 'trans_seq'):
+                if 'target_size' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        target_size=self.configer.get('val_trans', 'resize')['target_size']
+                    )
+                if 'min_side_length' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        min_side_length=self.configer.get('val_trans', 'resize')['min_side_length']
+                    )
+                if 'max_side_length' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        max_side_length=self.configer.get('val_trans', 'resize')['max_side_length']
+                    )
 
     def __check_none(self, key_list, value_list):
         for key, value in zip(key_list, value_list):

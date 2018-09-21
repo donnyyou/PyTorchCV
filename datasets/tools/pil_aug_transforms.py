@@ -1273,6 +1273,20 @@ class PILAugCompose(object):
                     mean=self.configer.get('normalize', 'mean_value')
                 )
 
+            if 'resize' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
+                if 'target_size' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        target_size=self.configer.get('train_trans', 'resize')['target_size']
+                    )
+                if 'min_side_length' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        min_side_length=self.configer.get('train_trans', 'resize')['min_side_length']
+                    )
+                if 'max_side_length' in self.configer.get('train_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        max_side_length=self.configer.get('train_trans', 'resize')['max_side_length']
+                    )
+
         else:
             if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
                 self.transforms['random_saturation'] = RandomSaturation(
@@ -1416,6 +1430,20 @@ class PILAugCompose(object):
                     rotate_ratio=self.configer.get('val_trans', 'random_rotate')['ratio'],
                     mean=self.configer.get('normalize', 'mean_value')
                 )
+
+            if 'resize' in self.configer.get('val_trans', 'trans_seq'):
+                if 'target_size' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        target_size=self.configer.get('val_trans', 'resize')['target_size']
+                    )
+                if 'min_side_length' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        min_side_length=self.configer.get('val_trans', 'resize')['min_side_length']
+                    )
+                if 'max_side_length' in self.configer.get('val_trans', 'resize'):
+                    self.transforms['resize'] = Resize(
+                        max_side_length=self.configer.get('val_trans', 'resize')['max_side_length']
+                    )
 
     def __check_none(self, key_list, value_list):
         for key, value in zip(key_list, value_list):
