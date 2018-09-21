@@ -43,9 +43,9 @@ class DetDataLoader(object):
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),
-            trans.Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                            mean=self.configer.get('trans_params', 'normalize')['mean'],
-                            std=self.configer.get('trans_params', 'normalize')['std']), ])
+            trans.Normalize(div_value=self.configer.get('normalize', 'div_value'),
+                            mean=self.configer.get('normalize', 'mean'),
+                            std=self.configer.get('normalize', 'std')), ])
 
     def get_trainloader(self):
         if self.configer.get('method') == 'single_shot_detector':

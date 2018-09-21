@@ -71,8 +71,9 @@ class SegVisualizer(object):
 
                 ori_img = ori_img_in.clone()
                 for i in range(ori_img_in.size(0)):
-                    ori_img[i] = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                             std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+                    ori_img[i] = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                             mean=self.configer.get('normalize', 'mean'),
+                                             std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
 
                 ori_img = ori_img.numpy().transpose(2, 3, 1).astype(np.uint8)
 
@@ -153,8 +154,9 @@ class SegVisualizer(object):
 
                 ori_img = ori_img_in.clone()
                 for i in range(ori_img_in.size(0)):
-                    ori_img[i] = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                             std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+                    ori_img[i] = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                             mean=self.configer.get('normalize', 'mean'),
+                                             std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
 
                 ori_img = ori_img.numpy().transpose(2, 3, 1).astype(np.uint8)
 

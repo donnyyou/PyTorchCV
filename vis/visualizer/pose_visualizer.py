@@ -68,9 +68,9 @@ class PoseVisualizer(object):
             heatmap = heatmap_in.copy()
 
         if not isinstance(ori_img_in, np.ndarray):
-            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
-                                  std=self.configer.get('trans_params', 'normalize')['std'])(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
         else:
@@ -106,9 +106,9 @@ class PoseVisualizer(object):
                 Log.error('Image size is not valid.')
                 exit(1)
 
-            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
-                                  std=self.configer.get('trans_params', 'normalize')['std'])(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
         else:
             ori_img = ori_img_in.copy()

@@ -45,8 +45,9 @@ class TensorVisualizer(object):
                 Log.error('Image size is not valid.')
                 exit(1)
 
-            image = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                std=self.configer.get('trans_params', 'std'))(image_in.clone())
+            image = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                mean=self.configer.get('normalize', 'mean'),
+                                std=self.configer.get('normalize', 'std'))(image_in.clone())
             image = image.data.cpu().numpy().transpose(1, 2, 0)
         else:
             image = image_in.copy()

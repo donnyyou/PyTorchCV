@@ -43,27 +43,40 @@ class RandomPad(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         height, width, channels = img.shape
-        expand_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
-        pad_ratio = expand_ratio - 1.0
-        pad_width = int(pad_ratio * width)
-        pad_height = int(pad_ratio * height)
+        ws = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+        hs = ws
+        for _ in range(50):
+            scale = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+            min_ratio = max(0.5, 1. / scale / scale)
+            max_ratio = min(2, scale * scale)
+            ratio = math.sqrt(random.uniform(min_ratio, max_ratio))
+            ws = scale * ratio
+            hs = scale / ratio
+            if ws >= 1 and hs >= 1:
+                break
+
+        w = int(ws * width)
+        h = int(hs * height)
+
+        pad_width = random.randint(0, w - width)
+        pad_height = random.randint(0, h - height)
 
         left_pad = random.randint(0, pad_width)  # pad_left
         up_pad = random.randint(0, pad_height)  # pad_up
 
-        expand_image = np.zeros((int(height * expand_ratio), int(width * expand_ratio), channels), dtype=img.dtype)
+        expand_image = np.zeros((h, w, channels), dtype=img.dtype)
         expand_image[:, :, :] = self.mean
         expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = img
         img = expand_image
 
         if labelmap is not None:
-            expand_labelmap = np.zeros((int(height * expand_ratio), int(width * expand_ratio)), dtype=labelmap.dtype)
+            expand_labelmap = np.zeros((h, w), dtype=labelmap.dtype)
             expand_labelmap[:, :] = 255
             expand_labelmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = labelmap
             labelmap = expand_labelmap
 
         if maskmap is not None:
-            expand_maskmap = np.zeros((int(height * expand_ratio), int(width * expand_ratio)), dtype=maskmap.dtype)
+            expand_maskmap = np.zeros((h, w), dtype=maskmap.dtype)
             expand_maskmap[:, :] = 1
             expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = maskmap
             maskmap = expand_maskmap
@@ -324,7 +337,7 @@ class RandomResizedCrop(object):
     """
 
     def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=cv2.INTER_CUBIC):
-        self.size = size
+        self.size = tuple(size)
         self.interpolation = interpolation
         self.scale = scale
         self.ratio = ratio
@@ -354,7 +367,7 @@ class RandomResizedCrop(object):
             if random.random() < 0.5:
                 w, h = h, w
 
-            if w <= img.size[0] and h <= img.size[1]:
+            if w <= width and h <= height:
                 i = random.randint(0, height - h)
                 j = random.randint(0, width - w)
                 return i, j, h, w
@@ -1017,7 +1030,7 @@ class Resize(object):
         assert labelmap is None or isinstance(labelmap, np.ndarray)
         assert maskmap is None or isinstance(maskmap, np.ndarray)
 
-        width, height = img.size
+        height, width, _ = img.shape
         if self.target_size is not None:
             target_size = self.target_size
             w_scale_ratio = self.target_size[0] / width

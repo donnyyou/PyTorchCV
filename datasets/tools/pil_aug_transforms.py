@@ -44,10 +44,23 @@ class RandomPad(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         width, height = img.size
-        expand_ratio = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
-        pad_ratio = expand_ratio - 1.0
-        pad_width = int(pad_ratio * width)
-        pad_height = int(pad_ratio * height)
+        ws = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+        hs = ws
+        for _ in range(50):
+            scale = random.uniform(self.up_scale_range[0], self.up_scale_range[1])
+            min_ratio = max(0.5, 1. / scale / scale)
+            max_ratio = min(2, scale * scale)
+            ratio = math.sqrt(random.uniform(min_ratio, max_ratio))
+            ws = scale * ratio
+            hs = scale / ratio
+            if ws >= 1 and hs >= 1:
+                break
+
+        w = int(ws * width)
+        h = int(hs * height)
+
+        pad_width = random.randint(0, w - width)
+        pad_height = random.randint(0, h - height)
 
         left_pad = random.randint(0, pad_width)  # pad_left
         up_pad = random.randint(0, pad_height)  # pad_up
