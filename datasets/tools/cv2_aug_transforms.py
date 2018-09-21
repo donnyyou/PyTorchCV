@@ -308,6 +308,78 @@ class RandomBrightness(object):
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
+class RandomResizedCrop(object):
+    """Crop the given PIL Image to random size and aspect ratio.
+
+    A crop of random size (default: of 0.08 to 1.0) of the original size and a random
+    aspect ratio (default: of 3/4 to 4/3) of the original aspect ratio is made. This crop
+    is finally resized to given size.
+    This is popularly used to train the Inception networks.
+
+    Args:
+        size: expected output size of each edge
+        scale: range of size of the origin size cropped
+        ratio: range of aspect ratio of the origin aspect ratio cropped
+        interpolation: Default: PIL.Image.BILINEAR
+    """
+
+    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=cv2.INTER_CUBIC):
+        self.size = size
+        self.interpolation = interpolation
+        self.scale = scale
+        self.ratio = ratio
+
+    @staticmethod
+    def get_params(img, scale, ratio):
+        """Get parameters for ``crop`` for a random sized crop.
+
+        Args:
+            img (PIL Image): Image to be cropped.
+            scale (tuple): range of size of the origin size cropped
+            ratio (tuple): range of aspect ratio of the origin aspect ratio cropped
+
+        Returns:
+            tuple: params (i, j, h, w) to be passed to ``crop`` for a random
+                sized crop.
+        """
+        height, width, _ = img.shape
+        for attempt in range(10):
+            area = width * height
+            target_area = random.uniform(*scale) * area
+            aspect_ratio = random.uniform(*ratio)
+
+            w = int(round(math.sqrt(target_area * aspect_ratio)))
+            h = int(round(math.sqrt(target_area / aspect_ratio)))
+
+            if random.random() < 0.5:
+                w, h = h, w
+
+            if w <= img.size[0] and h <= img.size[1]:
+                i = random.randint(0, height - h)
+                j = random.randint(0, width - w)
+                return i, j, h, w
+
+        # Fallback
+        w = min(height, width)
+        i = (height - w) // 2
+        j = (width - w) // 2
+        return i, j, w, w
+
+    def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
+        """
+        Args:
+            img (Numpy Image): Image to be cropped and resized.
+
+        Returns:
+            Numpy Image: Randomly cropped and resized image.
+        """
+        assert labelmap is None and maskmap is None and kpts is None and bboxes is None and labels is None
+        i, j, h, w = self.get_params(img, self.scale, self.ratio)
+        img = img[i:i+h, j:j+w]
+        img = cv2.resize(img, self.size, interpolation=self.interpolation)
+        return img, labelmap, maskmap, kpts, bboxes, labels, polygons
+
+
 class RandomResize(object):
     """Resize the given numpy.ndarray to random size and aspect ratio.
 
@@ -1134,6 +1206,11 @@ class CV2AugCompose(object):
                 else:
                     Log.error('Not Support Crop Method!')
                     exit(1)
+
+            if 'random_resized_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
+                self.transforms['random_resized_crop'] = RandomResizedCrop(
+                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size']
+                )
 
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_rotate'] = RandomRotate(
