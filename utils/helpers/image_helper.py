@@ -52,20 +52,20 @@ class ImageHelper(object):
         with open(image_path, 'rb') as f:
             img = Image.open(f)
 
-        if mode == 'RGB':
-            return img.convert('RGB')
+            if mode == 'RGB':
+                return img.convert('RGB')
 
-        elif mode == 'BGR':
-            img = img.convert('RGB')
-            cv_img = ImageHelper.rgb2bgr(np.array(img))
-            return Image.fromarray(cv_img)
+            elif mode == 'BGR':
+                img = img.convert('RGB')
+                cv_img = ImageHelper.rgb2bgr(np.array(img))
+                return Image.fromarray(cv_img)
 
-        elif mode == 'P':
-            return img.convert('P')
+            elif mode == 'P':
+                return img.convert('P')
 
-        else:
-            Log.error('Not support mode {}'.format(mode))
-            exit(1)
+            else:
+                Log.error('Not support mode {}'.format(mode))
+                exit(1)
 
     @staticmethod
     def rgb2bgr(img_rgb):
