@@ -15,20 +15,29 @@ DETECTOR_CONFIG = {
     'num_centrals': [256, 128, 128, 128],
     'num_strides': [2, 2, 1, 1],
     'num_padding': [1, 1, 0, 0],
-    'vgg_cfg': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512],
+    'vgg_cfg': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512],
 }
 
 
 class Vgg300SSD(nn.Module):
     def __init__(self, configer):
         super(Vgg300SSD, self).__init__()
-        self.vgg_features = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg'])
+        self.vgg_features = nn.ModuleList(BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg']))
         self.ssd_head = SSDHead(configer)
 
     def forward(self, x):
-        x = self.vgg_features(x)
-        out = self.ssd_head(x)
-        return out
+        out = []
+        for k in range(23):
+            x = self.vgg_features[k](x)
+
+        x = self.L2Norm(x)
+        out.append(x)
+
+        for k in range(23, len(self.vgg_features)):
+            x = self.base[k](x)
+
+        out_head = self.ssd_head(x)
+        return out + out_head
 
 
 class SSDHead(nn.Module):
@@ -41,15 +50,9 @@ class SSDHead(nn.Module):
         self.num_centrals = DETECTOR_CONFIG['num_centrals']
         self.num_paddings = DETECTOR_CONFIG['num_padding']
         self.num_strides = DETECTOR_CONFIG['num_strides']
-        self.norm4 = L2Norm2d(20)
 
         self.feature1 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
             nn.Conv2d(512, self.num_features[1], kernel_size=3, padding=6, dilation=6),
             nn.ReLU(),
             nn.Conv2d(self.num_features[1], self.num_features[1], kernel_size=1),
@@ -95,9 +98,6 @@ class SSDHead(nn.Module):
 
     def forward(self, feature):
         det_feature = list()
-
-        det_feature.append(self.norm4(feature))
-        feature = F.max_pool2d(feature, kernel_size=2, stride=2, ceil_mode=True)
 
         feature = self.feature1(feature)
         det_feature.append(feature)
