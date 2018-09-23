@@ -22,22 +22,39 @@ DETECTOR_CONFIG = {
 class Vgg300SSD(nn.Module):
     def __init__(self, configer):
         super(Vgg300SSD, self).__init__()
-        self.vgg_features = nn.ModuleList(BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg']))
+        self.vgg_features = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg']).named_modules()
+        cnt = 0
+        self.sub_vgg1_list = nn.ModuleList()
+        self.sub_vgg2_list = nn.ModuleList()
+        for key, module in self.vgg_features:
+            if len(key.split('.')) < 2:
+                continue
+
+            if cnt < 23:
+                self.sub_vgg1_list.append(module)
+            else:
+                self.sub_vgg2_list.append(module)
+
+            cnt += 1
+
+        self.norm4 = L2Norm2d(20)
         self.ssd_head = SSDHead(configer)
+        self.ssd_detection_layer = SSDDetectionLayer(configer)
 
     def forward(self, x):
         out = []
-        for k in range(23):
-            x = self.vgg_features[k](x)
+        for module in self.sub_vgg1_list:
+            x = module(x)
 
-        x = self.L2Norm(x)
-        out.append(x)
-
-        for k in range(23, len(self.vgg_features)):
-            x = self.base[k](x)
+        out.append(self.norm4(x))
+        for module in self.sub_vgg2_list:
+            x = module(x)
 
         out_head = self.ssd_head(x)
-        return out + out_head
+        final_out = out + out_head
+        loc_preds, conf_preds = self.ssd_detection_layer(final_out)
+
+        return final_out, loc_preds, conf_preds
 
 
 class SSDHead(nn.Module):
@@ -76,7 +93,6 @@ class SSDHead(nn.Module):
                                            num_c=self.num_centrals[3], stride=self.num_strides[3],
                                            pad=self.num_paddings[3])
 
-        self.ssd_detection_layer = SSDDetectionLayer(configer)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -114,10 +130,7 @@ class SSDHead(nn.Module):
         feature = self.feature5(feature)
         det_feature.append(feature)
 
-        loc_preds, conf_preds = self.ssd_detection_layer(det_feature)
-
-        return det_feature, loc_preds, conf_preds
-
+        return det_feature
 
 class L2Norm2d(nn.Module):
     """L2Norm layer across all channels."""
