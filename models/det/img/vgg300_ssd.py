@@ -4,8 +4,9 @@
 # VGG300 SSD model
 
 
-import torch.nn.functional as F
+import torch
 from torch import nn
+import torch.nn.init as init
 
 from utils.layers.det.ssd_detection_layer import SSDDetectionLayer
 from models.backbones.backbone_selector import BackboneSelector
@@ -37,7 +38,7 @@ class Vgg300SSD(nn.Module):
 
             cnt += 1
 
-        self.norm4 = L2Norm2d(20)
+        self.norm4 = L2Norm(512, 20)
         self.ssd_head = SSDHead(configer)
         self.ssd_detection_layer = SSDDetectionLayer(configer)
 
@@ -96,7 +97,7 @@ class SSDHead(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.xavier_uniform_(m.weight.data)
+                nn.init.kaiming_normal_(m.weight.data, mode='fan_out')
                 m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
@@ -132,18 +133,23 @@ class SSDHead(nn.Module):
 
         return det_feature
 
-class L2Norm2d(nn.Module):
-    """L2Norm layer across all channels."""
 
-    def __init__(self, scale):
-        super(L2Norm2d, self).__init__()
-        self.scale = scale
+class L2Norm(nn.Module):
+    def __init__(self,n_channels, scale):
+        super(L2Norm,self).__init__()
+        self.n_channels = n_channels
+        self.gamma = scale or None
+        self.eps = 1e-10
+        self.weight = nn.Parameter(torch.Tensor(self.n_channels))
+        self.reset_parameters()
 
-    def forward(self, x, dim=1):
-        """out = scale * x / sqrt(\sum x_i^2)"""
+    def reset_parameters(self):
+        init.constant(self.weight,self.gamma)
 
-        _sum = x.pow(2).sum(dim).clamp(min=1e-12).rsqrt()
-        out = self.scale * x * _sum.unsqueeze(1).expand_as(x)
+    def forward(self, x):
+        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt()+self.eps
+        x /= norm
+        out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
         return out
 
 
