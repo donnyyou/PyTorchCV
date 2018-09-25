@@ -62,7 +62,7 @@ def vgg_backbone(configer):
             Log.info('Loading pretrained model:{}'.format(configer.get('network', 'pretrained_model')))
             pretrained_dict = torch.load(configer.get('network', 'pretrained_model'))
 
-        Log.info('Pretrained Keys: {}'.format(pretrained_dict))
+        Log.info('Pretrained Keys: {}'.format(pretrained_dict.keys()))
         model_dict = model.state_dict()
         load_dict = dict()
         for k, v in pretrained_dict.items():
@@ -76,6 +76,8 @@ def vgg_backbone(configer):
         Log.info('Matched Keys: {}'.format(load_dict.keys()))
         model_dict.update(load_dict)
         model.load_state_dict(model_dict)
+
+    return model
 
 
 class Vgg300SSD(nn.Module):
