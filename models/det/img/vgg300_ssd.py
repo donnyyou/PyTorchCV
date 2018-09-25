@@ -51,7 +51,7 @@ class VGGModel(nn.Module):
         conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
         layers += [pool5, conv6,
                    nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
-        return layers
+        return nn.Sequential(*layers)
 
 
 def vgg_backbone(configer):
@@ -64,6 +64,7 @@ def vgg_backbone(configer):
 
         Log.info('Pretrained Keys: {}'.format(pretrained_dict.keys()))
         model_dict = model.state_dict()
+        Log.info('Model Keys: {}'.format(model_dict.keys()))
         load_dict = dict()
         for k, v in pretrained_dict.items():
             new_key = k
@@ -114,6 +115,7 @@ class Vgg300SSD(nn.Module):
         out.append(x)
         out_head = self.ssd_head(x)
         final_out = out + out_head
+
         loc_preds, conf_preds = self.ssd_detection_layer(final_out)
 
         return final_out, loc_preds, conf_preds

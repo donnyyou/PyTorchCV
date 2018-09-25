@@ -4,25 +4,87 @@
 # VGG300 SSD model
 
 
-import torch.nn.functional as F
+import torch
 from torch import nn
+import torch.nn.init as init
 
 from utils.layers.det.ssd_detection_layer import SSDDetectionLayer
-from models.backbones.backbone_selector import BackboneSelector
+from utils.tools.logger import Logger as Log
 
 
 DETECTOR_CONFIG = {
     'num_centrals': [256, 128, 128, 128, 128],
-    'num_strides': [2, 2, 2, 2, 2],
-    'num_padding': [1, 1, 1, 1, 1],
+    'num_strides': [2, 2, 2, 2],
+    'num_padding': [1, 1, 1, 1],
     'vgg_cfg': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512],
 }
+
+
+class VGGModel(nn.Module):
+    def __init__(self, cfg, batch_norm=False):
+        super(VGGModel, self).__init__()
+        self.features = VGGModel.vgg(cfg=cfg, batch_norm=batch_norm)
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+    @staticmethod
+    def vgg(cfg, batch_norm=False):
+        layers = []
+        in_channels = 3
+        for v in cfg:
+            if v == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            elif v == 'C':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
+            else:
+                conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+                if batch_norm:
+                    layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+                else:
+                    layers += [conv2d, nn.ReLU(inplace=True)]
+                in_channels = v
+
+        pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)
+        conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
+        layers += [pool5, conv6,
+                   nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
+        return nn.Sequential(*layers)
+
+
+def vgg_backbone(configer):
+    model = VGGModel(DETECTOR_CONFIG['vgg_cfg'])
+    pretrained_dict = dict()
+    if configer.get('network', 'pretrained_model') is not None:
+        if configer.get('network', 'pretrained_model') is not None:
+            Log.info('Loading pretrained model:{}'.format(configer.get('network', 'pretrained_model')))
+            pretrained_dict = torch.load(configer.get('network', 'pretrained_model'))
+
+        Log.info('Pretrained Keys: {}'.format(pretrained_dict.keys()))
+        model_dict = model.state_dict()
+        Log.info('Model Keys: {}'.format(model_dict.keys()))
+        load_dict = dict()
+        for k, v in pretrained_dict.items():
+            new_key = k
+            if 'features' not in k:
+                new_key = 'features.{}'.format(k)
+
+            if new_key in model_dict:
+                load_dict[new_key] = v
+
+        Log.info('Matched Keys: {}'.format(load_dict.keys()))
+        model_dict.update(load_dict)
+        model.load_state_dict(model_dict)
+
+    return model
 
 
 class Vgg512SSD(nn.Module):
     def __init__(self, configer):
         super(Vgg512SSD, self).__init__()
-        self.vgg_features = BackboneSelector(configer).get_backbone(vgg_cfg=DETECTOR_CONFIG['vgg_cfg']).named_modules()
+        self.vgg_features = vgg_backbone(configer).named_modules()
         cnt = 0
         self.sub_vgg1_list = nn.ModuleList()
         self.sub_vgg2_list = nn.ModuleList()
@@ -37,7 +99,7 @@ class Vgg512SSD(nn.Module):
 
             cnt += 1
 
-        self.norm4 = L2Norm2d(20)
+        self.norm4 = L2Norm(512, 20)
         self.ssd_head = SSDHead(configer)
         self.ssd_detection_layer = SSDDetectionLayer(configer)
 
@@ -50,8 +112,10 @@ class Vgg512SSD(nn.Module):
         for module in self.sub_vgg2_list:
             x = module(x)
 
+        out.append(x)
         out_head = self.ssd_head(x)
         final_out = out + out_head
+
         loc_preds, conf_preds = self.ssd_detection_layer(final_out)
 
         return final_out, loc_preds, conf_preds
@@ -67,12 +131,6 @@ class SSDHead(nn.Module):
         self.num_centrals = DETECTOR_CONFIG['num_centrals']
         self.num_paddings = DETECTOR_CONFIG['num_padding']
         self.num_strides = DETECTOR_CONFIG['num_strides']
-        self.feature1 = nn.Sequential(
-            nn.Conv2d(512, self.num_features[1], kernel_size=3, padding=6, dilation=6),
-            nn.ReLU(),
-            nn.Conv2d(self.num_features[1], self.num_features[1], kernel_size=1),
-            nn.ReLU(),
-        )
 
         # 'num_features': [512, 1024, 512, 256, 256, 256].
         # 'num_centrals': [256, 128, 128, 128],
@@ -90,9 +148,10 @@ class SSDHead(nn.Module):
         self.feature5 = self.__extra_layer(num_in=self.num_features[4], num_out=self.num_features[5],
                                            num_c=self.num_centrals[3], stride=self.num_strides[3],
                                            pad=self.num_paddings[3])
-        self.feature6 = self.__extra_layer(num_in=self.num_features[5], num_out=self.num_features[6],
-                                           num_c=self.num_centrals[4], stride=self.num_strides[4],
-                                           pad=self.num_paddings[4])
+
+        self.feature6 = nn.Sequential(
+            nn.Conv2d(256, 128, kernel_size=1, stride=1),
+            nn.Conv2d(128, 256, kernel_size=4, stride=1, padding=1))
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -114,9 +173,6 @@ class SSDHead(nn.Module):
     def forward(self, feature):
         det_feature = list()
 
-        feature = self.feature1(feature)
-        det_feature.append(feature)
-
         feature = self.feature2(feature)
         det_feature.append(feature)
 
@@ -135,18 +191,22 @@ class SSDHead(nn.Module):
         return det_feature
 
 
-class L2Norm2d(nn.Module):
-    """L2Norm layer across all channels."""
+class L2Norm(nn.Module):
+    def __init__(self,n_channels, scale):
+        super(L2Norm,self).__init__()
+        self.n_channels = n_channels
+        self.gamma = scale or None
+        self.eps = 1e-10
+        self.weight = nn.Parameter(torch.Tensor(self.n_channels))
+        self.reset_parameters()
 
-    def __init__(self, scale):
-        super(L2Norm2d, self).__init__()
-        self.scale = scale
+    def reset_parameters(self):
+        init.constant_(self.weight,self.gamma)
 
-    def forward(self, x, dim=1):
-        """out = scale * x / sqrt(\sum x_i^2)"""
-
-        _sum = x.pow(2).sum(dim).clamp(min=1e-12).rsqrt()
-        out = self.scale * x * _sum.unsqueeze(1).expand_as(x)
+    def forward(self, x):
+        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt()+self.eps
+        x = x / norm
+        out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
         return out
 
 
