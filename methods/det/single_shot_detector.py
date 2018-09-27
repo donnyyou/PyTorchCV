@@ -98,11 +98,11 @@ class SingleShotDetector(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-            self.warm_lr(len(self.train_loader))
-            
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, batch_data in enumerate(self.train_loader):
+            if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
+                self.warm_lr(len(self.train_loader))
+
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
@@ -138,9 +138,6 @@ class SingleShotDetector(object):
 
             # Print the log info & reset the states.
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
-                if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-                    self.warm_lr(len(self.train_loader))
-
                 Log.info('Train Epoch: {0}\tTrain Iteration: {1}\t'
                          'Time {batch_time.sum:.3f}s / {2}iters, ({batch_time.avg:.3f})\t'
                          'Data load {data_time.sum:.3f}s / {2}iters, ({data_time.avg:3f})\n'
