@@ -156,6 +156,8 @@
       "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.01
+      "conf_threshold": 0.01,
+      "max_per_image": 300,
+      "cls_keep_num": 50
     }
 }

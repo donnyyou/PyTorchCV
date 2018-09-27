@@ -77,7 +77,7 @@ class DetHelper(object):
         return torch.LongTensor(keep)
 
     @staticmethod
-    def cls_nms(bboxes, scores=None, labels=None, nms_threshold=0.0, mode='union'):
+    def cls_nms(bboxes, scores=None, labels=None, nms_threshold=0.0, mode='union', cls_keep_num=None):
         unique_labels = labels.cpu().unique()
         bboxes = bboxes.contiguous().view(-1, 4)
         if scores is not None:
@@ -100,6 +100,9 @@ class DetHelper(object):
                 cls_keep = DetHelper.nms(bboxes[cls_index],
                                          nms_threshold=nms_threshold,
                                          mode=mode)
+
+            if cls_keep_num is not None:
+                cls_keep = cls_keep[:cls_keep_num]
 
             cls_keep_list.append(cls_index[cls_keep])
 

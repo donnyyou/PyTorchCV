@@ -134,9 +134,13 @@ class SingleShotDetectorTest(object):
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
                                      nms_threshold=configer.get('nms', 'max_threshold'),
-                                     mode=configer.get('nms', 'mode'))
+                                     mode=configer.get('nms', 'mode'),
+                                     cls_keep_num=configer.get('vis', 'cls_keep_num'))
 
-            output[image_i] = valid_preds[keep]
+            valid_preds = valid_preds[keep]
+            _, order = valid_preds[:, 4].sort(0, descending=True)
+            order = order[:configer.get('vis', 'max_per_image')]
+            output[image_i] = valid_preds[order]
 
         return output
 
