@@ -50,8 +50,10 @@ class OPDataLoader(data.Dataset):
             img, maskmap, kpts = self.aug_transform(img, maskmap=maskmap, kpts=kpts)
 
         width, height = maskmap.size
-        maskmap = ImageHelper.resize(maskmap, (width // self.configer.get('network', 'stride'),
-                                               height // self.configer.get('network', 'stride')), Image.NEAREST)
+        maskmap = ImageHelper.resize(maskmap,
+                                     (width // self.configer.get('network', 'stride'),
+                                      height // self.configer.get('network', 'stride')),
+                                     interpolation='nearest')
 
         maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
         kpts = torch.from_numpy(kpts).float()

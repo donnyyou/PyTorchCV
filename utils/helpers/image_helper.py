@@ -15,8 +15,17 @@ from PIL import Image
 from utils.tools.logger import Logger as Log
 
 
-PIL_INTER = [Image.NEAREST, Image.ANTIALIAS, Image.BILINEAR, Image.CUBIC]
-CV2_INTER = [cv2.INTER_NEAREST, cv2.INTER_LANCZOS4, cv2.INTER_LINEAR, cv2.INTER_CUBIC]
+PIL_INTER_DICT = {
+    'nearest': Image.NEAREST,
+    'linear': Image.BILINEAR,
+    'cubic': Image.CUBIC
+}
+
+CV2_INTER_DICT = {
+    'nearest': cv2.INTER_NEAREST,
+    'linear': cv2.INTER_LINEAR,
+    'cubic': cv2.INTER_CUBIC
+}
 
 
 class ImageHelper(object):
@@ -133,14 +142,14 @@ class ImageHelper(object):
     @staticmethod
     def resize(img, target_size, interpolation=None):
         assert isinstance(target_size, (list, tuple))
-        interpolation = int(interpolation)
+        assert isinstance(interpolation, str)
 
         target_size = tuple(target_size)
         if isinstance(img, Image.Image):
-            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER[interpolation])
+            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER_DICT[interpolation])
 
         elif isinstance(img, np.ndarray):
-            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER[interpolation])
+            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER_DICT[interpolation])
 
         else:
             Log.error('Image type is invalid.')

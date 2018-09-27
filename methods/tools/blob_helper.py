@@ -30,7 +30,7 @@ class BlobHelper(object):
         else:
             in_width, in_height = input_size
 
-        image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation=1)
+        image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation='linear')
         img_tensor = ToTensor()(image)
         img_tensor = Normalize(div_value=self.configer.get('normalize', 'div_value'),
                                mean=self.configer.get('normalize', 'mean'),
