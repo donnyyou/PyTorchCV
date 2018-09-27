@@ -79,7 +79,8 @@ class SingleShotDetector(object):
         warm_epoch = self.configer.get('lr', 'warm')['warm_epoch']
         warm_lr = self.configer.get('lr', 'warm')['warm_lr']
         if self.configer.get('epoch') < warm_epoch:
-            lr = warm_lr + (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('epoch') / warm_epoch
+            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * (self.configer.get('epoch') - 1) / warm_epoch
+            lr = warm_lr + lr_delta
 
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = lr
