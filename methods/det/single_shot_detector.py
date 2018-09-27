@@ -71,15 +71,15 @@ class SingleShotDetector(object):
 
         return self.det_net.parameters()
 
-    def warm_lr(self):
+    def warm_lr(self, batch_len):
         """Sets the learning rate
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
-        warm_epoch = self.configer.get('lr', 'warm')['warm_epoch']
+        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
         warm_lr = self.configer.get('lr', 'warm')['warm_lr']
-        if self.configer.get('epoch') < warm_epoch:
-            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * (self.configer.get('epoch') - 1) / warm_epoch
+        if self.configer.get('iters') < warm_iters:
+            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('iters') / warm_iters
             lr = warm_lr + lr_delta
 
             for param_group in self.optimizer.param_groups:
@@ -99,8 +99,8 @@ class SingleShotDetector(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-            self.warm_lr()
-
+            self.warm_lr(len(self.train_loader))
+            
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, batch_data in enumerate(self.train_loader):
             data_dict = self.data_transformer(img_list=batch_data[0],
@@ -138,6 +138,9 @@ class SingleShotDetector(object):
 
             # Print the log info & reset the states.
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
+                if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
+                    self.warm_lr(len(self.train_loader))
+
                 Log.info('Train Epoch: {0}\tTrain Iteration: {1}\t'
                          'Time {batch_time.sum:.3f}s / {2}iters, ({batch_time.avg:.3f})\t'
                          'Data load {data_time.sum:.3f}s / {2}iters, ({data_time.avg:3f})\n'
