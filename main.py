@@ -70,6 +70,8 @@ if __name__ == "__main__":
                         dest='network:resume', help='The path of checkpoints.')
     parser.add_argument('--resume_level', default='full', type=str,
                         dest='network:resume_level', help='The resume level of networks.')
+    parser.add_argument('--resume_continue', type=str2bool, nargs='?', default=False,
+                        dest='network:resume_continue', help='Whether to continue training.')
 
     # ***********  Params for solver.  **********
     parser.add_argument('--optim_method', default=None, type=str,
