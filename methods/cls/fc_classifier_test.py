@@ -10,12 +10,13 @@ from __future__ import print_function
 
 import os
 import cv2
+import json
 import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
-from datasets.det_data_loader import DetDataLoader
+from datasets.cls_data_loader import ClsDataLoader
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.data_transformer import DataTransformer
@@ -33,12 +34,18 @@ class FCClassifierTest(object):
         self.configer = configer
         self.blob_helper = BlobHelper(configer)
         self.cls_model_manager = ClsModelManager(configer)
-        self.det_data_loader = DetDataLoader(configer)
+        self.cls_data_loader = ClsDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.data_transformer = DataTransformer(configer)
         self.cls_parser = ClsParser(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
-        self.det_net = None
+        self.cls_net = None
+        if self.configer.get('dataset') == 'imagenet':
+            with open(os.path.join(self.configer.get('project_dir'),
+                                   'datasets/cls/imagenet/imagenet_class_index.json')) as json_stream:
+                name_dict = json.load(json_stream)
+                name_seq = [name_dict[str(i)][1] for i in range(self.configer.get('data', 'num_classes'))]
+                self.configer.add_key_value(['details', 'name_seq'], name_seq)
 
         self._init_model()
 
@@ -152,7 +159,7 @@ class FCClassifierTest(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, batch_data in enumerate(self.det_data_loader.get_trainloader()):
+        for i, batch_data in enumerate(self.cls_data_loader.get_trainloader()):
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               labels_list=batch_data[1],
                                               trans_dict=self.configer.get('train', 'data_transformer'))

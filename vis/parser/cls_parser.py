@@ -45,7 +45,7 @@ class ClsParser(object):
         color_num = len(self.configer.get('details', 'color_list'))
 
         cv2.putText(image_canvas, class_name,
-                    (5, 5), cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
+                    (10, 10), cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5,
                     color=self.configer.get('details', 'color_list')[label_id % color_num], thickness=2)
 
         return image_canvas
