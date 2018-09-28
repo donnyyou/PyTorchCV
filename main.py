@@ -72,6 +72,8 @@ if __name__ == "__main__":
                         dest='network:resume_level', help='The resume level of networks.')
     parser.add_argument('--resume_continue', type=str2bool, nargs='?', default=False,
                         dest='network:resume_continue', help='Whether to continue training.')
+    parser.add_argument('--resume_val', type=str2bool, nargs='?', default=True,
+                        dest='network:resume_val', help='Whether to validate during resume.')
 
     # ***********  Params for solver.  **********
     parser.add_argument('--optim_method', default=None, type=str,

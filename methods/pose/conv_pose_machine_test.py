@@ -119,12 +119,10 @@ class ConvPoseMachineTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.pose_data_loader.get_valloader()
-
-        for i, batch_data in enumerate(val_data_loader):
+        for i, batch_data in enumerate(self.pose_data_loader.get_trainloader()):
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               kpts_list=batch_data[1],
-                                              trans_dict=self.configer.get('val', 'data_transformer'))
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
 
             inputs = data_dict['img']
             input_size = [inputs.size(3), inputs.size(2)]

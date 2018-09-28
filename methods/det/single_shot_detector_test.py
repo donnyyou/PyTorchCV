@@ -219,7 +219,7 @@ class SingleShotDetectorTest(object):
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               bboxes_list=batch_data[1],
                                               labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('val', 'data_transformer'))
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']

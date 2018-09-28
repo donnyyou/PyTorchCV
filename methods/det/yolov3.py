@@ -86,7 +86,7 @@ class YOLOv3(object):
         """
           Train function of every epoch during train phase.
         """
-        if self.configer.get('network', 'resume') is not None and self.configer.get('iters') == 0:
+        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
             self.__val()
 
         self.det_net.train()

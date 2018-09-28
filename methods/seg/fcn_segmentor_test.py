@@ -207,10 +207,8 @@ class FCNSegmentorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.seg_data_loader.get_valloader()
-
         count = 0
-        for i, batch_data in enumerate(val_data_loader):
+        for i, batch_data in enumerate(self.seg_data_loader.get_trainloader()):
             data_dict = self.data_transformer(img_list=batch_data[0],
                                               labelmap_list=batch_data[1],
                                               trans_dict=self.configer.get('train', 'data_transformer'))
