@@ -97,9 +97,6 @@ class OpenPose(object):
         """
           Train function of every epoch during train phase.
         """
-        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
-            self.__val()
-
         self.pose_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
@@ -217,6 +214,9 @@ class OpenPose(object):
 
     def train(self):
         cudnn.benchmark = True
+        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
+            self.__val()
+
         while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
             self.__train()
             if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
