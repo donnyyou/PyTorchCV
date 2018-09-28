@@ -7,23 +7,13 @@
       "data_dir": "~/DataSet/ImageNet",
       "image_tool": "pil",
       "input_mode": "RGB",
-      "workers": 8
+      "workers": 16
     },
     "train": {
-      "batch_size": 1024,
-      "data_transformer": {
-        "size_mode": "fix_size",
-        "input_size": [224, 224],
-        "align_method": "only_pad"
-      }
+      "batch_size": 512
     },
     "val": {
-      "batch_size": 1024,
-      "data_transformer": {
-        "size_mode": "fix_size",
-        "input_size": [224, 224],
-        "align_method": "only_pad"
-      }
+      "batch_size": 512
     },
     "test": {
     },
@@ -64,7 +54,7 @@
     "checkpoints": {
       "checkpoints_name": "fc_shufflenetv2_imagenet_cls",
       "checkpoints_dir": "checkpoints/cls/imagenet",
-      "save_iters": 500
+      "save_iters": 2000
     },
 
     "network":{
@@ -89,7 +79,7 @@
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 500,
+      "test_interval": 2000,
       "max_epoch": 250
     },
     "optim": {

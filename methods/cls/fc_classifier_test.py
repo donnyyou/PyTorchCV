@@ -11,7 +11,6 @@ from __future__ import print_function
 import os
 import cv2
 import json
-import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
@@ -159,13 +158,7 @@ class FCClassifierTest(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, batch_data in enumerate(self.cls_data_loader.get_trainloader()):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              labels_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
-            inputs = data_dict['img']
-            labels = data_dict['labels']
-            labels = torch.from_numpy(np.array(labels)).long()
+        for i, (inputs, labels) in enumerate(self.cls_data_loader.get_trainloader()):
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), self.configer.get('data', 'num_classes'))
 
