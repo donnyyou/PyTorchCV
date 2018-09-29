@@ -28,6 +28,9 @@ class DataTransformer(object):
         if batch is None:
             return None
 
+        if isinstance(batch, torch.Tensor):
+            return batch
+
         error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
         elem_type = type(batch[0])
 
