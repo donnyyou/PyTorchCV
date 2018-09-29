@@ -8,24 +8,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
-import cv2
 import json
-import numpy as np
+import os
+
+import cv2
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
 from datasets.cls_data_loader import ClsDataLoader
-from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.data_transformer import DataTransformer
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.cls_model_manager import ClsModelManager
-from vis.parser.cls_parser import ClsParser
-from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.tools.logger import Logger as Log
+from vis.parser.cls_parser import ClsParser
 
 
 class FCClassifierTest(object):
@@ -36,7 +35,6 @@ class FCClassifierTest(object):
         self.cls_model_manager = ClsModelManager(configer)
         self.cls_data_loader = ClsDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.data_transformer = DataTransformer(configer)
         self.cls_parser = ClsParser(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.cls_net = None

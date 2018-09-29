@@ -9,12 +9,13 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
+from datasets.tools.data_transformer import DataTransformer
 from loss.pose_loss_manager import PoseLossManager
-from methods.tools.data_transformer import DataTransformer
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
@@ -77,11 +78,7 @@ class ConvPoseMachine(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, tagmap, num_objects)
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              kpts_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
-
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             input_size = [inputs.size(3), inputs.size(2)]
             heatmap = self.heatmap_generator(data_dict['kpts'], input_size)
@@ -134,11 +131,7 @@ class ConvPoseMachine(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  kpts_list=batch_data[1],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
-
+            for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 input_size = [inputs.size(3), inputs.size(2)]
                 heatmap = self.heatmap_generator(data_dict['kpts'], input_size)

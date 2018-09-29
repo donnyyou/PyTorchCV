@@ -9,21 +9,20 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import cv2
-import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from methods.tools.module_utilizer import ModuleUtilizer
+from datasets.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.data_transformer import DataTransformer
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
-from utils.helpers.image_helper import ImageHelper
-from utils.helpers.file_helper import FileHelper
-from utils.helpers.json_helper import JsonHelper
 from utils.helpers.det_helper import DetHelper
+from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
+from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.logger import Logger as Log
@@ -215,11 +214,7 @@ class SingleShotDetectorTest(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, batch_data in enumerate(self.det_data_loader.get_trainloader()):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              bboxes_list=batch_data[1],
-                                              labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']

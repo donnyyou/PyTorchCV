@@ -9,7 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import numpy as np
+
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -17,11 +17,10 @@ from datasets.cls_data_loader import ClsDataLoader
 from loss.cls_loss_manager import ClsLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.tools.data_transformer import DataTransformer
 from models.cls_model_manager import ClsModelManager
-from val.scripts.cls.cls_running_score import ClsRunningScore
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
+from val.scripts.cls.cls_running_score import ClsRunningScore
 
 
 class FCClassifier(object):
@@ -40,7 +39,6 @@ class FCClassifier(object):
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.cls_net = None
         self.train_loader = None

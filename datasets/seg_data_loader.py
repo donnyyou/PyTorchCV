@@ -17,6 +17,7 @@ from datasets.seg.mr_data_loader import MRDataLoader
 import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.transforms as trans
+from datasets.tools.collate_functions import CollateFunctions
 from utils.tools.logger import Logger as Log
 
 
@@ -59,9 +60,13 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=True, collate_fn=self._seg_collate)
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True, drop_last=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'labelmap'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -72,7 +77,12 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels', 'polygons'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -88,9 +98,13 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=True, collate_fn=self._seg_collate)
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=True, drop_last=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'labelmap'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -101,7 +115,12 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels', 'polygons'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 

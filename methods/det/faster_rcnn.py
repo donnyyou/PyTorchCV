@@ -9,16 +9,16 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
 from loss.det_loss_manager import DetLossManager
-from methods.tools.data_transformer import DataTransformer
+from methods.det.faster_rcnn_test import FastRCNNTest
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.det.faster_rcnn_test import FastRCNNTest
 from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.layers.det.rpn_target_generator import RPNTargetGenerator
@@ -47,7 +47,6 @@ class FasterRCNN(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -93,12 +92,8 @@ class FasterRCNN(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              bboxes_list=batch_data[1],
-                                              labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
-            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
+        for i, data_dict in enumerate(self.train_loader):
+            img_scale = data_dict['img_scale']
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
@@ -159,12 +154,8 @@ class FasterRCNN(object):
         self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  bboxes_list=batch_data[1],
-                                                  labels_list=batch_data[2],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
-                img_scale = torch.from_numpy(np.array(batch_data[3])).float()
+            for j, data_dict in enumerate(self.val_loader):
+                img_scale = data_dict['img_scale']
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])

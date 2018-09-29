@@ -9,19 +9,20 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
+from datasets.tools.data_transformer import DataTransformer
+from extensions.layers.syncbn.parallel import DataParallelCriterion
 from loss.seg_loss_manager import SegLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.tools.data_transformer import DataTransformer
 from models.seg_model_manager import SegModelManager
-from val.scripts.seg.seg_running_score import SegRunningScore
-from extensions.layers.syncbn.parallel import DataParallelCriterion
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
+from val.scripts.seg.seg_running_score import SegRunningScore
 from vis.visualizer.seg_visualizer import SegVisualizer
 
 
@@ -90,10 +91,7 @@ class FCNSegmentor(object):
 
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              labelmap_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             targets = data_dict['labelmap']
             self.data_time.update(time.time() - start_time)
@@ -144,10 +142,7 @@ class FCNSegmentor(object):
         self.seg_net.eval()
         start_time = time.time()
 
-        for j, batch_data in enumerate(self.val_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              labelmap_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for j, data_dict in enumerate(self.val_loader):
             inputs = data_dict['img']
             targets = data_dict['labelmap']
 

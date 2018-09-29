@@ -25,7 +25,7 @@ class DataTransformer(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def _stack(self, batch):
+    def stack(self, batch):
         if batch is None:
             return None
 
@@ -59,15 +59,16 @@ class DataTransformer(object):
 
         raise TypeError((error_msg.format(type(batch[0]))))
 
-    def __call__(self, img_list=None, label_list=None, labelmap_list=None, maskmap_list=None,
+    def __call__(self, img_list=None, label_list=None, imgscale_list=None, labelmap_list=None, maskmap_list=None,
                  kpts_list=None, bboxes_list=None, labels_list=None, polygons_list=None, trans_dict=None):
 
         if trans_dict['size_mode'] == 'random_size':
             return {
-                'img': self._stack(img_list),
-                'label': self._stack(label_list),
-                'labelmap': self._stack(labelmap_list),
-                'maskmap': self._stack(maskmap_list),
+                'img': self.stack(img_list),
+                'label': self.stack(label_list),
+                'imgscale': self.stack(imgscale_list),
+                'labelmap': self.stack(labelmap_list),
+                'maskmap': self.stack(maskmap_list),
                 'kpts': kpts_list,
                 'bboxes': bboxes_list,
                 'labels': labels_list,
@@ -162,10 +163,11 @@ class DataTransformer(object):
                     bboxes_list[i][:, 1::2] += up_pad
 
         return {
-            'img': self._stack(img_list),
-            'label': self._stack(label_list),
-            'labelmap': self._stack(labelmap_list),
-            'maskmap': self._stack(maskmap_list),
+            'img': self.stack(img_list),
+            'label': self.stack(label_list),
+            'imgscale': self.stack(imgscale_list),
+            'labelmap': self.stack(labelmap_list),
+            'maskmap': self.stack(maskmap_list),
             'kpts': kpts_list,
             'bboxes': bboxes_list,
             'labels': labels_list,

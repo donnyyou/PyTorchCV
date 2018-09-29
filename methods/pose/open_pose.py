@@ -9,14 +9,15 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
+from datasets.tools.data_transformer import DataTransformer
 from loss.pose_loss_manager import PoseLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.tools.data_transformer import DataTransformer
 from models.pose_model_manager import PoseModelManager
 from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.layers.pose.paf_generator import PafGenerator
@@ -104,11 +105,7 @@ class OpenPose(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              kpts_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
-
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
             input_size = [inputs.size(3), inputs.size(2)]

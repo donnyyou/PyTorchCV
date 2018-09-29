@@ -9,15 +9,16 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.tools.data_transformer import DataTransformer
 from loss.det_loss_manager import DetLossManager
+from methods.det.yolov3_test import YOLOv3Test
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.tools.data_transformer import DataTransformer
-from methods.det.yolov3_test import YOLOv3Test
 from models.det_model_manager import DetModelManager
 from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.layers.det.yolo_target_generator import YOLOTargetGenerator
@@ -93,11 +94,7 @@ class YOLOv3(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              bboxes_list=batch_data[1],
-                                              labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
