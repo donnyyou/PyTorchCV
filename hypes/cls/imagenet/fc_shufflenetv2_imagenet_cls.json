@@ -10,10 +10,20 @@
       "workers": 16
     },
     "train": {
-      "batch_size": 512
+      "batch_size": 512,
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [224, 224],
+        "align_method": "only_pad"
+      }
     },
     "val": {
-      "batch_size": 512
+      "batch_size": 512,
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [224, 224],
+        "align_method": "only_pad"
+      }
     },
     "test": {
     },

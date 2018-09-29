@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import re
 import random
 import torch
 import torch.nn.functional as F
@@ -23,15 +24,51 @@ class DataTransformer(object):
     def __init__(self, configer):
         self.configer = configer
 
+    def _stack(self, batch):
+        if batch is None:
+            return None
+
+        error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
+        elem_type = type(batch[0])
+
+        if isinstance(batch[0], torch.Tensor):
+            out = None
+            if self.configer.get('data', 'workers') > 0:
+                # If we're in a background process, concatenate directly into a
+                # shared memory tensor to avoid an extra copy
+                numel = sum([x.numel() for x in batch])
+                storage = batch[0].storage()._new_shared(numel)
+                out = batch[0].new(storage)
+
+            return torch.stack(batch, 0, out=out)
+
+        elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
+                and elem_type.__name__ != 'string_':
+            elem = batch[0]
+            if elem_type.__name__ == 'ndarray':
+                # array of string classes and object
+                if re.search('[SaUO]', elem.dtype.str) is not None:
+                    raise TypeError(error_msg.format(elem.dtype))
+
+                return torch.stack([torch.from_numpy(b) for b in batch], 0)
+
+        elif isinstance(batch[0], int):
+            return torch.LongTensor(batch)
+
+        elif isinstance(batch[0], float):
+            return torch.DoubleTensor(batch)
+
+        raise TypeError((error_msg.format(type(batch[0]))))
+
     def __call__(self, img_list=None, labelmap_list=None, maskmap_list=None,
                  kpts_list=None, bboxes_list=None, labels_list=None,
                  polygons_list=None, trans_dict=None):
 
         if trans_dict['size_mode'] == 'random_size':
             return {
-                'img': torch.stack(img_list, 0),
-                'labelmap': None if labelmap_list is None else torch.stack(labelmap_list, 0),
-                'maskmap': None if maskmap_list is None else torch.stack(maskmap_list, 0),
+                'img': self._stack(img_list),
+                'labelmap': self._stack(labelmap_list),
+                'maskmap': self._stack(maskmap_list),
                 'kpts': kpts_list,
                 'bboxes': bboxes_list,
                 'labels': labels_list,
@@ -123,9 +160,9 @@ class DataTransformer(object):
                     bboxes_list[i][:, 1::2] += up_pad
 
         return {
-            'img': torch.stack(img_list, 0),
-            'labelmap': None if labelmap_list is None else torch.stack(labelmap_list, 0),
-            'maskmap': None if maskmap_list is None else torch.stack(maskmap_list, 0),
+            'img': self._stack(img_list),
+            'labelmap': self._stack(labelmap_list),
+            'maskmap': self._stack(maskmap_list),
             'kpts': kpts_list,
             'bboxes': bboxes_list,
             'labels': labels_list,

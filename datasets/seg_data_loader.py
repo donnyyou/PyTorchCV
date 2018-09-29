@@ -120,15 +120,8 @@ class SegDataLoader(object):
                 1) (tensor) batch of images stacked on their 0 dim
                 2) (list of tensors) annotations for a given image are stacked on 0 dim
         """
-        out_list = []
-        for i in range(len(batch[0])):
-            out_list.append([])
-
-        for sample in batch:
-            for i in range(len(sample)):
-                out_list[i].append(sample[i])
-
-        return out_list
+        transposed = list(zip(*batch))
+        return transposed
 
 if __name__ == "__main__":
     # Test data loader.

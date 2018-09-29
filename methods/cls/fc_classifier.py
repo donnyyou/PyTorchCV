@@ -74,7 +74,11 @@ class FCClassifier(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, (inputs, labels) in enumerate(self.train_loader):
+        for i, batch_data in enumerate(self.train_loader):
+            data_dict = self.data_transformer(img_list=batch_data[0],
+                                              trans_dict=self.configer.get('train', 'data_transformer'))
+            inputs = data_dict['img']
+            labels = torch.LongTensor(batch_data[1])
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
@@ -122,7 +126,11 @@ class FCClassifier(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, (inputs, labels) in enumerate(self.val_loader):
+            for j, batch_data in enumerate(self.val_loader):
+                data_dict = self.data_transformer(img_list=batch_data[0],
+                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+                inputs = data_dict['img']
+                labels = torch.LongTensor(batch_data[1])
                 # Change the data type.
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
@@ -153,7 +161,7 @@ class FCClassifier(object):
         cudnn.benchmark = True
         if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
             self.__val()
-            
+
         while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
             self.__train()
             if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
