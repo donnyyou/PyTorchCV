@@ -7,10 +7,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import re
 import random
+import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 
 
 class DataTransformer(object):
@@ -32,7 +33,6 @@ class DataTransformer(object):
             return batch
 
         error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
-        elem_type = type(batch[0])
 
         if isinstance(batch[0], torch.Tensor):
             out = None
@@ -45,15 +45,11 @@ class DataTransformer(object):
 
             return torch.stack(batch, 0, out=out)
 
-        elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
-                and elem_type.__name__ != 'string_':
-            elem = batch[0]
-            if elem_type.__name__ == 'ndarray':
-                # array of string classes and object
-                if re.search('[SaUO]', elem.dtype.str) is not None:
-                    raise TypeError(error_msg.format(elem.dtype))
+        elif isinstance(batch[0], np.ndarray):
+            return torch.stack([torch.from_numpy(b) for b in batch], 0)
 
-                return torch.stack([torch.from_numpy(b) for b in batch], 0)
+        elif isinstance(batch[0], Image.Image):
+            return torch.stack([torch.from_numpy(np.array(b)) for b in batch], 0)
 
         elif isinstance(batch[0], int):
             return torch.LongTensor(batch)
@@ -92,6 +88,9 @@ class DataTransformer(object):
 
         for i in range(len(img_list)):
             channels, height, width = img_list[i].size()
+            if height == target_height and width == target_width:
+                continue
+
             scaled_size = [width, height]
 
             if trans_dict['align_method'] in ['only_scale', 'scale_and_pad']:
