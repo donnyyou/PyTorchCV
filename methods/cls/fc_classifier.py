@@ -74,11 +74,9 @@ class FCClassifier(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
-            labels = torch.LongTensor(batch_data[1])
+            labels = data_dict['label']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
@@ -126,11 +124,9 @@ class FCClassifier(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+            for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
-                labels = torch.LongTensor(batch_data[1])
+                labels = data_dict['label']
                 # Change the data type.
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.

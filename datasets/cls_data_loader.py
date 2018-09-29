@@ -15,6 +15,7 @@ import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.transforms as trans
 from datasets.cls.fc_data_loader import FCDataLoader
+from datasets.tools.collate_functions import CollateFunctions
 from utils.tools.logger import Logger as Log
 
 
@@ -52,7 +53,13 @@ class ClsDataLoader(object):
                              aug_transform=self.aug_train_transform,
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'label'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -67,7 +74,12 @@ class ClsDataLoader(object):
                              aug_transform=self.aug_val_transform,
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'label'],
+                    configer=self.configer, trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -75,19 +87,6 @@ class ClsDataLoader(object):
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
 
-    @staticmethod
-    def _cls_collate(batch):
-        """Custom collate fn for dealing with batches of images that have a different
-        number of associated object annotations (bounding boxes).
-        Arguments:
-            batch: (tuple) A tuple of tensor images and lists of annotations
-        Return:
-            A tuple containing:
-                1) (tensor) batch of images stacked on their 0 dim
-                2) (list of tensors) annotations for a given image are stacked on 0 dim
-        """
-        transposed = list(zip(*batch))
-        return transposed
 
 if __name__ == "__main__":
     # Test data loader.

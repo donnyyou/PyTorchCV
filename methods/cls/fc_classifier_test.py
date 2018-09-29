@@ -159,11 +159,9 @@ class FCClassifierTest(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, batch_data in enumerate(self.cls_data_loader.get_trainloader()):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.cls_data_loader.get_trainloader()):
             inputs = data_dict['img']
-            labels = torch.LongTensor(batch_data[1])
+            labels = data_dict['label']
             eye_matrix = torch.eye(self.configer.get('data', 'num_classes'))
             labels_target = eye_matrix[labels.view(-1)].view(inputs.size(0), self.configer.get('data', 'num_classes'))
 
