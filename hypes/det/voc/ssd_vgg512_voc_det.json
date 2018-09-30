@@ -5,8 +5,8 @@
     "data": {
       "num_classes": 21,
       "data_dir": "~/DataSet/VOC07+12_DET",
-      "image_tool": "pil",
-      "input_mode": "RGB",
+      "image_tool": "cv2",
+      "input_mode": "BGR",
       "keep_difficult": false,
       "workers": 8
     },
@@ -49,7 +49,7 @@
         "upper": 1.5
       },
       "random_pad": {
-        "ratio": 0.5,
+        "ratio": 0.6,
         "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {
@@ -101,10 +101,10 @@
     "checkpoints": {
       "checkpoints_name": "ssd_vgg512_voc_det",
       "checkpoints_dir": "checkpoints/det/voc",
-      "save_iters": 3000
+      "save_iters": 5000
     },
     "network":{
-      "backbone": "vgg19_bn",
+      "backbone": "vgg16",
       "model_name": "vgg512_ssd",
       "num_feature_list": [512, 1024, 512, 256, 256, 256, 256],
       "stride_list": [8, 16, 32, 64, 128, 256, 512],
@@ -118,17 +118,26 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.001,
-      "lr_policy": "step",
+      "is_warm": true,
+      "warm": {
+        "warm_lr": 0.000001,
+        "warm_epoch": 6
+      },
+      "base_lr": 0.004,
+      "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
-        "step_size": 60
+        "step_size": 500
+      },
+      "multistep": {
+        "gamma": 0.1,
+        "stepvalue": [156, 195, 234]
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 1000,
-      "max_epoch": 160
+      "test_interval": 5000,
+      "max_epoch": 235
     },
     "optim": {
       "optim_method": "sgd",
@@ -144,9 +153,11 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.45
+      "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.0
+      "conf_threshold": 0.01,
+      "max_per_image": 200,
+      "cls_keep_num": 50
     }
 }
