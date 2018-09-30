@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
 import cv2
 import torch
 
@@ -80,17 +79,6 @@ class YOLOv3Test(object):
 
     @staticmethod
     def decode(batch_pred_bboxes, configer):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
-
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
-
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
         box_corner = batch_pred_bboxes.new(batch_pred_bboxes.shape)
         box_corner[:, :, 0] = batch_pred_bboxes[:, :, 0] - batch_pred_bboxes[:, :, 2] / 2
         box_corner[:, :, 1] = batch_pred_bboxes[:, :, 1] - batch_pred_bboxes[:, :, 3] / 2

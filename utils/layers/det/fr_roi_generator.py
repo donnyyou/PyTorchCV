@@ -12,7 +12,6 @@ import torch
 
 from extensions.layers.nms.module import NMS
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
 

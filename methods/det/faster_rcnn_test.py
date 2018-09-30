@@ -9,9 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
 import cv2
-import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -238,7 +236,7 @@ class FastRCNNTest(object):
 
         count = 0
         for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
-            img_scale = data_dict['img_scale']
+            img_scale = data_dict['imgscale']
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])

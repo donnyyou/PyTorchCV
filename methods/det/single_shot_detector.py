@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -103,7 +102,6 @@ class SingleShotDetector(object):
 
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
-            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             # Change the data type.
             inputs = self.module_utilizer.to_device(inputs)
@@ -159,7 +157,6 @@ class SingleShotDetector(object):
             for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
-                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
