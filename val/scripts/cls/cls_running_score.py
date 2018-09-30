@@ -36,15 +36,14 @@ class ClsRunningScore(object):
         _, pred = output.topk(maxk, 1, True, True)
         pred = pred.t()
         correct = pred.eq(target.view(1, -1).expand_as(pred))
-
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=False)
+            res.append(correct_k / batch_size)
 
-        self.top1_acc.update(res[0].data[0], batch_size)
-        self.top3_acc.update(res[1].data[0], batch_size)
-        self.top5_acc.update(res[2].data[0], batch_size)
+        self.top1_acc.update(res[0].item(), batch_size)
+        self.top3_acc.update(res[1].item(), batch_size)
+        self.top5_acc.update(res[2].item(), batch_size)
 
     def reset(self):
         self.top1_acc.reset()

@@ -8,23 +8,29 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import torch
 import torch.nn as nn
 
 
 class CrossEntropyLoss(nn.Module):
     def __init__(self, configer=None):
         super(CrossEntropyLoss, self).__init__()
+        super(CrossEntropyLoss, self).__init__()
         self.configer = configer
-
         weight = None
         if not self.configer.is_empty('cross_entropy_loss', 'weight'):
             weight = self.configer.get('cross_entropy_loss', 'weight')
+            weight = torch.FloatTensor(weight).cuda()
 
-        size_average = True
-        if not self.configer.is_empty('cross_entropy_loss', 'size_average'):
-            size_average = self.configer.get('cross_entropy_loss', 'size_average')
+        reduction = 'elementwise_mean'
+        if not self.configer.is_empty('cross_entropy_loss', 'reduction'):
+            reduction = self.configer.get("cross_entropy_loss", "reduction")
 
-        self.cross_entropy_loss = nn.CrossEntropyLoss(weight=weight, size_average=size_average)
+        ignore_index = -100
+        if not self.configer.is_empty('cross_entropy_loss', 'ignore_index'):
+            ignore_index = self.configer.get('cross_entropy_loss', 'ignore_index')
+
+        self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction=reduction)
 
     def forward(self, inputs, targets):
-        return self.cross_entropy_loss(inputs, targets)
+        return self.ce_loss(inputs, targets)

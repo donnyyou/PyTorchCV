@@ -9,21 +9,20 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import cv2
-import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 
 from datasets.det_data_loader import DetDataLoader
-from methods.tools.module_utilizer import ModuleUtilizer
+from datasets.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.data_transformer import DataTransformer
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
-from utils.helpers.image_helper import ImageHelper
-from utils.helpers.file_helper import FileHelper
-from utils.helpers.json_helper import JsonHelper
 from utils.helpers.det_helper import DetHelper
+from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
+from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.logger import Logger as Log
@@ -134,9 +133,13 @@ class SingleShotDetectorTest(object):
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
                                      nms_threshold=configer.get('nms', 'max_threshold'),
-                                     mode=configer.get('nms', 'mode'))
+                                     mode=configer.get('nms', 'mode'),
+                                     cls_keep_num=configer.get('vis', 'cls_keep_num'))
 
-            output[image_i] = valid_preds[keep]
+            valid_preds = valid_preds[keep]
+            _, order = valid_preds[:, 4].sort(0, descending=True)
+            order = order[:configer.get('vis', 'max_per_image')]
+            output[image_i] = valid_preds[order]
 
         return output
 
@@ -210,17 +213,10 @@ class SingleShotDetectorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.det_data_loader.get_valloader()
-
         count = 0
-        for i, batch_data in enumerate(val_data_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              bboxes_list=batch_data[1],
-                                              labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('val', 'data_transformer'))
+        for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
-            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()

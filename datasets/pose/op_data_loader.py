@@ -44,14 +44,16 @@ class OPDataLoader(data.Dataset):
         kpts, bboxes = self.__read_json_file(self.json_list[index])
 
         if self.aug_transform is not None and len(bboxes) > 0:
-            img, maskmap, kpts, bboxes = self.aug_transform(img, mask=maskmap, kpts=kpts, bboxes=bboxes)
+            img, maskmap, kpts, bboxes = self.aug_transform(img, maskmap=maskmap, kpts=kpts, bboxes=bboxes)
 
         elif self.aug_transform is not None:
-            img, maskmap, kpts = self.aug_transform(img, mask=maskmap, kpts=kpts)
+            img, maskmap, kpts = self.aug_transform(img, maskmap=maskmap, kpts=kpts)
 
         width, height = maskmap.size
-        maskmap = ImageHelper.resize(maskmap, (width // self.configer.get('network', 'stride'),
-                                               height // self.configer.get('network', 'stride')), Image.NEAREST)
+        maskmap = ImageHelper.resize(maskmap,
+                                     (width // self.configer.get('network', 'stride'),
+                                      height // self.configer.get('network', 'stride')),
+                                     interpolation='nearest')
 
         maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
         kpts = torch.from_numpy(kpts).float()
@@ -77,7 +79,7 @@ class OPDataLoader(data.Dataset):
         bboxes = list()
 
         for object in json_dict['objects']:
-            kpts.append(object['keypoints'])
+            kpts.append(object['kpts'])
             if 'bbox' in object:
                 bboxes.append(object['bbox'])
 

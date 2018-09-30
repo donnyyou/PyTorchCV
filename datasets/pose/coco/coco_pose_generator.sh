@@ -15,14 +15,14 @@ COCO_ANNO_DIR='/home/donny/DataSet/MSCOCO/annotations/'
 TRAIN_ANNO_FILE=${COCO_ANNO_DIR}'person_keypoints_train2017.json'
 VAL_ANNO_FILE=${COCO_ANNO_DIR}'person_keypoints_val2017.json'
 
-TRAIN_ROOT_DIR='/home/donny/DataSet/COCO_MASK_ALL/train'
-VAL_ROOT_DIR='/home/donny/DataSet/COCO_MASK_ALL/val'
+TRAIN_ROOT_DIR='/home/donny/DataSet/COCO_KPTS/train'
+VAL_ROOT_DIR='/home/donny/DataSet/COCO_KPTS/val'
 
 
-python2.7 coco_pose_generator.py --root_dir $TRAIN_ROOT_DIR \
-                                 --ori_anno_file $TRAIN_ANNO_FILE \
-                                 --ori_img_dir $COCO_TRAIN_IMG_DIR
+python coco_pose_generator.py --root_dir $TRAIN_ROOT_DIR \
+                              --ori_anno_file $TRAIN_ANNO_FILE \
+                              --ori_img_dir $COCO_TRAIN_IMG_DIR
 
-python2.7 coco_pose_generator.py --root_dir $VAL_ROOT_DIR \
-                                 --ori_anno_file $VAL_ANNO_FILE \
-                                 --ori_img_dir $COCO_VAL_IMG_DIR
+python coco_pose_generator.py --root_dir $VAL_ROOT_DIR \
+                              --ori_anno_file $VAL_ANNO_FILE \
+                              --ori_img_dir $COCO_VAL_IMG_DIR

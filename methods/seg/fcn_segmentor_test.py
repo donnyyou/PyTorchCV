@@ -9,18 +9,19 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import cv2
 import numpy as np
 import torch
 from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
-from methods.tools.module_utilizer import ModuleUtilizer
-from methods.tools.data_transformer import DataTransformer
+from datasets.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.seg_model_manager import SegModelManager
-from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 from vis.parser.seg_parser import SegParser
 from vis.visualizer.seg_visualizer import SegVisualizer
@@ -207,13 +208,8 @@ class FCNSegmentorTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.seg_data_loader.get_valloader()
-
         count = 0
-        for i, batch_data in enumerate(val_data_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              labelmap_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.seg_data_loader.get_trainloader()):
             inputs = data_dict['img']
             targets = data_dict['labelmap']
             for j in range(inputs.size(0)):

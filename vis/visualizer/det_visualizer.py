@@ -62,9 +62,9 @@ class DetVisualizer(object):
 
         for i in range(inputs.size(0)):
             rois = indices_and_rois[indices_and_rois[:, 0] == i][:, 1:]
-            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
-                                  std=self.configer.get('trans_params', 'normalize')['std'])(inputs[i])
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(inputs[i])
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
             color_num = len(self.configer.get('details', 'color_list'))
@@ -96,9 +96,9 @@ class DetVisualizer(object):
             os.makedirs(base_dir)
 
         if not isinstance(ori_img_in, np.ndarray):
-            ori_img = DeNormalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                                  mean=self.configer.get('trans_params', 'normalize')['mean'],
-                                  std=self.configer.get('trans_params', 'normalize')['std'])(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
         else:

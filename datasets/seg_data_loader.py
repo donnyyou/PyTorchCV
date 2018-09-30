@@ -17,6 +17,7 @@ from datasets.seg.mr_data_loader import MRDataLoader
 import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.transforms as trans
+from datasets.tools.collate_functions import CollateFunctions
 from utils.tools.logger import Logger as Log
 
 
@@ -43,9 +44,9 @@ class SegDataLoader(object):
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),
-            trans.Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                            mean=self.configer.get('trans_params', 'normalize')['mean'],
-                            std=self.configer.get('trans_params', 'normalize')['std']), ])
+            trans.Normalize(div_value=self.configer.get('normalize', 'div_value'),
+                            mean=self.configer.get('normalize', 'mean'),
+                            std=self.configer.get('normalize', 'std')), ])
 
         self.label_transform = trans.Compose([
             trans.ToLabel(),
@@ -59,9 +60,13 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=True, collate_fn=self._seg_collate)
+                batch_size=self.configer.get('train', 'batch_size'), shuffle=True, drop_last=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'labelmap'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -72,7 +77,12 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels', 'polygons'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -88,9 +98,13 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              label_transform=self.label_transform,
                              configer=self.configer),
-                batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=True, collate_fn=self._seg_collate)
+                batch_size=self.configer.get('val', 'batch_size'), shuffle=True, drop_last=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'labelmap'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -101,7 +115,12 @@ class SegDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), pin_memory=True, collate_fn=self._seg_collate)
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels', 'polygons'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -120,15 +139,8 @@ class SegDataLoader(object):
                 1) (tensor) batch of images stacked on their 0 dim
                 2) (list of tensors) annotations for a given image are stacked on 0 dim
         """
-        out_list = []
-        for i in range(len(batch[0])):
-            out_list.append([])
-
-        for sample in batch:
-            for i in range(len(sample)):
-                out_list[i].append(sample[i])
-
-        return out_list
+        transposed = [list(sample) for sample in zip(*batch)]
+        return transposed
 
 if __name__ == "__main__":
     # Test data loader.

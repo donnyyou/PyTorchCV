@@ -17,6 +17,7 @@ import datasets.tools.transforms as trans
 from datasets.det.ssd_data_loader import SSDDataLoader
 from datasets.det.fr_data_loader import FRDataLoader
 from datasets.det.yolo_data_loader import YOLODataLoader
+from datasets.tools.collate_functions import CollateFunctions
 from utils.tools.logger import Logger as Log
 
 
@@ -43,9 +44,9 @@ class DetDataLoader(object):
 
         self.img_transform = trans.Compose([
             trans.ToTensor(),
-            trans.Normalize(div_value=self.configer.get('trans_params', 'normalize')['div_value'],
-                            mean=self.configer.get('trans_params', 'normalize')['mean'],
-                            std=self.configer.get('trans_params', 'normalize')['std']), ])
+            trans.Normalize(div_value=self.configer.get('normalize', 'div_value'),
+                            mean=self.configer.get('normalize', 'mean'),
+                            std=self.configer.get('normalize', 'std')), ])
 
     def get_trainloader(self):
         if self.configer.get('method') == 'single_shot_detector':
@@ -55,7 +56,13 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -66,7 +73,13 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'imgscale', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -77,7 +90,13 @@ class DetDataLoader(object):
                                img_transform=self.img_transform,
                                configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('train', 'data_transformer')
+                )
+            )
 
             return trainloader
 
@@ -93,7 +112,13 @@ class DetDataLoader(object):
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -104,7 +129,13 @@ class DetDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'imgscale', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -115,7 +146,13 @@ class DetDataLoader(object):
                                img_transform=self.img_transform,
                                configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
-                num_workers=self.configer.get('data', 'workers'), collate_fn=self._det_collate, pin_memory=True)
+                num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                collate_fn=lambda *args: CollateFunctions.our_collate(
+                    *args, data_keys=['img', 'bboxes', 'labels'],
+                    configer=self.configer,
+                    trans_dict=self.configer.get('val', 'data_transformer')
+                )
+            )
 
             return valloader
 
@@ -123,23 +160,3 @@ class DetDataLoader(object):
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
             return None
 
-    @staticmethod
-    def _det_collate(batch):
-        """Custom collate fn for dealing with batches of images that have a different
-        number of associated object annotations (bounding boxes).
-        Arguments:
-            batch: (tuple) A tuple of tensor images and lists of annotations
-        Return:
-            A tuple containing:
-                1) (tensor) batch of images stacked on their 0 dim
-                2) (list of tensors) annotations for a given image are stacked on 0 dim
-        """
-        out_list= []
-        for i in range(len(batch[0])):
-            out_list.append([])
-
-        for sample in batch:
-            for i in range(len(sample)):
-                out_list[i].append(sample[i])
-
-        return out_list

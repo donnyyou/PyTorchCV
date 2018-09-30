@@ -29,8 +29,6 @@ class PoseVisualizer(object):
         self.configer = configer
 
     def __get_peaks(self, heatmap):
-        heatmap = cv2.resize(heatmap,
-                             tuple(self.configer.get('data', 'input_size')), interpolation=cv2.INTER_CUBIC)
         s_map = gaussian_filter(heatmap, sigma=3)
         map_left = np.zeros(s_map.shape)
         map_left[:, 1:] = s_map[:, :-1]
@@ -70,14 +68,15 @@ class PoseVisualizer(object):
             heatmap = heatmap_in.copy()
 
         if not isinstance(ori_img_in, np.ndarray):
-            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                  std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_RGB2BGR)
         else:
             ori_img = ori_img_in.copy()
 
-        for j in range(self.configer.get('data', 'num_keypoints')):
+        for j in range(self.configer.get('data', 'num_kpts')):
             peaks = self.__get_peaks(heatmap[:, :, j])
 
             for peak in peaks:
@@ -85,7 +84,6 @@ class PoseVisualizer(object):
                                      self.configer.get('vis', 'circle_radius'),
                                      self.configer.get('details', 'color_list')[j], thickness=-1)
 
-            ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')))
             cv2.imwrite(os.path.join(base_dir, '{}_{}.jpg'.format(name, j)), ori_img)
 
     def vis_paf(self, inputs_in, ori_img_in, name='default', sub_dir='pafs'):
@@ -108,14 +106,12 @@ class PoseVisualizer(object):
                 Log.error('Image size is not valid.')
                 exit(1)
 
-            ori_img = DeNormalize(mean=self.configer.get('trans_params', 'mean'),
-                                  std=self.configer.get('trans_params', 'std'))(ori_img_in.clone())
+            ori_img = DeNormalize(div_value=self.configer.get('normalize', 'div_value'),
+                                  mean=self.configer.get('normalize', 'mean'),
+                                  std=self.configer.get('normalize', 'std'))(ori_img_in.clone())
             ori_img = ori_img.data.cpu().squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
         else:
             ori_img = ori_img_in.copy()
-
-        inputs = cv2.resize(inputs, tuple(self.configer.get('data', 'input_size')), interpolation=cv2.INTER_CUBIC)
-        ori_img = cv2.resize(ori_img, tuple(self.configer.get('data', 'input_size')), interpolation=cv2.INTER_CUBIC)
 
         for i in range(len(self.configer.get('details', 'limb_seq'))):
             U = inputs[:, :, 2*i] * -1

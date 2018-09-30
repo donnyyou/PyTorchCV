@@ -21,9 +21,8 @@ class HeatmapGenerator(object):
 
     def __call__(self, gt_kpts, input_size, maskmap=None):
         width, height = input_size
-        width = self.configer.get('data', 'input_size')[0]
         stride = self.configer.get('network', 'stride')
-        num_keypoints = self.configer.get('data', 'num_keypoints')
+        num_keypoints = self.configer.get('data', 'num_kpts')
         sigma = self.configer.get('heatmap', 'sigma')
         method = self.configer.get('heatmap', 'method')
         batch_size = len(gt_kpts)
@@ -60,7 +59,7 @@ class HeatmapGenerator(object):
                             if heatmap[batch_id][j][h][w] > 1:
                                 heatmap[batch_id][j][h][w] = 1
 
-            heatmap[batch_id, num_keypoints, :, :] = 1.0 - np.max(heatmap[batch_id, :, :, :-1], axis=3)
+            heatmap[batch_id, num_keypoints, :, :] = 1.0 - np.max(heatmap[batch_id, :-1, :, :], axis=0)
 
         heatmap = torch.from_numpy(heatmap)
         if maskmap is not None:

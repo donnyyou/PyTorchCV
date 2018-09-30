@@ -9,25 +9,26 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
+from datasets.tools.data_transformer import DataTransformer
 from datasets.tools.transforms import BoundResize
-from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.data_transformer import DataTransformer
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
-from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.layers.det.rpn_target_generator import RPNTargetGenerator
 from utils.layers.det.fr_roi_generator import FRRoiGenerator
 from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
+from utils.layers.det.rpn_target_generator import RPNTargetGenerator
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -235,14 +236,9 @@ class FastRCNNTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.det_data_loader.get_valloader()
         count = 0
-        for i, batch_data in enumerate(val_data_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              bboxes_list=batch_data[1],
-                                              labels_list=batch_data[2],
-                                              trans_dict=self.configer.get('val', 'data_transformer'))
-            img_scale = torch.from_numpy(np.array(batch_data[3])).float()
+        for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
+            img_scale = data_dict['img_scale']
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])

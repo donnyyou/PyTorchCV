@@ -93,22 +93,22 @@ class CocoPoseGenerator(object):
                                img_anns[p]['bbox'][0] + img_anns[p]['bbox'][2],
                                img_anns[p]['bbox'][1] + img_anns[p]['bbox'][3]]
 
-                dic['keypoints'] = np.zeros((17, 3)).tolist()
+                dic['kpts'] = np.zeros((17, 3)).tolist()
                 for part in range(17):
-                    dic['keypoints'][part][0] = kpt[part * 3]
-                    dic['keypoints'][part][1] = kpt[part * 3 + 1]
+                    dic['kpts'][part][0] = kpt[part * 3]
+                    dic['kpts'][part][1] = kpt[part * 3 + 1]
                     # visiable is 1, unvisiable is 0 and not labeled is -1
                     if kpt[part * 3 + 2] == 2:
-                        dic['keypoints'][part][2] = 1
+                        dic['kpts'][part][2] = 1
                     elif kpt[part * 3 + 2] == 1:
-                        dic['keypoints'][part][2] = 0
+                        dic['kpts'][part][2] = 0
                     else:
-                        dic['keypoints'][part][2] = -1
+                        dic['kpts'][part][2] = -1
 
                 persons.append(dic)
                 person_centers.append(np.append(person_center, max(img_anns[p]['bbox'][2], img_anns[p]['bbox'][3])))
 
-            if len(persons) >= 0:
+            if len(persons) > 0:
                 persons = self.__coco_to_ours(persons)
                 json_dict['objects'] = persons
 
@@ -158,19 +158,19 @@ class CocoPoseGenerator(object):
         for person in persons:
             dic = dict()
             dic['bbox'] = person['bbox']
-            dic['keypoints'] = np.zeros((18,3)).tolist()
+            dic['kpts'] = np.zeros((18,3)).tolist()
             for i in range(17):
-                dic['keypoints'][COCO_TO_OURS[i]][0] = person['keypoints'][i][0]
-                dic['keypoints'][COCO_TO_OURS[i]][1] = person['keypoints'][i][1]
-                dic['keypoints'][COCO_TO_OURS[i]][2] = person['keypoints'][i][2]
-            dic['keypoints'][1][0] = (person['keypoints'][5][0] + person['keypoints'][6][0]) * 0.5
-            dic['keypoints'][1][1] = (person['keypoints'][5][1] + person['keypoints'][6][1]) * 0.5
-            if person['keypoints'][5][2] == person['keypoints'][6][2]:
-                dic['keypoints'][1][2] = person['keypoints'][5][2]
-            elif person['keypoints'][5][2] == -1 or person['keypoints'][6][2] == -1:
-                dic['keypoints'][1][2] = -1
+                dic['kpts'][COCO_TO_OURS[i]][0] = person['kpts'][i][0]
+                dic['kpts'][COCO_TO_OURS[i]][1] = person['kpts'][i][1]
+                dic['kpts'][COCO_TO_OURS[i]][2] = person['kpts'][i][2]
+            dic['kpts'][1][0] = (person['kpts'][5][0] + person['kpts'][6][0]) * 0.5
+            dic['kpts'][1][1] = (person['kpts'][5][1] + person['kpts'][6][1]) * 0.5
+            if person['kpts'][5][2] == person['kpts'][6][2]:
+                dic['kpts'][1][2] = person['kpts'][5][2]
+            elif person['kpts'][5][2] == -1 or person['kpts'][6][2] == -1:
+                dic['kpts'][1][2] = -1
             else:
-                dic['keypoints'][1][2] = 0
+                dic['kpts'][1][2] = 0
 
             our_persons.append(dic)
 

@@ -16,13 +16,13 @@ import torch
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
-from methods.tools.data_transformer import DataTransformer
-from methods.tools.module_utilizer import ModuleUtilizer
+from datasets.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
+from methods.tools.module_utilizer import ModuleUtilizer
 from models.pose_model_manager import PoseModelManager
-from utils.layers.pose.heatmap_generator import HeatmapGenerator
-from utils.helpers.image_helper import ImageHelper
 from utils.helpers.file_helper import FileHelper
+from utils.helpers.image_helper import ImageHelper
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.tools.logger import Logger as Log
 from vis.visualizer.pose_visualizer import PoseVisualizer
 
@@ -119,13 +119,7 @@ class ConvPoseMachineTest(object):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        val_data_loader = self.pose_data_loader.get_valloader()
-
-        for i, batch_data in enumerate(val_data_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              kpts_list=batch_data[1],
-                                              trans_dict=self.configer.get('val', 'data_transformer'))
-
+        for i, data_dict in enumerate(self.pose_data_loader.get_trainloader()):
             inputs = data_dict['img']
             input_size = [inputs.size(3), inputs.size(2)]
             heatmap = self.heatmap_generator(data_dict['kpts'], input_size)

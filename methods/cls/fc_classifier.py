@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -16,11 +17,10 @@ from datasets.cls_data_loader import ClsDataLoader
 from loss.cls_loss_manager import ClsLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
-from methods.tools.data_transformer import DataTransformer
 from models.cls_model_manager import ClsModelManager
-from val.scripts.cls.cls_running_score import ClsRunningScore
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
+from val.scripts.cls.cls_running_score import ClsRunningScore
 
 
 class FCClassifier(object):
@@ -39,7 +39,6 @@ class FCClassifier(object):
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.cls_net = None
         self.train_loader = None
@@ -73,12 +72,9 @@ class FCClassifier(object):
         self.configer.plus_one('epoch')
         self.scheduler.step(self.configer.get('epoch'))
 
-        for i, batch_data in enumerate(self.train_loader):
-            data_dict = self.data_transformer(img_list=batch_data[0],
-                                              labels_list=batch_data[1],
-                                              trans_dict=self.configer.get('train', 'data_transformer'))
+        for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
-            labels = data_dict['labels']
+            labels = data_dict['label']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
@@ -126,12 +122,9 @@ class FCClassifier(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  labels_list=batch_data[1],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+            for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
-                labels = data_dict['labels']
+                labels = data_dict['label']
                 # Change the data type.
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
@@ -151,7 +144,8 @@ class FCClassifier(object):
             # Print the log info & reset the states.
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))
             Log.info('TestLoss = {loss.avg:.8f}'.format(loss=self.val_losses))
-            Log.info('Top1 ACC = {acc.avg:.8f}\n'.format(acc=self.cls_running_score.get_top1_acc()))
+            Log.info('Top1 ACC = {}'.format(self.cls_running_score.get_top1_acc()))
+            Log.info('Top5 ACC = {}'.format(self.cls_running_score.get_top5_acc()))
             self.batch_time.reset()
             self.val_losses.reset()
             self.cls_running_score.reset()
@@ -159,6 +153,9 @@ class FCClassifier(object):
 
     def train(self):
         cudnn.benchmark = True
+        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
+            self.__val()
+
         while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
             self.__train()
             if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):

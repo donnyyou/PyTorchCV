@@ -45,8 +45,8 @@ class CocoEvaluator(object):
                     object_dict['category_id'] = 1
                     object_dict['score'] = object['score']
                     object_dict['keypoints'] = list()
-                    for j in range(self.configer.get('data', 'num_keypoints') - 1):
-                        keypoint = object['keypoints'][self.configer.get('details', 'coco_to_ours')[j]]
+                    for j in range(self.configer.get('data', 'num_kpts') - 1):
+                        keypoint = object['kpts'][self.configer.get('details', 'coco_to_ours')[j]]
                         object_dict['keypoints'].append(keypoint[0])
                         object_dict['keypoints'].append(keypoint[1])
                         object_dict['keypoints'].append(keypoint[2])

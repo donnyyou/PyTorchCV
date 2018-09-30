@@ -15,8 +15,17 @@ from PIL import Image
 from utils.tools.logger import Logger as Log
 
 
-PIL_INTER = [Image.NEAREST, Image.ANTIALIAS, Image.BILINEAR, Image.CUBIC]
-CV2_INTER = [cv2.INTER_NEAREST, cv2.INTER_LANCZOS4, cv2.INTER_LINEAR, cv2.INTER_CUBIC]
+PIL_INTER_DICT = {
+    'nearest': Image.NEAREST,
+    'linear': Image.BILINEAR,
+    'cubic': Image.CUBIC
+}
+
+CV2_INTER_DICT = {
+    'nearest': cv2.INTER_NEAREST,
+    'linear': cv2.INTER_LINEAR,
+    'cubic': cv2.INTER_CUBIC
+}
 
 
 class ImageHelper(object):
@@ -49,20 +58,23 @@ class ImageHelper(object):
 
     @staticmethod
     def pil_read_image(image_path, mode='RGB'):
-        if mode == 'RGB':
-            return Image.open(image_path).convert('RGB')
+        with open(image_path, 'rb') as f:
+            img = Image.open(f)
 
-        elif mode == 'BGR':
-            img = Image.open(image_path).convert('RGB')
-            cv_img = ImageHelper.rgb2bgr(np.array(img))
-            return Image.fromarray(cv_img)
+            if mode == 'RGB':
+                return img.convert('RGB')
 
-        elif mode == 'P':
-            return Image.open(image_path).convert('P')
+            elif mode == 'BGR':
+                img = img.convert('RGB')
+                cv_img = ImageHelper.rgb2bgr(np.array(img))
+                return Image.fromarray(cv_img)
 
-        else:
-            Log.error('Not support mode {}'.format(mode))
-            exit(1)
+            elif mode == 'P':
+                return img.convert('P')
+
+            else:
+                Log.error('Not support mode {}'.format(mode))
+                exit(1)
 
     @staticmethod
     def rgb2bgr(img_rgb):
@@ -130,14 +142,14 @@ class ImageHelper(object):
     @staticmethod
     def resize(img, target_size, interpolation=None):
         assert isinstance(target_size, (list, tuple))
-        interpolation = int(interpolation)
+        assert isinstance(interpolation, str)
 
         target_size = tuple(target_size)
         if isinstance(img, Image.Image):
-            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER[interpolation])
+            return ImageHelper.pil_resize(img, target_size, interpolation=PIL_INTER_DICT[interpolation])
 
         elif isinstance(img, np.ndarray):
-            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER[interpolation])
+            return ImageHelper.cv2_resize(img, target_size, interpolation=CV2_INTER_DICT[interpolation])
 
         else:
             Log.error('Image type is invalid.')

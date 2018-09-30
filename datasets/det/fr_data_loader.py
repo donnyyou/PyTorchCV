@@ -49,7 +49,7 @@ class FRDataLoader(data.Dataset):
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, bboxes, labels, scale
+        return img, scale, bboxes, labels
 
     def __len__(self):
 

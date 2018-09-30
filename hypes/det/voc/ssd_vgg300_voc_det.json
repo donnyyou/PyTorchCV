@@ -6,7 +6,7 @@
       "num_classes": 21,
       "data_dir": "~/DataSet/VOC07+12_DET",
       "image_tool": "cv2",
-      "input_mode": "RGB",
+      "input_mode": "BGR",
       "keep_difficult": false,
       "workers": 8
     },
@@ -32,56 +32,52 @@
       "scale_search": [1.0]
     },
     "train_trans": {
-      "saturation_ratio": 0.5,
-      "hue_ratio": 0.5,
-      "perm_ratio": 0.5,
-      "contrast_ratio": 0.5,
-      "pad_ratio":0.5,
-      "brightness_ratio": 0.5,
-      "blur_ratio": 0.5,
-      "flip_ratio": 0.5,
-      "crop_ratio": 1.0,
-      "trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness",
-                    "random_perm", "random_hflip", "random_pad", "random_crop"]
-    },
-    "val_trans": {
-      "trans_seq": []
-    },
-    "trans_params": {
+      "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"],
       "random_saturation": {
+        "ratio": 0.5,
         "lower": 0.5,
         "upper": 1.5
       },
       "random_hue": {
+        "ratio": 0.5,
         "delta": 18
       },
       "random_contrast": {
+        "ratio": 0.5,
         "lower": 0.5,
         "upper": 1.5
       },
       "random_pad": {
+        "ratio": 0.6,
         "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {
+        "ratio": 0.5,
         "shift_value": 32
       },
-      "random_gauss_blur": {
-        "max_blur": 4
+      "random_perm": {
+        "ratio": 0.5
       },
       "random_hflip": {
+        "ratio": 0.5,
         "swap_pair": []
       },
       "random_crop":{
+        "ratio": 1.0,
         "method": "det",
         "grid":[3, 2],
         "center_jitter": 20
-      },
-      "normalize": {
-        "div_value": 1,
-        "mean_value": [123, 117, 104],
-        "mean": [123, 117, 104],
-        "std": [1.0, 1.0, 1.0]
       }
+    },
+    "val_trans": {
+      "trans_seq": []
+    },
+    "normalize": {
+      "div_value": 1,
+      "mean_value": [104, 117, 123],
+      "mean": [104.0, 117.0, 123.0],
+      "std": [1.0, 1.0, 1.0]
     },
     "gt": {
       "anchor_method": "ssd",
@@ -108,7 +104,7 @@
       "save_iters": 5000
     },
     "network":{
-      "backbone": "vgg16_bn",
+      "backbone": "vgg16",
       "model_name": "vgg300_ssd",
       "num_feature_list": [512, 1024, 512, 256, 256, 256],
       "stride_list": [8, 16, 30, 60, 100, 300],
@@ -122,7 +118,12 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.001,
+      "is_warm": true,
+      "warm": {
+        "warm_lr": 0.000001,
+        "warm_epoch": 6
+      },
+      "base_lr": 0.004,
       "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
@@ -155,6 +156,8 @@
       "max_threshold": 0.45
     },
     "vis": {
-      "conf_threshold": 0.05
+      "conf_threshold": 0.01,
+      "max_per_image": 200,
+      "cls_keep_num": 50
     }
 }

@@ -46,7 +46,11 @@ def make_layers(cfg, batch_norm=False):
     in_channels = 3
     for v in cfg:
         if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+
+        elif v == 'C':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
+
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
@@ -92,8 +96,17 @@ class VGGModels(object):
                 pretrained_dict = self.load_url(model_urls[backbone.split('_')[0]])
 
             model_dict = model.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-            model_dict.update(pretrained_dict)
+            load_dict = dict()
+            for k, v in pretrained_dict.items():
+                new_key = k
+                if 'features' not in k:
+                    new_key = 'features.{}'.format(k)
+
+                if new_key in model_dict:
+                    load_dict[new_key] = v
+
+            Log.info('Matched Keys: {}'.format(load_dict.keys()))
+            model_dict.update(load_dict)
             model.load_state_dict(model_dict)
 
         return model
@@ -107,9 +120,19 @@ class VGGModels(object):
                 pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
             else:
                 pretrained_dict = self.load_url(model_urls['{}_bn'.format(backbone.split('_')[0])])
+
             model_dict = model.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-            model_dict.update(pretrained_dict)
+            load_dict = dict()
+            for k, v in pretrained_dict.items():
+                new_key = k
+                if 'features' not in k:
+                    new_key = 'features.{}'.format(k)
+
+                if new_key in model_dict:
+                    load_dict[new_key] = v
+
+            Log.info('Matched Keys: {}'.format(load_dict.keys()))
+            model_dict.update(load_dict)
             model.load_state_dict(model_dict)
 
         return model

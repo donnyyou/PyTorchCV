@@ -65,12 +65,15 @@ class ModuleUtilizer(object):
         net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         if self.configer.get('network', 'resume') is not None:
-            checkpoint_dict = torch.load(self.configer.get('network', 'resume'))
-            if 'state_dict' in checkpoint_dict:
-                checkpoint_dict = checkpoint_dict['state_dict']
+            resume_dict = torch.load(self.configer.get('network', 'resume'))
+            if 'state_dict' in resume_dict:
+                checkpoint_dict = resume_dict['state_dict']
 
-            if 'model' in checkpoint_dict:
-                checkpoint_dict = checkpoint_dict['model']
+            elif 'model' in resume_dict:
+                checkpoint_dict = resume_dict['model']
+
+            else:
+                checkpoint_dict = resume_dict
 
             net_dict = net.state_dict()
 
@@ -102,6 +105,12 @@ class ModuleUtilizer(object):
             else:
                 Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
                 exit(1)
+
+            if self.configer.get('network', 'resume_continue'):
+                self.configer.update_value(['epoch'], resume_dict['config_dict']['epoch'])
+                self.configer.update_value(['iters'], resume_dict['config_dict']['iters'])
+                self.configer.update_value(['performance'], resume_dict['config_dict']['performance'])
+                self.configer.update_value(['val_loss'], resume_dict['config_dict']['val_loss'])
 
             net.load_state_dict(net_dict)
 

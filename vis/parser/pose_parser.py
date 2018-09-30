@@ -76,11 +76,11 @@ class PoseParser(object):
 
     def draw_points(self, image_canvas, info_tree):
         for object in info_tree['objects']:
-            for i in range(self.configer.get('data', 'num_keypoints')):
-                if object['keypoints'][i][2] == -1:
+            for i in range(self.configer.get('data', 'num_kpts')):
+                if object['kpts'][i][2] == -1:
                     continue
 
-                cv2.circle(image_canvas, (int(object['keypoints'][i][0]), int(object['keypoints'][i][1])),
+                cv2.circle(image_canvas, (int(object['kpts'][i][0]), int(object['kpts'][i][1])),
                            self.configer.get('vis', 'circle_radius'),
                            self.configer.get('details', 'color_list')[i], thickness=-1)
 
@@ -89,7 +89,7 @@ class PoseParser(object):
     def link_points(self, image_canvas, info_tree):
         for object in info_tree['objects']:
             for i in range(len(self.configer.get('details', 'limb_seq'))):
-                two_points = np.array(object['keypoints'])[np.array(self.configer.get('details', 'limb_seq')[i])-1]
+                two_points = np.array(object['kpts'])[np.array(self.configer.get('details', 'limb_seq')[i])-1]
                 if -1 in two_points[:, 2]:
                     continue
 
