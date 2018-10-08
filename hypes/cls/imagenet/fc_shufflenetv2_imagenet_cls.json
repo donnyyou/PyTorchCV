@@ -7,7 +7,7 @@
       "data_dir": "~/DataSet/ImageNet",
       "image_tool": "pil",
       "input_mode": "RGB",
-      "workers": 16
+      "workers": 32
     },
     "train": {
       "batch_size": 1024,

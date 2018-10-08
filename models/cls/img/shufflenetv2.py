@@ -169,7 +169,7 @@ class ShuffleNetV2(nn.Module):
 
         for name, m in self.named_modules():
             if any(map(lambda x: isinstance(m, x), [nn.Linear, nn.Conv1d, nn.Conv2d])):
-                nn.init.kaiming_uniform_(m.weight, mode='fan_in')
+                nn.init.kaiming_uniform_(m.weight, mode='fan_out')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
