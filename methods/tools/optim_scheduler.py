@@ -53,6 +53,10 @@ class OptimScheduler(object):
             lambda_poly = lambda epoch: pow((1.0 - epoch / self.configer.get('solver', 'max_epoch')), 0.9)
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_poly)
 
+        elif policy == 'lambda_linear':
+            lambda_linear = lambda epoch: (epoch / self.configer.get('solver', 'max_epoch'))
+            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_linear)
+
         else:
             Log.error('Policy:{} is not valid.'.format(policy))
             exit(1)
