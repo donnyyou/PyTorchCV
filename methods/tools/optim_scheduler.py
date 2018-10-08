@@ -54,7 +54,7 @@ class OptimScheduler(object):
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_poly)
 
         elif policy == 'lambda_linear':
-            lambda_linear = lambda epoch: (epoch / self.configer.get('solver', 'max_epoch'))
+            lambda_linear = lambda epoch: 1.0 - (epoch / self.configer.get('solver', 'max_epoch'))
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_linear)
 
         else:
