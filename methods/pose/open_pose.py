@@ -195,7 +195,7 @@ class OpenPose(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.pose_net, metric='iters')
+            self.module_utilizer.save_net(self.pose_net, save_mode='iters')
             Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.val_loss_heatmap.avg, self.val_loss_associate.avg))
             # Print the log info & reset the states.
             Log.info(

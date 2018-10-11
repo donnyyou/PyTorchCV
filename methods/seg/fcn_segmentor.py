@@ -172,8 +172,8 @@ class FCNSegmentor(object):
 
         self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
         self.configer.update_value(['val_loss'], self.val_losses.avg)
-        self.module_utilizer.save_net(self.seg_net, metric='performance')
-        self.module_utilizer.save_net(self.seg_net, metric='val_loss')
+        self.module_utilizer.save_net(self.seg_net, save_mode='performance')
+        self.module_utilizer.save_net(self.seg_net, save_mode='val_loss')
 
         # Print the log info & reset the states.
         Log.info(
