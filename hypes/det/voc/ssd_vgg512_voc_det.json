@@ -28,7 +28,7 @@
       }
     },
     "test": {
-      "_input_size": [512, 512],
+      "input_size": [512, 512],
       "scale_search": [1.0]
     },
     "train_trans": {
