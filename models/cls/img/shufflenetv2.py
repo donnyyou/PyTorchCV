@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: Donny You (youansheng@gmail.com)
-# Class Definition for Single Shot Detector.
+# Class Definition for ShuffleNetv2 Models.
 
 
 from __future__ import absolute_import
@@ -10,162 +10,203 @@ from __future__ import print_function
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from collections import OrderedDict
 
 
-def conv_bn(inp, oup, stride):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup),
-        nn.ReLU(inplace=True)
-    )
-
-
-def conv_1x1_bn(inp, oup):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
-        nn.ReLU(inplace=True)
-    )
-
-
-def channel_shuffle(x, groups):
-    batchsize, num_channels, height, width = x.data.size()
-
-    channels_per_group = num_channels // groups
-
-    # reshape
-    x = x.view(batchsize, groups,
-               channels_per_group, height, width)
-
-    x = torch.transpose(x, 1, 2).contiguous()
-
-    # flatten
-    x = x.view(batchsize, -1, height, width)
-
-    return x
-
-
-class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, benchmodel):
-        super(InvertedResidual, self).__init__()
-        self.benchmodel = benchmodel
-        self.stride = stride
-        assert stride in [1, 2]
-
-        oup_inc = oup // 2
-
-        if self.benchmodel == 1:
-            # assert inp == oup_inc
-            self.banch2 = nn.Sequential(
-                # pw
-                nn.Conv2d(oup_inc, oup_inc, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                nn.ReLU(inplace=True),
-                # dw
-                nn.Conv2d(oup_inc, oup_inc, 3, stride, 1, groups=oup_inc, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                # pw-linear
-                nn.Conv2d(oup_inc, oup_inc, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                nn.ReLU(inplace=True),
-            )
-        else:
-            self.banch1 = nn.Sequential(
-                # dw
-                nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
-                nn.BatchNorm2d(inp),
-                # pw-linear
-                nn.Conv2d(inp, oup_inc, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                nn.ReLU(inplace=True),
-            )
-
-            self.banch2 = nn.Sequential(
-                # pw
-                nn.Conv2d(inp, oup_inc, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                nn.ReLU(inplace=True),
-                # dw
-                nn.Conv2d(oup_inc, oup_inc, 3, stride, 1, groups=oup_inc, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                # pw-linear
-                nn.Conv2d(oup_inc, oup_inc, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup_inc),
-                nn.ReLU(inplace=True),
-            )
-
-    @staticmethod
-    def _concat(x, out):
-        # concatenate along channel axis
-        return torch.cat((x, out), 1)
+class ShuffleUnit(nn.Module):
+    def __init__(self, groups):
+        super(ShuffleUnit, self).__init__()
+        self.groups = groups
 
     def forward(self, x):
-        if 1 == self.benchmodel:
-            x1 = x[:, :(x.shape[1] // 2), :, :]
-            x2 = x[:, (x.shape[1] // 2):, :, :]
-            out = self._concat(x1, self.banch2(x2))
+        n, c, h, w = x.shape
+        x = x.reshape(n, self.groups, c // self.groups, h, w)
+        x = x.permute(0, 2, 1, 3, 4)
+        x = x.reshape(n, c, h, w)
+        return x
 
-        elif 2 == self.benchmodel:
-            out = self._concat(self.banch1(x), self.banch2(x))
+
+class ConvBnRelu(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1,
+                 groups=1):
+        super(ConvBnRelu, self).__init__()
+        self.conv_bn_relu = nn.Sequential(
+            nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding, dilation, groups,
+                      False),
+            nn.BatchNorm2d(out_channel),
+            nn.ReLU(True))
+
+    def forward(self, x):
+        return self.conv_bn_relu(x)
+
+
+class ConvBn(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1, groups=1):
+        super(ConvBn, self).__init__()
+        self.conv_bn = nn.Sequential(
+            nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding, dilation, groups,
+                      False),
+            nn.BatchNorm2d(out_channel))
+
+    def forward(self, x):
+        return self.conv_bn(x)
+
+
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=2):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        n, c, _, _ = x.size()
+        y = self.avg_pool(x).view(n, c)
+        y = self.fc(y).view(n, c, 1, 1)
+        return x * y
+
+
+class ShuffleNetV2Block(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, dilation=1, stride=1, shuffle_group=2):
+        super(ShuffleNetV2Block, self).__init__()
+
+        pad = (kernel_size // 2) * dilation
+        self._stride = stride
+        if stride == 1:
+            # Split and concat unit
+            if in_channel != out_channel:
+                raise ValueError('in_c must equal out_c if stride is 1, which is {} and {}.'
+                                 .format(in_channel, out_channel))
+            branch_channel = (in_channel // 2) + (in_channel % 2)
+            self._branch_channel = branch_channel
+            self.branch = nn.Sequential(
+                ConvBnRelu(branch_channel, branch_channel, 1),
+                ConvBn(branch_channel, branch_channel, kernel_size, padding=pad, dilation=dilation,
+                       groups=branch_channel),
+                ConvBnRelu(branch_channel, branch_channel, 1)
+            )
+        else:
+            # No split and downsample unit
+            self.branch_0 = nn.Sequential(
+                ConvBnRelu(in_channel, out_channel, 1),
+                ConvBn(out_channel, out_channel, kernel_size, stride, padding=pad,
+                       dilation=dilation, groups=out_channel),
+                ConvBnRelu(out_channel, out_channel, 1)
+            )
+            self.branch_1 = nn.Sequential(
+                ConvBn(in_channel, in_channel, kernel_size, stride, padding=pad, dilation=dilation,
+                       groups=in_channel),
+                ConvBnRelu(in_channel, out_channel, 1)
+            )
+        self.shuffle = ShuffleUnit(shuffle_group)
+
+    def forward(self, x):
+        if self._stride == 1:
+            x_0, x_1 = torch.split(x, self._branch_channel, dim=1)
+            out = torch.cat([self.branch(x_0), x_1], dim=1)
 
         else:
-            out = None
+            out = torch.cat([self.branch_0(x), self.branch_1(x)], dim=1)
 
-        return channel_shuffle(out, 2)
+        out = self.shuffle(out)
+        return out
+
+
+class ShuffleNetV2ResBlock(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, dilation=1, stride=1,
+                 shuffle_group=2, use_se_block=True, se_reduction=16):
+        super(ShuffleNetV2ResBlock, self).__init__()
+
+        pad = (kernel_size // 2) * dilation
+        self._stride = stride
+        self._in_channel = in_channel
+        self._out_channel = out_channel
+        if stride == 1 and in_channel == out_channel:
+            # Split and concat unit
+            branch_channel = (in_channel // 2) + (in_channel % 2)
+            self._branch_channel = branch_channel
+            self._blocks = [
+                ConvBnRelu(branch_channel, branch_channel, 1),
+                ConvBn(branch_channel, branch_channel, kernel_size, padding=pad, dilation=dilation,
+                       groups=branch_channel),
+                ConvBnRelu(branch_channel, branch_channel, 1)
+            ]
+            if use_se_block:
+                self._blocks.append(SELayer(branch_channel, se_reduction))
+
+            self.branch = nn.Sequential(*self._blocks)
+        else:
+            # No split and downsample unit
+            self._blocks = [
+                ConvBnRelu(in_channel, out_channel, 1),
+                ConvBn(out_channel, out_channel, kernel_size, stride, padding=pad,
+                       dilation=dilation, groups=out_channel),
+                ConvBnRelu(out_channel, out_channel, 1)
+            ]
+            if use_se_block:
+                self._blocks.append(SELayer(out_channel, se_reduction))
+            self.branch_0 = nn.Sequential(*self._blocks)
+            self.branch_1 = nn.Sequential(
+                ConvBn(in_channel, in_channel, kernel_size, stride, padding=pad, dilation=dilation,
+                       groups=in_channel),
+                ConvBnRelu(in_channel, out_channel, 1)
+            )
+        self.shuffle = ShuffleUnit(shuffle_group)
+
+    def forward(self, x):
+        if self._stride == 1 and self._in_channel == self._out_channel:
+            x_0, x_1 = torch.split(x, self._branch_channel, dim=1)
+            x_0 = x_0 + self.branch(x_0)
+            out = torch.cat([x_0, x_1], dim=1)
+        else:
+            out = torch.cat([self.branch_0(x), self.branch_1(x)], dim=1)
+
+        out = self.shuffle(out)
+        return out
 
 
 class ShuffleNetV2(nn.Module):
-    def __init__(self, configer, width_mult=1.):
+    """
+    Class for building ShuffleNetV2 model with [0.5, 1.0, 1.5, 2.0] sizes
+    """
+    def __init__(self, configer):
         super(ShuffleNetV2, self).__init__()
         self.configer = configer
-        self.stage_repeats = [4, 8, 4]
-        # index 0 is invalid and should never be called.
-        # only used for indexing convenience.
-        if self.configer.get('network', 'width_mult') == 0.5:
-            self.stage_out_channels = [-1, 24, 48, 96, 192, 1024]
+        self.block_def = self._select_channel_size(self.configer.get('network', 'model_scale'))
+        cur_channel = 24
+        down_size = 4
 
-        elif self.configer.get('network', 'width_mult') == 1.0:
-            self.stage_out_channels = [-1, 24, 116, 232, 464, 1024]
+        # First conv down size
+        self.blocks = [('init_block',
+                        nn.Sequential(
+                            ConvBnRelu(3, cur_channel, 3, stride=2, padding=1),
+                            nn.MaxPool2d(3, stride=2, padding=1)
+                        ))]
 
-        elif self.configer.get('network', 'width_mult') == 1.5:
-            self.stage_out_channels = [-1, 24, 176, 352, 704, 1024]
+        # Middle shuffle blocks
+        for idx, block in enumerate(self.block_def[:-1]):
+            out_channel, repeat = block
+            self.blocks += [('stage{}_block1'.format(idx + 2),
+                             ShuffleNetV2Block(cur_channel, out_channel // 2, 3, stride=2,
+                                               shuffle_group=self.configer.get('network', 'shuffle_group')))]
+            down_size *= 2
+            for i in range(repeat - 1):
+                self.blocks += [('stage{}_block{}'.format(idx + 2, i + 2),
+                                 ShuffleNetV2Block(out_channel, out_channel, 3,
+                                                   shuffle_group=self.configer.get('network', 'shuffle_group')))]
 
-        elif self.configer.get('network', 'width_mult') == 2.0:
-            self.stage_out_channels = [-1, 24, 224, 488, 976, 2048]
+            cur_channel = out_channel
 
-        else:
-            raise ValueError("width_multi {} not support!".format(self.configer.get('network', 'width_mult')))
-
-        # building first layer
-        input_channel = self.stage_out_channels[1]
-        self.conv1 = conv_bn(3, input_channel, 2)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.features = []
-        # building inverted residual blocks
-        for idxstage in range(len(self.stage_repeats)):
-            numrepeat = self.stage_repeats[idxstage]
-            output_channel = self.stage_out_channels[idxstage + 2]
-            for i in range(numrepeat):
-                if i == 0:
-                    # inp, oup, stride, benchmodel):
-                    self.features.append(InvertedResidual(input_channel, output_channel, 2, 2))
-
-                else:
-                    self.features.append(InvertedResidual(input_channel, output_channel, 1, 1))
-
-                input_channel = output_channel
-
-        # make it nn.Sequential
-        self.features = nn.Sequential(*self.features)
-
-        # building last several layers
-        self.conv_last = conv_1x1_bn(input_channel, self.stage_out_channels[-1])
+        self.backbone = nn.Sequential(OrderedDict(self.blocks))
+        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1),
+                                       nn.AvgPool2d(self.configer.get('network', 'pooled_size'), [1, 1]))
 
         # building classifier
-        self.classifier = nn.Sequential(nn.Linear(self.stage_out_channels[-1],
-                                                  self.configer.get('data', 'num_classes')))
+        self.classifier = nn.Linear(self.block_def[-1][0], self.configer.get('data', 'num_classes'))
 
         for name, m in self.named_modules():
             if any(map(lambda x: isinstance(m, x), [nn.Linear, nn.Conv1d, nn.Conv2d])):
@@ -173,13 +214,130 @@ class ShuffleNetV2(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
+    def _select_channel_size(self, model_scale):
+        # [(out_channel, repeat_times), (out_channel, repeat_times), ...]
+        if model_scale == 0.5:
+            return [(48, 4), (96, 8), (192, 4), (1024, 1)]
+        elif model_scale == 1.0:
+            return [(116, 4), (232, 8), (464, 4), (1024, 1)]
+        elif model_scale == 1.5:
+            return [(176, 4), (352, 8), (704, 4), (1024, 1)]
+        elif model_scale == 2.0:
+            return [(244, 4), (488, 8), (976, 4), (2048, 1)]
+        else:
+            raise ValueError('Unsupported model size.')
+
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.maxpool(x)
-        x = self.features(x)
-        x = self.conv_last(x)
-        x = F.adaptive_avg_pool2d(x, (1, 1))
-        x = x.view(-1, self.stage_out_channels[-1])
+        x = self.backbone(x)
+        x = self.conv_pool(x)
+        x = x.view(-1, self.block_def[-1][0])
+        x = self.classifier(x)
+        return x
+
+
+class ShuffleResNetV2(nn.Module):
+    """
+    Class for building ShuffleNetV2-50 and SE-ShuffleNetV2-164
+    """
+    def __init__(self, configer):
+        super(ShuffleResNetV2, self).__init__()
+        self.configer = configer
+        self.block_def = self._select_model_size(self.configer.get('network', 'model_name'))
+        down_size = 2
+        self.blocks = []
+
+        # First conv down size
+        self.init_block, cur_channel = self._get_init_block(self.configer.get('network', 'model_name'), 3)
+        self.blocks += self.init_block
+
+        # Middle shuffle blocks
+        for idx, block in enumerate(self.block_def[:-1]):
+            out_channel, repeat = block
+            down_size *= 2
+
+            if idx == 0:
+                self.blocks += [('stage{}_block1'.format(idx + 2),
+                                 nn.MaxPool2d(3, stride=2, padding=1)),
+                                ('stage{}_block2'.format(idx + 2),
+                                 ShuffleNetV2ResBlock(cur_channel, out_channel // 2, 3,
+                                                      shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                                      use_se_block=self.configer.get('network', 'use_se_block'),
+                                                      se_reduction=self.configer.get('network', 'se_reduction'))
+                                 )]
+                for i in range(repeat - 2):
+                    self.blocks += [('stage{}_block{}'.format(idx + 2, i + 3),
+                                     ShuffleNetV2ResBlock(out_channel, out_channel, 3,
+                                                          shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                                          use_se_block=self.configer.get('network', 'use_se_block'),
+                                                          se_reduction=self.configer.get('network', 'se_reduction')
+                                                          )
+                                     )]
+            else:
+                self.blocks += [('stage{}_block1'.format(idx + 2),
+                                 ShuffleNetV2ResBlock(cur_channel, out_channel // 2, 3, stride=2,
+                                                      shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                                      use_se_block=self.configer.get('network', 'use_se_block'),
+                                                      se_reduction=self.configer.get('network', 'se_reduction')
+                                                      )
+                                 )]
+                for i in range(repeat - 1):
+                    self.blocks += [('stage{}_block{}'.format(idx + 2, i + 2),
+                                     ShuffleNetV2ResBlock(out_channel, out_channel, 3,
+                                                          shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                                          use_se_block=self.configer.get('network', 'use_se_block'),
+                                                          se_reduction=self.configer.get('network', 'se_reduction')
+                                                          )
+                                     )]
+            cur_channel = out_channel
+
+        self.backbone = nn.Sequential(OrderedDict(self.blocks))
+
+        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1),
+                                       nn.AvgPool2d(self.configer.get('network', 'pooled_size'), [1, 1]))
+
+        # building classifier
+        self.classifier = nn.Linear(self.block_def[-1][0], self.configer.get('data', 'num_classes'))
+
+        for name, m in self.named_modules():
+            if any(map(lambda x: isinstance(m, x), [nn.Linear, nn.Conv1d, nn.Conv2d])):
+                nn.init.kaiming_uniform_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def _get_init_block(self, model_arch, in_channel):
+        out_channel = 64
+        if model_arch == 'shufflenetv2-50':
+            blocks = [('init_block', ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1))]
+
+        elif model_arch == 'shufflenetv2-164':
+            blocks = [('init_block',
+                       nn.Sequential(
+                           ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1),
+                           ConvBnRelu(out_channel, out_channel, 3, stride=1, padding=1),
+                           ConvBnRelu(out_channel, 2 * out_channel, 3, stride=1, padding=1)
+                       ))]
+            out_channel *= 2
+
+        else:
+            raise ValueError('Support arch [shufflenetv2-50, shufflenetv2-164]')
+
+        return blocks, out_channel
+
+    def _select_model_size(self, model_arch):
+        # [(out_channel, repeat_times), (out_channel, repeat_times), ...]
+        if model_arch == 'shufflenetv2-50':
+            return [(244, 4), (488, 4), (976, 6), (1952, 3), (2048, 1)]
+
+        elif model_arch == 'shufflenetv2-164':
+            return [(340, 10), (680, 10), (1360, 23), (2720, 10), (2048, 1)]
+
+        else:
+            raise ValueError('Support arch [shufflenetv2-50, shufflenetv2-164]')
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.conv_pool(x)
+        x = x.view(-1, self.block_def[-1][0])
         x = self.classifier(x)
         return x
 
