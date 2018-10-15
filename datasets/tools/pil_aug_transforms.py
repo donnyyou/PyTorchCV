@@ -535,7 +535,7 @@ class RandomResize(object):
         if labelmap is not None:
             labelmap = labelmap.resize(converted_size, Image.NEAREST)
         if maskmap is not None:
-            maskmap = maskmap.resize(converted_size, Image.CUBIC)
+            maskmap = maskmap.resize(converted_size, Image.NEAREST)
 
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
