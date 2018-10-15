@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
+import numpy as np
 from torch.utils import data
 
 from utils.helpers.image_helper import ImageHelper
@@ -33,6 +33,9 @@ class FSDataLoader(data.Dataset):
                                      mode=self.configer.get('data', 'input_mode'))
         labelmap = ImageHelper.read_image(self.label_list[index],
                                           tool=self.configer.get('data', 'image_tool'), mode='P')
+        if not self.configer.is_empty('data', 'label_list'):
+            labelmap = self._encode_label(labelmap)
+
         if self.aug_transform is not None:
             img, labelmap = self.aug_transform(img, labelmap=labelmap)
 
@@ -43,6 +46,19 @@ class FSDataLoader(data.Dataset):
             labelmap = self.label_transform(labelmap)
 
         return img, labelmap
+
+    def _encode_label(self, labelmap):
+        labelmap = np.array(labelmap)
+        shape = labelmap.shape
+        encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
+        for i in range(self.configer.get('data', 'num_classes')):
+            class_id = self.configer.get('data', 'label_list')[i]
+            encoded_labelmap[labelmap == class_id] = i
+
+        if self.configer.get('data', 'image_tool') == 'pil':
+            encoded_labelmap = ImageHelper.np2img(encoded_labelmap.astype(np.uint8))
+
+        return encoded_labelmap
 
     def __list_dirs(self, root_dir):
         img_list = list()
