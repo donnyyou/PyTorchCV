@@ -186,7 +186,7 @@ class YOLOv3Test(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, data_dict in enumerate(self.det_data_loader.get_valloader()):
+        for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
