@@ -3,92 +3,81 @@
     "task": "det",
     "method": "yolov3",
     "data": {
-      "train_batch_size": 16,
-      "val_batch_size": 2,
-      "train_input_size": [416, 416],
-      "val_input_size": [416, 416],
       "num_classes": 80,
-      "data_dir": "~/DataSet/COCO_DET",
+      "data_dir": "~/DataSet/COCO_INS",
+      "image_tool": "pil",
+      "input_mode": "RGB",
+      "keep_difficult": false,
       "workers": 8
+    },
+    "train": {
+      "batch_size": 16,
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [416, 416],
+        "align_method": "only_scale"
+      }
+    },
+    "val": {
+      "batch_size": 16,
+      "use_07_metric": true,
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [416, 416],
+        "align_method": "only_scale"
+      }
     },
     "test": {
       "test_input_size": [416, 416],
-      "scale_search": [0.5, 1.0, 1.5, 2.0],
-      "mirror": true
+      "scale_search": [0.5, 1.0, 1.5, 2.0]
     },
     "train_trans": {
-      "pad_ratio": 0.0,
-      "brightness_ratio": 0.0,
-      "blur_ratio": 0.0,
-      "hsv_ratio": 0.0,
-      "flip_ratio": 0.0,
-      "resize_ratio": 0.0,
-      "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
-                    "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
-    },
-    "val_trans": {
-      "pad_ratio":0.0,
-      "brightness_ratio": 0.0,
-      "blur_ratio": 0.0,
-      "hsv_ratio": 0.0,
-      "flip_ratio": 0.0,
-      "resize_ratio": 0.0,
-      "rotate_ratio": 0.0,
-      "crop_ratio": 0.0,
-      "trans_seq": ["random_brightness", "random_gauss_blur", "random_hsv",
-                    "random_hflip", "random_resize", "random_rotate",
-                    "random_crop", "resize"]
-    },
-    "trans_params": {
+      "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"],
       "random_saturation": {
+        "ratio": 0.5,
         "lower": 0.5,
         "upper": 1.5
       },
       "random_hue": {
+        "ratio": 0.5,
         "delta": 18
       },
       "random_contrast": {
+        "ratio": 0.5,
         "lower": 0.5,
         "upper": 1.5
       },
       "random_pad": {
+        "ratio": 0.6,
         "up_scale_range": [1.0, 4.0]
       },
       "random_brightness": {
+        "ratio": 0.5,
         "shift_value": 32
       },
-      "random_gauss_blur": {
-        "max_blur": 4
-      },
-      "random_hsv": {
-        "h_range": [0.7, 1.3],
-        "s_range": [0.7, 1.3],
-        "v_range": [0.7, 1.3]
+      "random_perm": {
+        "ratio": 0.5
       },
       "random_hflip": {
+        "ratio": 0.5,
         "swap_pair": []
       },
-      "random_resize": {
-        "scale_min": 0.75,
-        "scale_max": 1.25
-      },
-      "random_rotate": {
-        "rotate_degree": 40
-      },
       "random_crop":{
-        "crop_size": [1024, 512],
-        "method": "grid",
+        "ratio": 1.0,
+        "method": "det",
         "grid":[3, 2],
         "center_jitter": 20
-      },
-      "resize": {
-        "keep_scale": false
-      },
-      "mean": [0.485, 0.456, 0.406],
-      "std": [0.229, 0.224, 0.225]
+      }
+    },
+    "val_trans": {
+      "trans_seq": []
+    },
+    "normalize": {
+      "div_value": 255,
+      "mean_value": [0, 0, 0],
+      "mean": [0.0, 0.0, 0.0],
+      "std": [1.0, 1.0, 1.0]
     },
     "gt": {
       "anchors_list": [
@@ -140,7 +129,6 @@
     "network":{
       "backbone": "darknet53",
       "model_name": "darknet_yolov3",
-      "init": "kaiming_normal",
       "stride_list": [32, 16, 8],
       "loss_weights": {
         "coord_loss": 2.5,

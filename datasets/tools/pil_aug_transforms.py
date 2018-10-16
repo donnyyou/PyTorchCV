@@ -988,7 +988,7 @@ class RandomDetCrop(object):
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
-            if mode is None:
+            if mode is None or bboxes.size == 0:
                 return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
             min_iou, max_iou = mode

@@ -171,7 +171,7 @@ class YOLOv3(object):
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = YOLOv3Test.decode(detections, self.configer)
-                batch_pred_bboxes = self.__get_object_list(batch_detections)
+                batch_pred_bboxes = self.__get_object_list(batch_detections, input_size)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
@@ -191,16 +191,16 @@ class YOLOv3(object):
             self.val_losses.reset()
             self.det_net.train()
 
-    def __get_object_list(self, batch_detections):
+    def __get_object_list(self, batch_detections, input_size):
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                    xmin = x1.cpu().item()
-                    ymin = y1.cpu().item()
-                    xmax = x2.cpu().item()
-                    ymax = y2.cpu().item()
+                    xmin = x1.cpu().item() * input_size[0]
+                    ymin = y1.cpu().item() * input_size[1]
+                    xmax = x2.cpu().item() * input_size[0]
+                    ymax = y2.cpu().item() * input_size[1]
                     cf = conf.cpu().item()
                     cls_pred = cls_pred.cpu().item()
                     object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])

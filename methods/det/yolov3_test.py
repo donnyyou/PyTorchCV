@@ -84,15 +84,17 @@ class YOLOv3Test(object):
         box_corner[:, :, 1] = batch_pred_bboxes[:, :, 1] - batch_pred_bboxes[:, :, 3] / 2
         box_corner[:, :, 2] = batch_pred_bboxes[:, :, 0] + batch_pred_bboxes[:, :, 2] / 2
         box_corner[:, :, 3] = batch_pred_bboxes[:, :, 1] + batch_pred_bboxes[:, :, 3] / 2
-        batch_pred_bboxes[:, :, :4] = box_corner[:, :, :4]
+
         # clip bounding box
-        batch_pred_bboxes[:, :, 0::2] = batch_pred_bboxes[:, :, 0::2].clamp(min=0, max=1.0)
-        batch_pred_bboxes[:, :, 1::2] = batch_pred_bboxes[:, :, 1::2].clamp(min=0, max=1.0)
+        box_corner[:, :, 0::2] = box_corner[:, :, 0::2].clamp(min=0, max=1.0)
+        box_corner[:, :, 1::2] = box_corner[:, :, 1::2].clamp(min=0, max=1.0)
+
+        batch_pred_bboxes[:, :, :4] = box_corner[:, :, :4]
 
         output = [None for _ in range(len(batch_pred_bboxes))]
         for image_i, image_pred in enumerate(batch_pred_bboxes):
             # Filter out confidence scores below threshold
-            conf_mask = (image_pred[:, 4] > configer.get('vis', 'conf_threshold')).squeeze()
+            conf_mask = (image_pred[:, 4] > configer.get('vis', 'obj_threshold')).squeeze()
             image_pred = image_pred[conf_mask]
             # If none are remaining => process next image
             if image_pred.numel() == 0:
@@ -184,7 +186,7 @@ class YOLOv3Test(object):
             os.makedirs(base_dir)
 
         count = 0
-        for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
+        for i, data_dict in enumerate(self.det_data_loader.get_valloader()):
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
@@ -210,7 +212,7 @@ class YOLOv3Test(object):
 
                 be_c += num_c
 
-            batch_detections = self.decode(self.yolo_detection_layer(output_list)[1], self.configer)
+            batch_detections = self.decode(self.yolo_detection_layer(output_list)[2], self.configer)
 
             for j in range(inputs.size(0)):
                 count = count + 1
