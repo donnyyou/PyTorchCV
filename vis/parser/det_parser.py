@@ -85,15 +85,15 @@ class DetParser(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hypes_file', default='../../hypes/det/coco/ssd_vgg300_coco_det.json', type=str,
+    parser.add_argument('--hypes_file', default='../../hypes/det/coco/yolov3_darknet_coco_det.json', type=str,
                         dest='hypes_file', help='The file of the hyper parameters.')
     parser.add_argument('--image_file', default=None, type=str,
                         dest='image_file', help='The image file of Det Parser.')
     parser.add_argument('--json_file', default=None, type=str,
                         dest='json_file', help='The json file of Det Parser.')
-    parser.add_argument('--image_dir', default='/home/donny/DataSet/COCO_DET/train/image', type=str,
+    parser.add_argument('--image_dir', default='/home/donny/DataSet/COCO_INS/train/image', type=str,
                         dest='image_dir', help='The image directory of Det Parser.')
-    parser.add_argument('--json_dir', default='/home/donny/DataSet/COCO_DET/train/json', type=str,
+    parser.add_argument('--json_dir', default='/home/donny/DataSet/COCO_INS/train/json', type=str,
                         dest='json_dir', help='The json directory of Det Parser.')
 
     args_parser = parser.parse_args()

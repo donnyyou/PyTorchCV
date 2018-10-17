@@ -12,6 +12,6 @@ DATA_SET='VOC07'
 SAVE_DIR='/home/donny/DataSet/'${DATA_SET}'_DET'
 
 
-python2.7 voc_det_generator.py --root_dir $ROOT_DIR \
-                               --save_dir $SAVE_DIR \
-                               --dataset $DATA_SET
+python voc_det_generator.py --root_dir $ROOT_DIR \
+                            --save_dir $SAVE_DIR \
+                            --dataset $DATA_SET

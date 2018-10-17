@@ -6,16 +6,17 @@
 
 export PYTHONPATH='/home/donny/Projects/PytorchCV'
 
+COCO_DIR='/home/donny/DataSet/MSCOCO/'
+COCO_TRAIN_IMG_DIR=${COCO_DIR}'train2017'
+COCO_VAL_IMG_DIR=${COCO_DIR}'val2017'
 
-COCO_TRAIN_IMG_DIR='/home/donny/DataSet/MSCOCO/train2017'
-COCO_VAL_IMG_DIR='/home/donny/DataSet/MSCOCO/val2017'
-
-COCO_ANNO_DIR='/home/donny/DataSet/MSCOCO/annotations/'
+COCO_ANNO_DIR=${COCO_DIR}'annotations/'
 TRAIN_ANNO_FILE=${COCO_ANNO_DIR}'instances_train2017.json'
 VAL_ANNO_FILE=${COCO_ANNO_DIR}'instances_val2017.json'
 
-TRAIN_SAVE_DIR='/home/donny/DataSet/COCO_INS/train'
-VAL_SAVE_DIR='/home/donny/DataSet/COCO_INS/val'
+SAVE_DIR='/home/donny/DataSet/COCO_INS/'
+TRAIN_SAVE_DIR=${SAVE_DIR}'train'
+VAL_SAVE_DIR=${SAVE_DIR}'val'
 
 
 python coco_ins_generator.py --save_dir $TRAIN_SAVE_DIR \

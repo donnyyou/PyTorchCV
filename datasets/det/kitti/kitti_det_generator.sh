@@ -12,7 +12,7 @@ ORI_LABEL_DIR='/home/donny/KITTI/label'
 SAVE_DIR='/data/DataSet/KITTI'
 
 
-python2.7 kitti_det_generator.py --ori_img_dir $ORI_IMG_DIR \
-                                 --ori_label_dir $ORI_LABEL_DIR \
-                                 --save_dir $SAVE_DIR \
-                                 --val_interval 10
+python kitti_det_generator.py --ori_img_dir $ORI_IMG_DIR \
+                              --ori_label_dir $ORI_LABEL_DIR \
+                              --save_dir $SAVE_DIR \
+                              --val_interval 10

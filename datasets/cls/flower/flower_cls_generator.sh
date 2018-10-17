@@ -11,6 +11,6 @@ ORI_IMG_DIR='/home/donny/Downloads/jpg'
 SAVE_DIR='/data/DataSet/Flower'
 
 
-python2.7 flower_cls_generator.py --ori_img_dir $ORI_IMG_DIR \
-                                  --save_dir $SAVE_DIR \
-                                  --val_interval 10
+python flower_cls_generator.py --ori_img_dir $ORI_IMG_DIR \
+                               --save_dir $SAVE_DIR \
+                               --val_interval 10
