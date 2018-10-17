@@ -8,18 +8,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.seg.semantic.syncbn_deeplabv3 import SyncBNDeepLabV3
-from models.seg.semantic.syncbn_pspnet import SyncBNPSPNet
-from models.seg.semantic.syncbn_embednet import SyncBNEmbedNet
-from models.seg.semantic.syncbn_denseassp import SyncBNDenseASPP
+from models.seg.semantic.deeplabv3 import DeepLabV3
+from models.seg.semantic.pspnet import PSPNet
+from models.seg.semantic.embednet import EmbedNet
+from models.seg.semantic.denseassp import DenseASPP
 from utils.tools.logger import Logger as Log
 
 
 SEG_MODEL_DICT = {
-    'syncbn_deeplabv3': SyncBNDeepLabV3,
-    'syncbn_pspnet': SyncBNPSPNet,
-    'syncbn_embednet': SyncBNEmbedNet,
-    'syncbn_denseaspp': SyncBNDenseASPP
+    'syncbn_deeplabv3': DeepLabV3,
+    'syncbn_pspnet': PSPNet,
+    'syncbn_embednet': EmbedNet,
+    'syncbn_denseaspp': DenseASPP
 }
 
 

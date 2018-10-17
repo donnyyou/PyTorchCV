@@ -77,8 +77,9 @@
       "save_iters": 2000
     },
     "network":{
-      "backbone": "syncbn_resnet101_dilated8",
-      "model_name": "syncbn_pspnet",
+      "backbone": "resnet101_dilated8",
+      "model_name": "pspnet",
+      "bn_type": "syncbn",
       "stride": 8,
       "loss_weights": {
         "aux_loss": 0.4,

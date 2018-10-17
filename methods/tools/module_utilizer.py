@@ -39,6 +39,8 @@ class ModuleUtilizer(object):
         if len(self.configer.get('gpu')) == 1:
             self.configer.update_value(['network', 'bn_type'], 'torchbn')
 
+        Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
+
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         return_list = list()

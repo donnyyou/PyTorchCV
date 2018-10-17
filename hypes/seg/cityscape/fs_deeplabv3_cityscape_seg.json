@@ -78,8 +78,9 @@
     },
 
     "network":{
-      "backbone": "syncbn_resnet101_dilated8",
-      "model_name": "syncbn_deeplabv3",
+      "backbone": "resnet101_dilated8",
+      "model_name": "deeplabv3",
+      "bn_type": "syncbn",
       "stride": 8,
       "syncbn": true
     },

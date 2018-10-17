@@ -77,8 +77,9 @@
       "save_iters": 2000
     },
     "network":{
-      "backbone": "syncbn_resnet101_dilated8",
-      "model_name": "syncbn_embednet",
+      "backbone": "resnet101_dilated8",
+      "model_name": "embednet",
+      "bn_type": "syncbn",
       "stride": 8,
       "lateral": true,
       "loss_weights": {
