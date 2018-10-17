@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from loss.det_loss_manager import DetLossManager
 from methods.det.yolov3_test import YOLOv3Test
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -46,7 +45,6 @@ class YOLOv3(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -149,11 +147,7 @@ class YOLOv3(object):
         self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  bboxes_list=batch_data[1],
-                                                  labels_list=batch_data[2],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+            for i, data_dict in enumerate(self.train_loader):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
