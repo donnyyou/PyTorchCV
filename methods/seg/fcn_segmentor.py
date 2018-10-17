@@ -63,7 +63,7 @@ class FCNSegmentor(object):
 
         self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
 
-        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
+        if self.configer.get('network', 'bn_type') == 'syncbn':
             self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
 
     def _get_parameters(self):

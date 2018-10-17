@@ -10,7 +10,6 @@ from __future__ import print_function
 
 from models.seg.semantic.syncbn_deeplabv3 import SyncBNDeepLabV3
 from models.seg.semantic.syncbn_pspnet import SyncBNPSPNet
-from models.seg.semantic.syncbn_gridencnet import SyncBNGridEncNet
 from models.seg.semantic.syncbn_embednet import SyncBNEmbedNet
 from models.seg.semantic.syncbn_denseassp import SyncBNDenseASPP
 from utils.tools.logger import Logger as Log
@@ -19,7 +18,6 @@ from utils.tools.logger import Logger as Log
 SEG_MODEL_DICT = {
     'syncbn_deeplabv3': SyncBNDeepLabV3,
     'syncbn_pspnet': SyncBNPSPNet,
-    'syncbn_grid_encnet': SyncBNGridEncNet,
     'syncbn_embednet': SyncBNEmbedNet,
     'syncbn_denseaspp': SyncBNDenseASPP
 }

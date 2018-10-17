@@ -33,6 +33,11 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
         self.configer.add_key_value(['network', 'parallel'], False)
+        if self.configer.is_empty('network', 'bn_type'):
+            self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
+
+        if len(self.configer.get('gpu')) == 1:
+            self.configer.update_value(['network', 'bn_type'], 'torchbn')
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -43,14 +48,11 @@ class ModuleUtilizer(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
-            if len(self.configer.get('gpu')) > 1:
-                from extensions.layers.syncbn.parallel import DataParallelModel
-                self.configer.update_value(['network', 'parallel'], True)
-                return DataParallelModel(net)
-            else:
-                self.configer.update_value(['network', 'syncbn'], False)
-                return net
+        if self.configer.get('network', 'bn_type') == 'syncbn':
+            assert len(self.configer.get('gpu')) > 1
+            from extensions.layers.syncbn.parallel import DataParallelModel
+            self.configer.update_value(['network', 'parallel'], True)
+            return DataParallelModel(net)
 
         elif len(self.configer.get('gpu')) > 1:
             self.configer.update_value(['network', 'parallel'], True)

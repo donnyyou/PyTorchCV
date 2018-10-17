@@ -240,8 +240,6 @@ class ResNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.resnet_models = ResNetModels(self.configer)
-        from models.backbones.resnet.syncbn_resnet_models import SyncBNResNetModels
-        self.syncbn_resnet_models = SyncBNResNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
@@ -284,14 +282,6 @@ class ResNetBackbone(object):
             orig_resnet = self.resnet_models.resnet101()
             arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
 
-        elif arch == 'syncbn_resnet101_dilated8':
-            orig_resnet = self.syncbn_resnet_models.resnet101()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8)
-
-        elif arch == 'syncbn_resnet101_dilated16':
-            orig_resnet = self.syncbn_resnet_models.resnet101()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
-
         elif arch == 'caffe_resnet101':
             orig_resnet = self.resnet_models.caffe_resnet101()
             arch_net = NormalCaffeResnetBackbone(orig_resnet)
@@ -302,14 +292,6 @@ class ResNetBackbone(object):
 
         elif arch == 'caffe_resnet101_dilated16':
             orig_resnet = self.resnet_models.caffe_resnet101()
-            arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=16)
-
-        elif arch == 'syncbn_caffe_resnet101_dilated8':
-            orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
-            arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=8)
-
-        elif arch == 'syncbn_caffe_resnet101_dilated16':
-            orig_resnet = self.syncbn_resnet_models.caffe_resnet101()
             arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=16)
 
         else:
