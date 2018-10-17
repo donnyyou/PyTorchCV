@@ -93,7 +93,7 @@ class DataParallelModel(DataParallel):
 
     Example::
 
-        >>> net = encoding.nn.DataParallelModel(model, device_ids=[0, 1, 2])
+        >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
         >>> y = net(x)
     """
     def gather(self, outputs, output_device):

@@ -12,6 +12,7 @@ import os
 import math
 import torch
 import torch.nn as nn
+from torch.nn.parallel.scatter_gather import gather as torch_gather
 
 from utils.tools.logger import Logger as Log
 
@@ -188,6 +189,17 @@ class ModuleUtilizer(object):
             if p.requires_grad:
                 p.grad.mul_(norm)
 
+    def gather(self, outputs, target_device_index=0, dim=0):
+        r"""
+        Gathers tensors from different GPUs on a specified device
+          (-1 means the CPU).
+        """
+        if isinstance(outputs, torch.Tensor):
+            return outputs
+
+        else:
+            gpu_list = self.configer.get('gpu')
+            return torch_gather(outputs, gpu_list[target_device_index], dim=dim)
 
 
 
