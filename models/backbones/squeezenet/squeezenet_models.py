@@ -147,8 +147,9 @@ class SqueezeNetModels(object):
             else:
                 pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
             model_dict = model.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-            model_dict.update(pretrained_dict)
+            matched_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+            Log.info('Matched Keys:{}'.format(matched_dict.keys()))
+            model_dict.update(matched_dict)
             model.load_state_dict(model_dict)
 
         return model
@@ -162,8 +163,9 @@ class SqueezeNetModels(object):
             else:
                 pretrained_dict = self.load_url(model_urls['squeezenet1_1'])
             model_dict = model.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-            model_dict.update(pretrained_dict)
+            matched_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+            Log.info('Matched Keys:{}'.format(matched_dict.keys()))
+            model_dict.update(matched_dict)
             model.load_state_dict(model_dict)
 
         return model
