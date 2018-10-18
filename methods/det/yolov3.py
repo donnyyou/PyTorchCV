@@ -86,13 +86,14 @@ class YOLOv3(object):
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
-        warm_lr = self.configer.get('lr', 'warm')['warm_lr']
         if self.configer.get('iters') < warm_iters:
-            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('iters') / warm_iters
-            lr = warm_lr + lr_delta
+            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
 
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] = lr
+            base_lr_list = self.scheduler.get_lr()
+            for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
+                param_group['lr'] = base_lr * lr_ratio
+
+            Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
 
     def __train(self):
         """
@@ -108,7 +109,7 @@ class YOLOv3(object):
         for i, data_dict in enumerate(self.train_loader):
             if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
                 self.warm_lr(len(self.train_loader))
-                
+
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
