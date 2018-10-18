@@ -144,6 +144,11 @@
       "rewrite": true
     },
     "lr": {
+      "is_warm": true,
+      "warm": {
+        "warm_lr": 0.000001,
+        "warm_epoch": 2
+      },
       "base_lr": 0.01,
       "lr_policy": "step",
       "step": {

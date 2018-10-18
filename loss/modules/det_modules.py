@@ -220,12 +220,12 @@ class YOLOv3Loss(nn.Module):
         tcls = targets[..., 5:]  # Cls pred.
 
         #  losses.
-        loss_x = self.bce_loss(x[objmask.byte()], tx[objmask.byte()])
-        loss_y = self.bce_loss(y[objmask.byte()], ty[objmask.byte()])
-        loss_w = self.mse_loss(w[objmask.byte()], tw[objmask.byte()])
-        loss_h = self.mse_loss(h[objmask.byte()], th[objmask.byte()])
-        loss_conf = self.bce_loss(conf[objmask.byte()], objmask[objmask.byte()]) + \
-                    0.5 * self.bce_loss(conf[noobjmask.byte()], objmask[noobjmask.byte()])
+        loss_x = self.bce_loss(x[objmask == 1], tx[objmask == 1])
+        loss_y = self.bce_loss(y[objmask == 1], ty[objmask == 1])
+        loss_w = self.mse_loss(w[objmask == 1], tw[objmask == 1])
+        loss_h = self.mse_loss(h[objmask == 1], th[objmask == 1])
+        loss_conf = self.bce_loss(conf[objmask == 1], objmask[objmask == 1]) + \
+                    0.5 * self.bce_loss(conf[noobjmask == 1], objmask[noobjmask == 1])
         loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
 
         #  total loss = losses * weight

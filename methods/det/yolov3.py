@@ -80,6 +80,20 @@ class YOLOv3(object):
 
         return params
 
+    def warm_lr(self, batch_len):
+        """Sets the learning rate
+        # Adapted from PyTorch Imagenet example:
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+        """
+        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
+        warm_lr = self.configer.get('lr', 'warm')['warm_lr']
+        if self.configer.get('iters') < warm_iters:
+            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('iters') / warm_iters
+            lr = warm_lr + lr_delta
+
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = lr
+
     def __train(self):
         """
           Train function of every epoch during train phase.
@@ -92,6 +106,9 @@ class YOLOv3(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
+            if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
+                self.warm_lr(len(self.train_loader))
+                
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
