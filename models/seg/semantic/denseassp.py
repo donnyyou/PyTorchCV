@@ -11,7 +11,7 @@ from models.backbones.backbone_selector import BackboneSelector
 from models.tools.module_helper import ModuleHelper
 
 
-class NDenseASPP(nn.Module):
+class DenseASPP(nn.Module):
     """
     * output_scale can only set as 8 or 16
     """

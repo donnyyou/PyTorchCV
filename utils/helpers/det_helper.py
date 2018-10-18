@@ -18,20 +18,20 @@ from utils.tools.logger import Logger as Log
 class DetHelper(object):
 
     @staticmethod
-    def cython_nms(bboxes, scores=None, nms_threshold=0.0):
+    def cython_nms(bboxes, scores=None, nms_threshold=0.3):
         """Apply classic DPM-style greedy NMS."""
         is_torch = False
         if not isinstance(bboxes, np.ndarray):
-            bboxes = bboxes.numpy()
+            bboxes = bboxes.cpu().numpy()
             if scores is None:
-                scores = np.ones((len(bboxes),), dtype=np.float32)
+                scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
             else:
-                scores = scores.numpy()
+                scores = scores.cpu().numpy()
 
             is_torch = True
 
         if scores is None:
-            scores = np.ones((len(bboxes),), dtype=np.float32)
+            scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
 
         bboxes = bboxes.reshape(-1, 4)
         scores = scores.reshape(-1, 1)
@@ -48,9 +48,16 @@ class DetHelper(object):
         """Apply the soft NMS algorithm from https://arxiv.org/abs/1704.04503."""
         is_torch = False
         if not isinstance(bboxes, np.ndarray):
-            bboxes = bboxes.numpy()
-            scores = scores.numpy()
+            bboxes = bboxes.cpu().numpy()
+            if scores is None:
+                scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
+            else:
+                scores = scores.cpu().numpy()
+
             is_torch = True
+
+        if scores is None:
+            scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
 
         bboxes = bboxes.reshape(-1, 4)
         scores = scores.reshape(-1, 1)
