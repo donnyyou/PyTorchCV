@@ -147,7 +147,7 @@ class YOLOv3(object):
         self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for i, data_dict in enumerate(self.train_loader):
+            for i, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
