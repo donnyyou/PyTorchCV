@@ -234,7 +234,7 @@ class YOLOv3Loss(nn.Module):
                loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
                loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
-        return loss * 3.0
+        return loss
 
 
 class FRLocLoss(nn.Module):

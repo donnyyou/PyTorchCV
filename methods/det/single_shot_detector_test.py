@@ -122,7 +122,7 @@ class SingleShotDetectorTest(object):
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
                                      nms_threshold=configer.get('nms', 'max_threshold'),
-                                     mode=configer.get('nms', 'mode'),
+                                     iou_mode=configer.get('nms', 'mode'),
                                      cls_keep_num=configer.get('vis', 'cls_keep_num'))
 
             valid_preds = valid_preds[keep]

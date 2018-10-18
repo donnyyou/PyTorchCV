@@ -109,7 +109,7 @@ class YOLOv3Test(object):
                                            scores=image_pred[:, 4],
                                            labels=class_pred.squeeze(1),
                                            nms_threshold=configer.get('nms', 'max_threshold'),
-                                           mode=configer.get('nms', 'mode'))
+                                           iou_mode=configer.get('nms', 'mode'), nms_mode='cython_nms')
 
             output[image_i] = detections[keep_index]
 

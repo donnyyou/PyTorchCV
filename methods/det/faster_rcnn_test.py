@@ -148,7 +148,7 @@ class FastRCNNTest(object):
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
                                      nms_threshold=configer.get('nms', 'overlap_threshold'),
-                                     mode=configer.get('nms', 'mode'))
+                                     iou_mode=configer.get('nms', 'mode'))
 
             output[i] = valid_preds[keep]
 
