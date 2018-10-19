@@ -131,7 +131,7 @@
       "model_name": "darknet_yolov3",
       "stride_list": [32, 16, 8],
       "loss_weights": {
-        "coord_loss": 2.5,
+        "coord_loss": 1.0,
         "obj_loss": 1.0,
         "cls_loss": 1.0
       }
@@ -149,7 +149,7 @@
         "warm_lr": 0.000001,
         "warm_epoch": 2
       },
-      "base_lr": 0.01,
+      "base_lr": 0.0001,
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,
