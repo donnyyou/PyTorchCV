@@ -50,6 +50,8 @@ This repository provides source code for some deep learning based cv problems. W
 |--------|:---------:|:------:|:------:|:------:|
 | [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.772 | - |
 | [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | VOC07+12 trainval | VOC07 test | 0.786 | - |
+| [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.798 | - |
+| [SSD-512 Ours](https://drive.google.com/open?id=1lVpabBt5arv8kBd5bHKhZgyS-vZpIwWe) | VOC07+12 trainval | VOC07 test | 0.807 | - |
 
 - Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks [[Faster R-CNN](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json)]
 
