@@ -135,6 +135,7 @@ class DataParallelCriterion(DataParallel):
             return self.module(inputs, *targets[0], **kwargs[0])
 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
+        targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
 
@@ -163,7 +164,7 @@ def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices
             device = get_a_var(input).get_device()
         try:
             with torch.cuda.device(device):
-                output = module(*(input + target), **kwargs)
+                output = module(input, target, **kwargs)
             with lock:
                 results[i] = output
         except Exception as e:
