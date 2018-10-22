@@ -83,7 +83,8 @@
       "shuffle_group": 2,
       "pooled_size": [7, 7],
       "use_se_block": false,
-      "se_reduction": 16
+      "se_reduction": 16,
+      "bn_type": "syncbn"
     },
     "logging": {
       "logfile_level": "info",
@@ -97,7 +98,7 @@
       "lr_policy": "step",
       "step": {
         "gamma": 0.333,
-        "step_size": 50
+        "step_size": 20
       }
     },
     "solver": {

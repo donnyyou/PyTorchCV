@@ -12,6 +12,8 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 
+from models.tools.module_helper import ModuleHelper
+
 
 class ShuffleUnit(nn.Module):
     def __init__(self, groups):
@@ -27,13 +29,12 @@ class ShuffleUnit(nn.Module):
 
 
 class ConvBnRelu(nn.Module):
-    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1,
-                 groups=1):
+    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1, groups=1, bn_type=None):
         super(ConvBnRelu, self).__init__()
         self.conv_bn_relu = nn.Sequential(
             nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding, dilation, groups,
                       False),
-            nn.BatchNorm2d(out_channel),
+            ModuleHelper.BatchNorm2d(bn_type=bn_type)(out_channel),
             nn.ReLU(True))
 
     def forward(self, x):
@@ -41,12 +42,12 @@ class ConvBnRelu(nn.Module):
 
 
 class ConvBn(nn.Module):
-    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1, groups=1):
+    def __init__(self, in_channel, out_channel, kernel_size, stride=1, padding=0, dilation=1, groups=1, bn_type=None):
         super(ConvBn, self).__init__()
         self.conv_bn = nn.Sequential(
             nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding, dilation, groups,
                       False),
-            nn.BatchNorm2d(out_channel))
+            ModuleHelper.BatchNorm2d(bn_type=bn_type)(out_channel))
 
     def forward(self, x):
         return self.conv_bn(x)
@@ -71,7 +72,7 @@ class SELayer(nn.Module):
 
 
 class ShuffleNetV2Block(nn.Module):
-    def __init__(self, in_channel, out_channel, kernel_size, dilation=1, stride=1, shuffle_group=2):
+    def __init__(self, in_channel, out_channel, kernel_size, dilation=1, stride=1, shuffle_group=2, bn_type=None):
         super(ShuffleNetV2Block, self).__init__()
 
         pad = (kernel_size // 2) * dilation
@@ -84,23 +85,23 @@ class ShuffleNetV2Block(nn.Module):
             branch_channel = (in_channel // 2) + (in_channel % 2)
             self._branch_channel = branch_channel
             self.branch = nn.Sequential(
-                ConvBnRelu(branch_channel, branch_channel, 1),
+                ConvBnRelu(branch_channel, branch_channel, 1, bn_type=bn_type),
                 ConvBn(branch_channel, branch_channel, kernel_size, padding=pad, dilation=dilation,
-                       groups=branch_channel),
-                ConvBnRelu(branch_channel, branch_channel, 1)
+                       groups=branch_channel, bn_type=bn_type),
+                ConvBnRelu(branch_channel, branch_channel, 1, bn_type=bn_type)
             )
         else:
             # No split and downsample unit
             self.branch_0 = nn.Sequential(
-                ConvBnRelu(in_channel, out_channel, 1),
+                ConvBnRelu(in_channel, out_channel, 1, bn_type=bn_type),
                 ConvBn(out_channel, out_channel, kernel_size, stride, padding=pad,
-                       dilation=dilation, groups=out_channel),
-                ConvBnRelu(out_channel, out_channel, 1)
+                       dilation=dilation, groups=out_channel, bn_type=bn_type),
+                ConvBnRelu(out_channel, out_channel, 1, bn_type=bn_type)
             )
             self.branch_1 = nn.Sequential(
                 ConvBn(in_channel, in_channel, kernel_size, stride, padding=pad, dilation=dilation,
-                       groups=in_channel),
-                ConvBnRelu(in_channel, out_channel, 1)
+                       groups=in_channel, bn_type=bn_type),
+                ConvBnRelu(in_channel, out_channel, 1, bn_type=bn_type)
             )
         self.shuffle = ShuffleUnit(shuffle_group)
 
@@ -118,7 +119,7 @@ class ShuffleNetV2Block(nn.Module):
 
 class ShuffleNetV2ResBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, dilation=1, stride=1,
-                 shuffle_group=2, use_se_block=True, se_reduction=16):
+                 shuffle_group=2, use_se_block=True, se_reduction=16, bn_type=None):
         super(ShuffleNetV2ResBlock, self).__init__()
 
         pad = (kernel_size // 2) * dilation
@@ -130,10 +131,10 @@ class ShuffleNetV2ResBlock(nn.Module):
             branch_channel = (in_channel // 2) + (in_channel % 2)
             self._branch_channel = branch_channel
             self._blocks = [
-                ConvBnRelu(branch_channel, branch_channel, 1),
+                ConvBnRelu(branch_channel, branch_channel, 1, bn_type=bn_type),
                 ConvBn(branch_channel, branch_channel, kernel_size, padding=pad, dilation=dilation,
-                       groups=branch_channel),
-                ConvBnRelu(branch_channel, branch_channel, 1)
+                       groups=branch_channel, bn_type=bn_type),
+                ConvBnRelu(branch_channel, branch_channel, 1, bn_type=bn_type)
             ]
             if use_se_block:
                 self._blocks.append(SELayer(branch_channel, se_reduction))
@@ -142,18 +143,18 @@ class ShuffleNetV2ResBlock(nn.Module):
         else:
             # No split and downsample unit
             self._blocks = [
-                ConvBnRelu(in_channel, out_channel, 1),
+                ConvBnRelu(in_channel, out_channel, 1, bn_type=bn_type),
                 ConvBn(out_channel, out_channel, kernel_size, stride, padding=pad,
-                       dilation=dilation, groups=out_channel),
-                ConvBnRelu(out_channel, out_channel, 1)
+                       dilation=dilation, groups=out_channel, bn_type=bn_type),
+                ConvBnRelu(out_channel, out_channel, 1, bn_type=bn_type)
             ]
             if use_se_block:
                 self._blocks.append(SELayer(out_channel, se_reduction))
             self.branch_0 = nn.Sequential(*self._blocks)
             self.branch_1 = nn.Sequential(
                 ConvBn(in_channel, in_channel, kernel_size, stride, padding=pad, dilation=dilation,
-                       groups=in_channel),
-                ConvBnRelu(in_channel, out_channel, 1)
+                       groups=in_channel, bn_type=bn_type),
+                ConvBnRelu(in_channel, out_channel, 1, bn_type=bn_type)
             )
         self.shuffle = ShuffleUnit(shuffle_group)
 
@@ -192,17 +193,20 @@ class ShuffleNetV2(nn.Module):
             out_channel, repeat = block
             self.blocks += [('stage{}_block1'.format(idx + 2),
                              ShuffleNetV2Block(cur_channel, out_channel // 2, 3, stride=2,
-                                               shuffle_group=self.configer.get('network', 'shuffle_group')))]
+                                               shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                               bn_type=self.configer.get('network', 'bn_type')))]
             down_size *= 2
             for i in range(repeat - 1):
                 self.blocks += [('stage{}_block{}'.format(idx + 2, i + 2),
                                  ShuffleNetV2Block(out_channel, out_channel, 3,
-                                                   shuffle_group=self.configer.get('network', 'shuffle_group')))]
+                                                   shuffle_group=self.configer.get('network', 'shuffle_group'),
+                                                   bn_type=self.configer.get('network', 'bn_type')))]
 
             cur_channel = out_channel
 
         self.backbone = nn.Sequential(OrderedDict(self.blocks))
-        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1),
+        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1,
+                                                  bn_type=self.configer.get('network', 'bn_type')),
                                        nn.AvgPool2d(self.configer.get('network', 'pooled_size'), [1, 1]))
 
         # building classifier
@@ -232,7 +236,7 @@ class ShuffleNetV2(nn.Module):
         x = self.conv_pool(x)
         x = x.view(-1, self.block_def[-1][0])
         x = self.classifier(x)
-        return x
+        return tuple([x])
 
 
 class ShuffleResNetV2(nn.Module):
@@ -262,37 +266,39 @@ class ShuffleResNetV2(nn.Module):
                                  ShuffleNetV2ResBlock(cur_channel, out_channel // 2, 3,
                                                       shuffle_group=self.configer.get('network', 'shuffle_group'),
                                                       use_se_block=self.configer.get('network', 'use_se_block'),
-                                                      se_reduction=self.configer.get('network', 'se_reduction'))
+                                                      se_reduction=self.configer.get('network', 'se_reduction'),
+                                                      bn_type=self.configer.get('network', 'bn_type'))
                                  )]
                 for i in range(repeat - 2):
                     self.blocks += [('stage{}_block{}'.format(idx + 2, i + 3),
                                      ShuffleNetV2ResBlock(out_channel, out_channel, 3,
                                                           shuffle_group=self.configer.get('network', 'shuffle_group'),
                                                           use_se_block=self.configer.get('network', 'use_se_block'),
-                                                          se_reduction=self.configer.get('network', 'se_reduction')
-                                                          )
+                                                          se_reduction=self.configer.get('network', 'se_reduction'),
+                                                          bn_type=self.configer.get('network', 'bn_type'))
                                      )]
             else:
                 self.blocks += [('stage{}_block1'.format(idx + 2),
                                  ShuffleNetV2ResBlock(cur_channel, out_channel // 2, 3, stride=2,
                                                       shuffle_group=self.configer.get('network', 'shuffle_group'),
                                                       use_se_block=self.configer.get('network', 'use_se_block'),
-                                                      se_reduction=self.configer.get('network', 'se_reduction')
-                                                      )
+                                                      se_reduction=self.configer.get('network', 'se_reduction'),
+                                                      bn_type=self.configer.get('network', 'bn_type'))
                                  )]
                 for i in range(repeat - 1):
                     self.blocks += [('stage{}_block{}'.format(idx + 2, i + 2),
                                      ShuffleNetV2ResBlock(out_channel, out_channel, 3,
                                                           shuffle_group=self.configer.get('network', 'shuffle_group'),
                                                           use_se_block=self.configer.get('network', 'use_se_block'),
-                                                          se_reduction=self.configer.get('network', 'se_reduction')
-                                                          )
+                                                          se_reduction=self.configer.get('network', 'se_reduction'),
+                                                          bn_type=self.configer.get('network', 'bn_type'))
                                      )]
             cur_channel = out_channel
 
         self.backbone = nn.Sequential(OrderedDict(self.blocks))
 
-        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1),
+        self.conv_pool = nn.Sequential(ConvBnRelu(cur_channel, self.block_def[-1][0], 1,
+                                                  bn_type=self.configer.get('network', 'bn_type')),
                                        nn.AvgPool2d(self.configer.get('network', 'pooled_size'), [1, 1]))
 
         # building classifier
@@ -307,14 +313,18 @@ class ShuffleResNetV2(nn.Module):
     def _get_init_block(self, model_arch, in_channel):
         out_channel = 64
         if model_arch == 'shufflenetv2-50':
-            blocks = [('init_block', ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1))]
+            blocks = [('init_block', ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1,
+                                                bn_type=self.configer.get('network', 'bn_type')))]
 
         elif model_arch == 'shufflenetv2-164':
             blocks = [('init_block',
                        nn.Sequential(
-                           ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1),
-                           ConvBnRelu(out_channel, out_channel, 3, stride=1, padding=1),
-                           ConvBnRelu(out_channel, 2 * out_channel, 3, stride=1, padding=1)
+                           ConvBnRelu(in_channel, out_channel, 3, stride=2, padding=1,
+                                      bn_type=self.configer.get('network', 'bn_type')),
+                           ConvBnRelu(out_channel, out_channel, 3, stride=1, padding=1,
+                                      bn_type=self.configer.get('network', 'bn_type')),
+                           ConvBnRelu(out_channel, 2 * out_channel, 3, stride=1, padding=1,
+                                      bn_type=self.configer.get('network', 'bn_type'))
                        ))]
             out_channel *= 2
 
@@ -339,7 +349,7 @@ class ShuffleResNetV2(nn.Module):
         x = self.conv_pool(x)
         x = x.view(-1, self.block_def[-1][0])
         x = self.classifier(x)
-        return x
+        return tuple([x])
 
 
 if __name__ == "__main__":
