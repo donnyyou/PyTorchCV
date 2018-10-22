@@ -13,8 +13,8 @@
     "train": {
       "batch_size": 32,
       "data_transformer": {
-        "size_mode": "fix_size",
-        "input_size": [[320, 320], [416, 416], [608, 608]],
+        "size_mode": "multi_size",
+        "ms_input_size": [[320, 320], [416, 416], [608, 608]],
         "align_method": "only_scale"
       }
     },
