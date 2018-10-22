@@ -224,14 +224,14 @@ class YOLOv3Loss(nn.Module):
         loss_y = self.bce_loss(y[objmask == 1], ty[objmask == 1])
         loss_w = self.mse_loss(w[objmask == 1], tw[objmask == 1])
         loss_h = self.mse_loss(h[objmask == 1], th[objmask == 1])
-        loss_conf = self.bce_loss(conf[objmask == 1], objmask[objmask == 1]) + \
-                    0.5 * self.bce_loss(conf[noobjmask == 1], objmask[noobjmask == 1])
+        loss_obj = self.bce_loss(conf[objmask == 1], objmask[objmask == 1])
+        loss_noobj = self.bce_loss(conf[noobjmask == 1], objmask[noobjmask == 1])
         loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
 
         #  total loss = losses * weight
-        loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
-               (loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
-               loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+        loss = (loss_x + loss_y + loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               loss_obj * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+               loss_noobj * self.configer.get('network', 'loss_weights')['noobj_loss'] + \
                loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
         return loss / targets.size(0)
