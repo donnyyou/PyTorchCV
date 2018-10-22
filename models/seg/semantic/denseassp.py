@@ -91,9 +91,7 @@ class DenseASPP(nn.Module):
 
         out = self.upsample(cls)
 
-        res = []
-        res.append(out)
-        return tuple(res)
+        return out
 
 
 class _DenseAsppBlock(nn.Sequential):
@@ -126,7 +124,7 @@ class _Transition(nn.Sequential):
 
 
 if __name__ == "__main__":
-    model = SyncBNDenseASPP(12)
+    model = DenseASPP(12)
     image = torch.autograd.Variable(torch.randn(1, 3, 512, 512))
     out = model(image)
     print(out.size())

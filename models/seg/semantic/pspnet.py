@@ -114,12 +114,12 @@ class PSPNet(nn.Sequential):
         x, aux = self.decoder([x, aux])
         x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
 
-        return tuple([x, aux])
+        return x, aux
 
 
 if __name__ == '__main__':
     i = torch.Tensor(1,3,512,512).cuda()
-    model = SyncBNPSPNet(num_classes=19).cuda()
+    model = PSPNet(num_classes=19).cuda()
     model.eval()
     o, _ = model(i)
     #print(o.size())
