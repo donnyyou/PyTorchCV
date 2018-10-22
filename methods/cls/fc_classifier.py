@@ -20,7 +20,6 @@ from models.cls_model_manager import ClsModelManager
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.cls.cls_running_score import ClsRunningScore
-from extensions.layers.syncbn.parallel import DataParallelCriterion
 
 
 class FCClassifier(object):
@@ -57,8 +56,6 @@ class FCClassifier(object):
         self.val_loader = self.cls_data_loader.get_valloader()
 
         self.ce_loss = self.cls_loss_manager.get_cls_loss('cross_entropy_loss')
-        if self.configer.get('network', 'bn_type') == 'syncbn':
-            self.ce_loss = DataParallelCriterion(self.ce_loss).cuda()
 
     def _get_parameters(self):
 
@@ -82,6 +79,7 @@ class FCClassifier(object):
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
             # Forward pass.
             outputs = self.cls_net(inputs)
+            outputs = self.module_utilizer.gather(outputs)
             # Compute the loss of the train batch & backward.
 
             loss = self.ce_loss(outputs, labels)
@@ -131,9 +129,9 @@ class FCClassifier(object):
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
                 outputs = self.cls_net(inputs)
+                outputs = self.module_utilizer.gather(outputs)
                 # Compute the loss of the val batch.
                 loss = self.ce_loss(outputs, labels)
-                outputs = self.module_utilizer.gather(outputs)
                 self.cls_running_score.update(outputs, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 

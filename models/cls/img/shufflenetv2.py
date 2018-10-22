@@ -236,7 +236,7 @@ class ShuffleNetV2(nn.Module):
         x = self.conv_pool(x)
         x = x.view(-1, self.block_def[-1][0])
         x = self.classifier(x)
-        return tuple([x])
+        return x
 
 
 class ShuffleResNetV2(nn.Module):
@@ -349,7 +349,7 @@ class ShuffleResNetV2(nn.Module):
         x = self.conv_pool(x)
         x = x.view(-1, self.block_def[-1][0])
         x = self.classifier(x)
-        return tuple([x])
+        return x
 
 
 if __name__ == "__main__":
