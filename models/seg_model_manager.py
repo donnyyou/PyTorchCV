@@ -16,10 +16,10 @@ from utils.tools.logger import Logger as Log
 
 
 SEG_MODEL_DICT = {
-    'syncbn_deeplabv3': DeepLabV3,
-    'syncbn_pspnet': PSPNet,
-    'syncbn_embednet': EmbedNet,
-    'syncbn_denseaspp': DenseASPP
+    'deeplabv3': DeepLabV3,
+    'pspnet': PSPNet,
+    'embednet': EmbedNet,
+    'denseaspp': DenseASPP
 }
 
 

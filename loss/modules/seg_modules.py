@@ -204,7 +204,7 @@ class FCNSegLoss(nn.Module):
         self.embed_loss = EmbeddingLoss(self.configer)
 
     def forward(self, *outputs):
-        if self.configer.get('network', 'model_name') == 'syncbn_grid_encnet':
+        if self.configer.get('network', 'model_name') == 'grid_encnet':
             seg_out, se_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
@@ -216,7 +216,7 @@ class FCNSegLoss(nn.Module):
 
             return loss
 
-        elif self.configer.get('network', 'model_name') == 'syncbn_pspnet':
+        elif self.configer.get('network', 'model_name') == 'pspnet':
             seg_out, aux_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
@@ -225,7 +225,7 @@ class FCNSegLoss(nn.Module):
             loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
             return loss
 
-        elif self.configer.get('network', 'model_name') == 'syncbn_embednet':
+        elif self.configer.get('network', 'model_name') == 'embednet':
             seg_out, aux_out, embed_out, targets = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))

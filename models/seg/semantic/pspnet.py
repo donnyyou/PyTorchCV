@@ -37,7 +37,6 @@ class PPMBilinearDeepsup(nn.Module):
         super(PPMBilinearDeepsup, self).__init__()
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
-        from extensions.layers.syncbn.module import BatchNorm2d
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),

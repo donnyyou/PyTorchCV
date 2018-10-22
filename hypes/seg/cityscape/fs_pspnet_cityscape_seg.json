@@ -84,8 +84,7 @@
       "loss_weights": {
         "aux_loss": 0.4,
         "seg_loss": 1.0
-      },
-      "syncbn": true
+      }
     },
     "logging": {
       "logfile_level": "info",
