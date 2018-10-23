@@ -17,7 +17,7 @@ class MseLoss(nn.Module):
     def __init__(self, configer):
         super(MseLoss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(size_average=False)
+        self.mse_loss = nn.MSELoss(reduction='sum')
 
     def forward(self, inputs, targets, mask=None, weights=None):
         loss = 0.0

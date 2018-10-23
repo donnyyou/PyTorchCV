@@ -49,7 +49,7 @@ class OPDataLoader(data.Dataset):
         elif self.aug_transform is not None:
             img, maskmap, kpts = self.aug_transform(img, maskmap=maskmap, kpts=kpts)
 
-        width, height = maskmap.size
+        width, height = ImageHelper.get_size(maskmap)
         maskmap = ImageHelper.resize(maskmap,
                                      (width // self.configer.get('network', 'stride'),
                                       height // self.configer.get('network', 'stride')),

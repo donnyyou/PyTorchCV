@@ -66,7 +66,7 @@ class OpenPose(object):
         self.train_loader = self.pose_data_loader.get_trainloader()
         self.val_loader = self.pose_data_loader.get_valloader()
 
-        self.weights = self.configer.get('network', 'weights')
+        self.weights = self.configer.get('network', 'loss_weights')
         self.mse_loss = self.pose_loss_manager.get_pose_loss('mse_loss')
 
     def _get_parameters(self):
@@ -74,7 +74,7 @@ class OpenPose(object):
         lr_2 = []
         lr_4 = []
         lr_8 = []
-        params_dict = dict(self.pose_net.module.named_parameters())
+        params_dict = dict(self.pose_net.named_parameters())
         for key, value in params_dict.items():
             if ('model1_' not in key) and ('model0.' not in key) and ('backbone.' not in key):
                 if key[-4:] == 'bias':
@@ -167,11 +167,7 @@ class OpenPose(object):
         start_time = time.time()
 
         with torch.no_grad():
-            for i, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  kpts_list=batch_data[1],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
-
+            for i, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 maskmap = data_dict['maskmap']
                 input_size = [inputs.size(3), inputs.size(2)]
