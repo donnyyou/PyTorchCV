@@ -203,9 +203,9 @@ class FCNSegLoss(nn.Module):
         self.focal_loss = FocalLoss(self.configer)
         self.embed_loss = EmbeddingLoss(self.configer)
 
-    def forward(self, *outputs):
+    def forward(self, outputs, targets):
         if self.configer.get('network', 'model_name') == 'grid_encnet':
-            seg_out, se_out, aux_out, targets = outputs
+            seg_out, se_out, aux_out = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
@@ -217,7 +217,7 @@ class FCNSegLoss(nn.Module):
             return loss
 
         elif self.configer.get('network', 'model_name') == 'pspnet':
-            seg_out, aux_out, targets = outputs
+            seg_out, aux_out = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
@@ -226,7 +226,7 @@ class FCNSegLoss(nn.Module):
             return loss
 
         elif self.configer.get('network', 'model_name') == 'embednet':
-            seg_out, aux_out, embed_out, targets = outputs
+            seg_out, aux_out, embed_out = outputs
             seg_loss = self.ce_loss(seg_out, targets)
             aux_targets = self._scale_target(targets, (aux_out.size(2), aux_out.size(3)))
             aux_loss = self.ce_loss(aux_out, aux_targets)
@@ -237,8 +237,7 @@ class FCNSegLoss(nn.Module):
             return loss
 
         else:
-            seg_out, targets = outputs
-            return self.ce_loss(seg_out, targets)
+            return self.ce_loss(outputs, targets)
 
     @staticmethod
     def _scale_target(targets_, scaled_size):

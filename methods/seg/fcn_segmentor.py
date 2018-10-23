@@ -148,10 +148,10 @@ class FCNSegmentor(object):
                 inputs, targets = self.module_utilizer.to_device(inputs, targets)
                 # Forward pass.
                 outputs = self.seg_net(inputs)
+                outputs = self.module_utilizer.gather(outputs)
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
-                outputs = self.module_utilizer.gather(outputs)
                 pred = outputs[0]
 
             self.val_losses.update(loss.item(), inputs.size(0))
