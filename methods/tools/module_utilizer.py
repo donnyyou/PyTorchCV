@@ -198,14 +198,15 @@ class ModuleUtilizer(object):
         Gathers tensors from different GPUs on a specified device
           (-1 means the CPU).
         """
-        if isinstance(outputs, torch.Tensor):
-            return outputs
-
-        else:
+        if self.configer.get('network', 'bn_type') == 'syncbn':
             if target_device is None:
                 target_device = list(range(torch.cuda.device_count()))[0]
 
             return torch_gather(outputs, target_device, dim=dim)
+
+        else:
+            assert isinstance(outputs, torch.Tensor)
+            return outputs
 
 
 
