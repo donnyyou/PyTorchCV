@@ -4,13 +4,17 @@
 # Generate the inputs.
 
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import cv2
 import numpy as np
 import torch
-from PIL import Image
 
 from datasets.tools.transforms import DeNormalize, ToTensor, Normalize
 from utils.helpers.image_helper import ImageHelper
+from utils.tools.logger import Logger as Log
 
 
 class BlobHelper(object):
@@ -24,20 +28,55 @@ class BlobHelper(object):
 
         return torch.cat(input_list, 0)
 
-    def make_input(self, image=None, input_size=None, scale=1.0):
-        if input_size is None:
+    def make_input(self, image=None, input_size=None,
+                   min_side_length=None, max_side_length=None, scale=None):
+        in_width, in_height = None, None
+        if input_size is None and min_side_length is None and max_side_length is None:
             in_width, in_height = ImageHelper.get_size(image)
-        else:
+
+        elif input_size is not None and min_side_length is None and max_side_length is None:
             in_width, in_height = input_size
 
-        image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation='linear')
-        img_tensor = ToTensor()(image)
-        img_tensor = Normalize(div_value=self.configer.get('normalize', 'div_value'),
-                               mean=self.configer.get('normalize', 'mean'),
-                               std=self.configer.get('normalize', 'std'))(img_tensor)
-        img_tensor = img_tensor.unsqueeze(0).to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
+        elif input_size is None and min_side_length is not None and max_side_length is None:
+            width, height = ImageHelper.get_size(image)
+            scale_ratio = min_side_length / min(width, height)
+            w_scale_ratio, h_scale_ratio = scale_ratio, scale_ratio
+            in_width, in_height = int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio))
 
-        return img_tensor
+        elif input_size is None and min_side_length is None and max_side_length is not None:
+            width, height = ImageHelper.get_size(image)
+            scale_ratio = max_side_length / max(width, height)
+            w_scale_ratio, h_scale_ratio = scale_ratio, scale_ratio
+            in_width, in_height = int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio))
+
+        else:
+            Log.error('Incorrect target size setting.')
+            exit(1)
+
+        if not isinstance(scale, (list, tuple)):
+            image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation='linear')
+            img_tensor = ToTensor()(image)
+            img_tensor = Normalize(div_value=self.configer.get('normalize', 'div_value'),
+                                   mean=self.configer.get('normalize', 'mean'),
+                                   std=self.configer.get('normalize', 'std'))(img_tensor)
+            img_tensor = img_tensor.unsqueeze(0).to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
+
+            return img_tensor
+
+        else:
+            img_tensor_list = []
+            for s in scale:
+                image = ImageHelper.resize(image, (int(in_width * s), int(in_height * s)), interpolation='linear')
+                img_tensor = ToTensor()(image)
+                img_tensor = Normalize(div_value=self.configer.get('normalize', 'div_value'),
+                                       mean=self.configer.get('normalize', 'mean'),
+                                       std=self.configer.get('normalize', 'std'))(img_tensor)
+                img_tensor = img_tensor.unsqueeze(0).to(
+                    torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
+
+                img_tensor_list.append(img_tensor)
+
+            return img_tensor_list
 
     def tensor2bgr(self, tensor):
         assert len(tensor.size()) == 3

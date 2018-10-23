@@ -751,7 +751,7 @@ class RandomFocusCrop(object):
     def get_center(self, img_size, bboxes):
         max_center = [img_size[0] // 2, img_size[1] // 2]
 
-        if bboxes is None or len(bboxes) == 0:
+        if bboxes is None or bboxes.size == 0:
             if img_size[0] > self.size[0]:
                 x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
             else:
@@ -857,7 +857,7 @@ class RandomFocusCrop(object):
         if maskmap is not None:
             expand_maskmap = np.zeros((max(height, self.size[1]) + abs(offset_up),
                                        max(width, self.size[0]) + abs(offset_left)), dtype=maskmap.dtype)
-            expand_maskmap[:, :, :] = 1
+            expand_maskmap[:, :] = 1
             expand_maskmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
                            abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = maskmap
             maskmap = expand_maskmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
@@ -866,7 +866,7 @@ class RandomFocusCrop(object):
         if labelmap is not None:
             expand_labelmap = np.zeros((max(height, self.size[1]) + abs(offset_up),
                                         max(width, self.size[0]) + abs(offset_left)), dtype=labelmap.dtype)
-            expand_labelmap[:, :, :] = 255
+            expand_labelmap[:, :] = 255
             expand_labelmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
                             abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = labelmap
             labelmap = expand_labelmap[max(offset_up, 0):max(offset_up, 0) + self.size[1],
@@ -944,7 +944,7 @@ class RandomDetCrop(object):
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
-            if mode is None:
+            if mode is None or bboxes.size == 0:
                 return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
             min_iou, max_iou = mode

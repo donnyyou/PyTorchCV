@@ -69,7 +69,9 @@ class CocoDetGenerator(object):
                 object_dict['bbox'] = [float(bbox[0]), float(bbox[1]),
                                        (float(bbox[2]) + float(bbox[0])), (float(bbox[3]) + float(bbox[1]))]
 
-                object_list.append(object_dict)
+                # Sanitize bboxes -- some are invalid
+                if anno['area'] > 0 and float(bbox[2]) > 0 and float(bbox[3]) > 0:
+                    object_list.append(object_dict)
 
             json_dict['objects'] = object_list
             fw = open(os.path.join(self.json_dir, '{}.json'.format(file_name.split('.')[0])), 'w')

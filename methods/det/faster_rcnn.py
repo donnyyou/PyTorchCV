@@ -9,8 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -93,10 +91,9 @@ class FasterRCNN(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         for i, data_dict in enumerate(self.train_loader):
-            img_scale = data_dict['img_scale']
             inputs = data_dict['img']
+            img_scale = data_dict['imgscale']
             batch_gt_bboxes = data_dict['bboxes']
-            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
             batch_gt_labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
@@ -155,10 +152,9 @@ class FasterRCNN(object):
         start_time = time.time()
         with torch.no_grad():
             for j, data_dict in enumerate(self.val_loader):
-                img_scale = data_dict['img_scale']
                 inputs = data_dict['img']
+                img_scale = data_dict['imgscale']
                 batch_gt_bboxes = data_dict['bboxes']
-                # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
                 batch_gt_labels = data_dict['labels']
                 # Change the data type.
                 gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
@@ -193,7 +189,7 @@ class FasterRCNN(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.det_net, metric='iters')
+            self.module_utilizer.save_net(self.det_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'

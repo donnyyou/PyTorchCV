@@ -1962,7 +1962,7 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
  *     with nogil:
  *         for k in range(K):             # <<<<<<<<<<<<<<
  *             box_area = (
- *                 (query_boxes[k, 2] - query_boxes[k, 0] + 1) *
+ *                 (query_boxes[k, 2] - query_boxes[k, 0]) *
  */
         __pyx_t_6 = __pyx_v_K;
         __pyx_t_7 = __pyx_t_6;
@@ -1972,8 +1972,8 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
           /* "extensions/layers/iou/src/cython_iou.pyx":53
  *         for k in range(K):
  *             box_area = (
- *                 (query_boxes[k, 2] - query_boxes[k, 0] + 1) *             # <<<<<<<<<<<<<<
- *                 (query_boxes[k, 3] - query_boxes[k, 1] + 1)
+ *                 (query_boxes[k, 2] - query_boxes[k, 0]) *             # <<<<<<<<<<<<<<
+ *                 (query_boxes[k, 3] - query_boxes[k, 1])
  *             )
  */
           __pyx_t_9 = __pyx_v_k;
@@ -1985,8 +1985,8 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
 
           /* "extensions/layers/iou/src/cython_iou.pyx":54
  *             box_area = (
- *                 (query_boxes[k, 2] - query_boxes[k, 0] + 1) *
- *                 (query_boxes[k, 3] - query_boxes[k, 1] + 1)             # <<<<<<<<<<<<<<
+ *                 (query_boxes[k, 2] - query_boxes[k, 0]) *
+ *                 (query_boxes[k, 3] - query_boxes[k, 1])             # <<<<<<<<<<<<<<
  *             )
  *             for n in range(N):
  */
@@ -2000,30 +2000,30 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
           /* "extensions/layers/iou/src/cython_iou.pyx":53
  *         for k in range(K):
  *             box_area = (
- *                 (query_boxes[k, 2] - query_boxes[k, 0] + 1) *             # <<<<<<<<<<<<<<
- *                 (query_boxes[k, 3] - query_boxes[k, 1] + 1)
+ *                 (query_boxes[k, 2] - query_boxes[k, 0]) *             # <<<<<<<<<<<<<<
+ *                 (query_boxes[k, 3] - query_boxes[k, 1])
  *             )
  */
-          __pyx_v_box_area = ((((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_10, __pyx_pybuffernd_query_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_12, __pyx_pybuffernd_query_boxes.diminfo[1].strides))) + 1.0) * (((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_13, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_14, __pyx_pybuffernd_query_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_query_boxes.diminfo[1].strides))) + 1.0));
+          __pyx_v_box_area = (((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_10, __pyx_pybuffernd_query_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_12, __pyx_pybuffernd_query_boxes.diminfo[1].strides))) * ((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_13, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_14, __pyx_pybuffernd_query_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_query_boxes.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_query_boxes.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_query_boxes.diminfo[1].strides))));
 
           /* "extensions/layers/iou/src/cython_iou.pyx":56
- *                 (query_boxes[k, 3] - query_boxes[k, 1] + 1)
+ *                 (query_boxes[k, 3] - query_boxes[k, 1])
  *             )
  *             for n in range(N):             # <<<<<<<<<<<<<<
- *                 iw = (
- *                     min(boxes[n, 2], query_boxes[k, 2]) -
+ *                 iw = (min(boxes[n, 2], query_boxes[k, 2]) - max(boxes[n, 0], query_boxes[k, 0]))
+ *                 if iw > 0:
  */
           __pyx_t_17 = __pyx_v_N;
           __pyx_t_18 = __pyx_t_17;
           for (__pyx_t_19 = 0; __pyx_t_19 < __pyx_t_18; __pyx_t_19+=1) {
             __pyx_v_n = __pyx_t_19;
 
-            /* "extensions/layers/iou/src/cython_iou.pyx":58
+            /* "extensions/layers/iou/src/cython_iou.pyx":57
+ *             )
  *             for n in range(N):
- *                 iw = (
- *                     min(boxes[n, 2], query_boxes[k, 2]) -             # <<<<<<<<<<<<<<
- *                     max(boxes[n, 0], query_boxes[k, 0]) + 1
- *                 )
+ *                 iw = (min(boxes[n, 2], query_boxes[k, 2]) - max(boxes[n, 0], query_boxes[k, 0]))             # <<<<<<<<<<<<<<
+ *                 if iw > 0:
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
  */
             __pyx_t_20 = __pyx_v_k;
             __pyx_t_21 = 2;
@@ -2038,14 +2038,6 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
             } else {
               __pyx_t_26 = __pyx_t_25;
             }
-
-            /* "extensions/layers/iou/src/cython_iou.pyx":59
- *                 iw = (
- *                     min(boxes[n, 2], query_boxes[k, 2]) -
- *                     max(boxes[n, 0], query_boxes[k, 0]) + 1             # <<<<<<<<<<<<<<
- *                 )
- *                 if iw > 0:
- */
             __pyx_t_27 = __pyx_v_k;
             __pyx_t_28 = 0;
             if (__pyx_t_28 < 0) __pyx_t_28 += __pyx_pybuffernd_query_boxes.diminfo[1].shape;
@@ -2059,32 +2051,24 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
             } else {
               __pyx_t_31 = __pyx_t_25;
             }
+            __pyx_v_iw = (__pyx_t_26 - __pyx_t_31);
 
             /* "extensions/layers/iou/src/cython_iou.pyx":58
  *             for n in range(N):
- *                 iw = (
- *                     min(boxes[n, 2], query_boxes[k, 2]) -             # <<<<<<<<<<<<<<
- *                     max(boxes[n, 0], query_boxes[k, 0]) + 1
- *                 )
- */
-            __pyx_v_iw = ((__pyx_t_26 - __pyx_t_31) + 1.0);
-
-            /* "extensions/layers/iou/src/cython_iou.pyx":61
- *                     max(boxes[n, 0], query_boxes[k, 0]) + 1
- *                 )
+ *                 iw = (min(boxes[n, 2], query_boxes[k, 2]) - max(boxes[n, 0], query_boxes[k, 0]))
  *                 if iw > 0:             # <<<<<<<<<<<<<<
- *                     ih = (
- *                         min(boxes[n, 3], query_boxes[k, 3]) -
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
+ *                     if ih > 0:
  */
             __pyx_t_32 = ((__pyx_v_iw > 0.0) != 0);
             if (__pyx_t_32) {
 
-              /* "extensions/layers/iou/src/cython_iou.pyx":63
+              /* "extensions/layers/iou/src/cython_iou.pyx":59
+ *                 iw = (min(boxes[n, 2], query_boxes[k, 2]) - max(boxes[n, 0], query_boxes[k, 0]))
  *                 if iw > 0:
- *                     ih = (
- *                         min(boxes[n, 3], query_boxes[k, 3]) -             # <<<<<<<<<<<<<<
- *                         max(boxes[n, 1], query_boxes[k, 1]) + 1
- *                     )
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))             # <<<<<<<<<<<<<<
+ *                     if ih > 0:
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)
  */
               __pyx_t_33 = __pyx_v_k;
               __pyx_t_34 = 3;
@@ -2099,14 +2083,6 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
               } else {
                 __pyx_t_22 = __pyx_t_26;
               }
-
-              /* "extensions/layers/iou/src/cython_iou.pyx":64
- *                     ih = (
- *                         min(boxes[n, 3], query_boxes[k, 3]) -
- *                         max(boxes[n, 1], query_boxes[k, 1]) + 1             # <<<<<<<<<<<<<<
- *                     )
- *                     if ih > 0:
- */
               __pyx_t_37 = __pyx_v_k;
               __pyx_t_38 = 1;
               if (__pyx_t_38 < 0) __pyx_t_38 += __pyx_pybuffernd_query_boxes.diminfo[1].shape;
@@ -2120,32 +2096,24 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
               } else {
                 __pyx_t_25 = __pyx_t_26;
               }
+              __pyx_v_ih = (__pyx_t_22 - __pyx_t_25);
 
-              /* "extensions/layers/iou/src/cython_iou.pyx":63
+              /* "extensions/layers/iou/src/cython_iou.pyx":60
  *                 if iw > 0:
- *                     ih = (
- *                         min(boxes[n, 3], query_boxes[k, 3]) -             # <<<<<<<<<<<<<<
- *                         max(boxes[n, 1], query_boxes[k, 1]) + 1
- *                     )
- */
-              __pyx_v_ih = ((__pyx_t_22 - __pyx_t_25) + 1.0);
-
-              /* "extensions/layers/iou/src/cython_iou.pyx":66
- *                         max(boxes[n, 1], query_boxes[k, 1]) + 1
- *                     )
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
  *                     if ih > 0:             # <<<<<<<<<<<<<<
- *                         ua = float(
- *                             (boxes[n, 2] - boxes[n, 0] + 1) *
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)
+ *                         overlaps[n, k] = iw * ih / ua
  */
               __pyx_t_32 = ((__pyx_v_ih > 0.0) != 0);
               if (__pyx_t_32) {
 
-                /* "extensions/layers/iou/src/cython_iou.pyx":68
+                /* "extensions/layers/iou/src/cython_iou.pyx":61
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
  *                     if ih > 0:
- *                         ua = float(
- *                             (boxes[n, 2] - boxes[n, 0] + 1) *             # <<<<<<<<<<<<<<
- *                             (boxes[n, 3] - boxes[n, 1] + 1) +
- *                             box_area - iw * ih
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)             # <<<<<<<<<<<<<<
+ *                         overlaps[n, k] = iw * ih / ua
+ *     return overlaps
  */
                 __pyx_t_41 = __pyx_v_n;
                 __pyx_t_42 = 2;
@@ -2153,33 +2121,17 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
                 __pyx_t_43 = __pyx_v_n;
                 __pyx_t_44 = 0;
                 if (__pyx_t_44 < 0) __pyx_t_44 += __pyx_pybuffernd_boxes.diminfo[1].shape;
-
-                /* "extensions/layers/iou/src/cython_iou.pyx":69
- *                         ua = float(
- *                             (boxes[n, 2] - boxes[n, 0] + 1) *
- *                             (boxes[n, 3] - boxes[n, 1] + 1) +             # <<<<<<<<<<<<<<
- *                             box_area - iw * ih
- *                         )
- */
                 __pyx_t_45 = __pyx_v_n;
                 __pyx_t_46 = 3;
                 if (__pyx_t_46 < 0) __pyx_t_46 += __pyx_pybuffernd_boxes.diminfo[1].shape;
                 __pyx_t_47 = __pyx_v_n;
                 __pyx_t_48 = 1;
                 if (__pyx_t_48 < 0) __pyx_t_48 += __pyx_pybuffernd_boxes.diminfo[1].shape;
+                __pyx_v_ua = ((double)(((((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_41, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_42, __pyx_pybuffernd_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_43, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_44, __pyx_pybuffernd_boxes.diminfo[1].strides))) * ((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_45, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_46, __pyx_pybuffernd_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_47, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_48, __pyx_pybuffernd_boxes.diminfo[1].strides)))) + __pyx_v_box_area) - (__pyx_v_iw * __pyx_v_ih)));
 
-                /* "extensions/layers/iou/src/cython_iou.pyx":67
- *                     )
+                /* "extensions/layers/iou/src/cython_iou.pyx":62
  *                     if ih > 0:
- *                         ua = float(             # <<<<<<<<<<<<<<
- *                             (boxes[n, 2] - boxes[n, 0] + 1) *
- *                             (boxes[n, 3] - boxes[n, 1] + 1) +
- */
-                __pyx_v_ua = ((double)((((((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_41, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_42, __pyx_pybuffernd_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_43, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_44, __pyx_pybuffernd_boxes.diminfo[1].strides))) + 1.0) * (((*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_45, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_46, __pyx_pybuffernd_boxes.diminfo[1].strides)) - (*__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_boxes.rcbuffer->pybuffer.buf, __pyx_t_47, __pyx_pybuffernd_boxes.diminfo[0].strides, __pyx_t_48, __pyx_pybuffernd_boxes.diminfo[1].strides))) + 1.0)) + __pyx_v_box_area) - (__pyx_v_iw * __pyx_v_ih)));
-
-                /* "extensions/layers/iou/src/cython_iou.pyx":72
- *                             box_area - iw * ih
- *                         )
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)
  *                         overlaps[n, k] = iw * ih / ua             # <<<<<<<<<<<<<<
  *     return overlaps
  */
@@ -2192,27 +2144,27 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
                   #ifdef WITH_THREAD
                   __Pyx_PyGILState_Release(__pyx_gilstate_save);
                   #endif
-                  __PYX_ERR(0, 72, __pyx_L4_error)
+                  __PYX_ERR(0, 62, __pyx_L4_error)
                 }
                 __pyx_t_49 = __pyx_v_n;
                 __pyx_t_50 = __pyx_v_k;
                 *__Pyx_BufPtrStrided2d(__pyx_t_10extensions_6layers_3iou_3src_10cython_iou_DTYPE_t *, __pyx_pybuffernd_overlaps.rcbuffer->pybuffer.buf, __pyx_t_49, __pyx_pybuffernd_overlaps.diminfo[0].strides, __pyx_t_50, __pyx_pybuffernd_overlaps.diminfo[1].strides) = (__pyx_t_25 / __pyx_v_ua);
 
-                /* "extensions/layers/iou/src/cython_iou.pyx":66
- *                         max(boxes[n, 1], query_boxes[k, 1]) + 1
- *                     )
+                /* "extensions/layers/iou/src/cython_iou.pyx":60
+ *                 if iw > 0:
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
  *                     if ih > 0:             # <<<<<<<<<<<<<<
- *                         ua = float(
- *                             (boxes[n, 2] - boxes[n, 0] + 1) *
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)
+ *                         overlaps[n, k] = iw * ih / ua
  */
               }
 
-              /* "extensions/layers/iou/src/cython_iou.pyx":61
- *                     max(boxes[n, 0], query_boxes[k, 0]) + 1
- *                 )
+              /* "extensions/layers/iou/src/cython_iou.pyx":58
+ *             for n in range(N):
+ *                 iw = (min(boxes[n, 2], query_boxes[k, 2]) - max(boxes[n, 0], query_boxes[k, 0]))
  *                 if iw > 0:             # <<<<<<<<<<<<<<
- *                     ih = (
- *                         min(boxes[n, 3], query_boxes[k, 3]) -
+ *                     ih = (min(boxes[n, 3], query_boxes[k, 3]) - max(boxes[n, 1], query_boxes[k, 1]))
+ *                     if ih > 0:
  */
             }
           }
@@ -2245,8 +2197,8 @@ static PyObject *__pyx_pf_10extensions_6layers_3iou_3src_10cython_iou_bbox_overl
       }
   }
 
-  /* "extensions/layers/iou/src/cython_iou.pyx":73
- *                         )
+  /* "extensions/layers/iou/src/cython_iou.pyx":63
+ *                         ua = float((boxes[n, 2] - boxes[n, 0]) * (boxes[n, 3] - boxes[n, 1]) + box_area - iw * ih)
  *                         overlaps[n, k] = iw * ih / ua
  *     return overlaps             # <<<<<<<<<<<<<<
  */

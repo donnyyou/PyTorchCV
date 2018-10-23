@@ -10,17 +10,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.backbones.backbone_selector import BackboneSelector
+from models.tools.module_helper import ModuleHelper
 
 
 class _ConvBatchNormReluBlock(nn.Module):
-    def __init__(self, inplanes, outplanes, kernel_size, stride, padding=1, dilation=1, relu=True):
+    def __init__(self, inplanes, outplanes, kernel_size, stride, padding=1, dilation=1, relu=True, bn_type=None):
         super(_ConvBatchNormReluBlock, self).__init__()
         self.relu = relu
         self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
                             kernel_size=kernel_size, stride=stride, padding=padding,
                             dilation = dilation, bias=False)
-        from extensions.layers.syncbn.module import BatchNorm2d
-        self.bn = BatchNorm2d(num_features=outplanes)
+        self.bn = ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
     def forward(self, x):
@@ -33,24 +33,23 @@ class _ConvBatchNormReluBlock(nn.Module):
 # PSP decoder Part
 # pyramid pooling, bilinear upsample
 class PPMBilinearDeepsup(nn.Module):
-    def __init__(self, num_class=150, fc_dim=4096):
+    def __init__(self, num_class=150, fc_dim=4096, bn_type=None):
         super(PPMBilinearDeepsup, self).__init__()
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
-        from extensions.layers.syncbn.module import BatchNorm2d
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
                 nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
-                BatchNorm2d(512),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
                 nn.ReLU(inplace=True)
             ))
         self.ppm = nn.ModuleList(self.ppm)
-        self.cbr_deepsup = _ConvBatchNormReluBlock(fc_dim // 2, fc_dim // 4, 3, 1)
+        self.cbr_deepsup = _ConvBatchNormReluBlock(fc_dim // 2, fc_dim // 4, 3, 1, bn_type=bn_type)
         self.conv_last = nn.Sequential(
             nn.Conv2d(fc_dim+len(pool_scales)*512, 512,
                       kernel_size=3, padding=1, bias=False),
-            BatchNorm2d(512),
+            ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
             nn.ReLU(inplace=True),
             nn.Dropout2d(0.1),
             nn.Conv2d(512, num_class, kernel_size=1)
@@ -79,33 +78,9 @@ class PPMBilinearDeepsup(nn.Module):
         return x, aux
 
 
-class EmbedModule(nn.Module):
-    def __init__(self, inchannels):
-        super(EmbedModule, self).__init__()
-        from extensions.layers.syncbn.module import BatchNorm2d
-        inter_channels = inchannels // 4
-        self.conv = nn.Sequential(
-            nn.Conv2d(inchannels, inter_channels, kernel_size=1, padding=0, bias=False),
-            BatchNorm2d(inter_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(inter_channels, inter_channels, kernel_size=7, padding=3, stride=1, bias=False),
-            BatchNorm2d(inter_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(inter_channels, inchannels, kernel_size=1, padding=0, bias=False),
-            BatchNorm2d(inchannels),
-            nn.ReLU(inplace=True),
-        )
-        # downsample & conv to get embedding.
-
-    def forward(self, x):
-        # return incremental for features & embedding for loss function.
-        x = self.conv(x)
-        return x
-
-
-class SyncBNEmbedNet(nn.Sequential):
+class PSPNet(nn.Sequential):
     def __init__(self, configer):
-        super(SyncBNEmbedNet, self).__init__()
+        super(PSPNet, self).__init__()
         self.configer = configer
         self.num_classes = self.configer.get('data', 'num_classes')
         self.backbone = BackboneSelector(configer).get_backbone()
@@ -129,23 +104,22 @@ class SyncBNEmbedNet(nn.Sequential):
 
         self.high_features1 = nn.Sequential(self.backbone.layer2, self.backbone.layer3)
         self.high_features2 = nn.Sequential(self.backbone.layer4)
-        self.embed_conv = EmbedModule(1024)
-        self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features)
+        self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features,
+                                          bn_type=self.configer.get('network', 'bn_type'))
 
     def forward(self, x):
         low = self.low_features(x)
         aux = self.high_features1(low)
-        incr = self.embed_conv(aux)
-        x = self.high_features2(aux+incr)
+        x = self.high_features2(aux)
         x, aux = self.decoder([x, aux])
         x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
 
-        return tuple([x, aux, incr])
+        return x, aux
 
 
 if __name__ == '__main__':
     i = torch.Tensor(1,3,512,512).cuda()
-    model = SyncBNEmbedNet(num_classes=19).cuda()
+    model = PSPNet(num_classes=19).cuda()
     model.eval()
     o, _ = model(i)
     #print(o.size())

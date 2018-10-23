@@ -535,7 +535,7 @@ class RandomResize(object):
         if labelmap is not None:
             labelmap = labelmap.resize(converted_size, Image.NEAREST)
         if maskmap is not None:
-            maskmap = maskmap.resize(converted_size, Image.CUBIC)
+            maskmap = maskmap.resize(converted_size, Image.NEAREST)
 
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
@@ -988,7 +988,7 @@ class RandomDetCrop(object):
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
-            if mode is None:
+            if mode is None or bboxes.size == 0:
                 return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
             min_iou, max_iou = mode

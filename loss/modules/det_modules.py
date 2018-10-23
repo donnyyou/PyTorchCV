@@ -200,8 +200,8 @@ class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss()
-        self.bce_loss = nn.BCELoss()
+        self.mse_loss = nn.MSELoss(reduction='sum')
+        self.bce_loss = nn.BCELoss(reduction='sum')
 
     def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
@@ -220,21 +220,21 @@ class YOLOv3Loss(nn.Module):
         tcls = targets[..., 5:]  # Cls pred.
 
         #  losses.
-        loss_x = self.bce_loss(x * objmask, tx * objmask)
-        loss_y = self.bce_loss(y * objmask, ty * objmask)
-        loss_w = self.mse_loss(w * objmask, tw * objmask)
-        loss_h = self.mse_loss(h * objmask, th * objmask)
-        loss_conf = self.bce_loss(conf * objmask, objmask) + \
-                    0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
+        loss_x = self.bce_loss(x[objmask == 1], tx[objmask == 1])
+        loss_y = self.bce_loss(y[objmask == 1], ty[objmask == 1])
+        loss_w = self.mse_loss(w[objmask == 1], tw[objmask == 1])
+        loss_h = self.mse_loss(h[objmask == 1], th[objmask == 1])
+        loss_obj = self.bce_loss(conf[objmask == 1], objmask[objmask == 1])
+        loss_noobj = self.bce_loss(conf[noobjmask == 1], objmask[noobjmask == 1])
         loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
 
         #  total loss = losses * weight
-        loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
-               (loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
-               loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+        loss = (loss_x + loss_y + loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
+               loss_obj * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+               loss_noobj * self.configer.get('network', 'loss_weights')['noobj_loss'] + \
                loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
-        return loss * 3.0
+        return loss / targets.size(0)
 
 
 class FRLocLoss(nn.Module):

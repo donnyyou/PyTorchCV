@@ -41,7 +41,7 @@ def nms(np.ndarray[np.float32_t, ndim=2] dets, np.float32_t thresh):
     cdef np.ndarray[np.float32_t, ndim=1] y2 = dets[:, 3]
     cdef np.ndarray[np.float32_t, ndim=1] scores = dets[:, 4]
 
-    cdef np.ndarray[np.float32_t, ndim=1] areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    cdef np.ndarray[np.float32_t, ndim=1] areas = (x2 - x1) * (y2 - y1)
     cdef np.ndarray[np.int_t, ndim=1] order = scores.argsort()[::-1]
 
     cdef int ndets = dets.shape[0]
@@ -77,8 +77,8 @@ def nms(np.ndarray[np.float32_t, ndim=2] dets, np.float32_t thresh):
               yy1 = max(iy1, y1[j])
               xx2 = min(ix2, x2[j])
               yy2 = min(iy2, y2[j])
-              w = max(0.0, xx2 - xx1 + 1)
-              h = max(0.0, yy2 - yy1 + 1)
+              w = max(0.0, xx2 - xx1)
+              h = max(0.0, yy2 - yy1)
               inter = w * h
               ovr = inter / (iarea + areas[j] - inter)
               if ovr >= thresh:
@@ -163,12 +163,12 @@ def soft_nms(
             y2 = boxes[pos, 3]
             s = boxes[pos, 4]
 
-            area = (x2 - x1 + 1) * (y2 - y1 + 1)
-            iw = (min(tx2, x2) - max(tx1, x1) + 1)
+            area = (x2 - x1) * (y2 - y1)
+            iw = (min(tx2, x2) - max(tx1, x1))
             if iw > 0:
-                ih = (min(ty2, y2) - max(ty1, y1) + 1)
+                ih = (min(ty2, y2) - max(ty1, y1))
                 if ih > 0:
-                    ua = float((tx2 - tx1 + 1) * (ty2 - ty1 + 1) + area - iw * ih)
+                    ua = float((tx2 - tx1) * (ty2 - ty1) + area - iw * ih)
                     ov = iw * ih / ua #iou between max box and detection box
 
                     if method == 1: # linear

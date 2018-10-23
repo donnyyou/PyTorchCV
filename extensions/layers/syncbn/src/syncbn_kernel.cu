@@ -245,6 +245,8 @@ std::vector<at::Tensor> Sum_Square_Forward_CUDA(
   /* outputs */
   at::Tensor sum_ = input_.type().tensor({input_.size(1)}).zero_();
   at::Tensor square_ = input_.type().tensor({input_.size(1)}).zero_();
+  // at::Tensor sum_ = torch::zeros({input_.size(1)}, input_.options());
+  // at::Tensor square_ = torch::zeros({input_.size(1)}, input_.options());
   /* cuda utils*/
   cudaStream_t stream = at::globalContext().getCurrentCUDAStream();
   dim3 blocks(input_.size(1));

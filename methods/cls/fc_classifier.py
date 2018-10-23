@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -80,6 +79,7 @@ class FCClassifier(object):
             inputs, labels = self.module_utilizer.to_device(inputs, labels)
             # Forward pass.
             outputs = self.cls_net(inputs)
+            outputs = self.module_utilizer.gather(outputs)
             # Compute the loss of the train batch & backward.
 
             loss = self.ce_loss(outputs, labels)
@@ -129,9 +129,9 @@ class FCClassifier(object):
                 inputs, labels = self.module_utilizer.to_device(inputs, labels)
                 # Forward pass.
                 outputs = self.cls_net(inputs)
+                outputs = self.module_utilizer.gather(outputs)
                 # Compute the loss of the val batch.
                 loss = self.ce_loss(outputs, labels)
-
                 self.cls_running_score.update(outputs, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
@@ -139,7 +139,7 @@ class FCClassifier(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.cls_net, metric='iters')
+            self.module_utilizer.save_net(self.cls_net, save_mode='iters')
 
             # Print the log info & reset the states.
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))

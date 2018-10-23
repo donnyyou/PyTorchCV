@@ -156,8 +156,6 @@ class DenseNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.densenet_models = DenseNetModels(self.configer)
-        from models.backbones.densenet.syncbn_densenet_models import SyncBNDenseNetModels
-        self.syncbn_densenet_models = SyncBNDenseNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
@@ -171,14 +169,6 @@ class DenseNetBackbone(object):
 
         elif arch == 'densenet121_dilated16':
             orig_densenet = self.densenet_models.densenet121()
-            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
-
-        elif arch == 'syncbn_densenet121_dilated8':
-            orig_densenet = self.syncbn_densenet_models.densenet121()
-            arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=8)
-
-        elif arch == 'syncbn_densenet121_dilated16':
-            orig_densenet = self.syncbn_densenet_models.densenet121()
             arch_net = DilatedDensenetBackbone(orig_densenet, dilate_scale=16)
 
         elif arch == 'densenet169':

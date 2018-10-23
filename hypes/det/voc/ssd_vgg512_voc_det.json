@@ -11,7 +11,7 @@
       "workers": 8
     },
     "train": {
-      "batch_size": 32,
+      "batch_size": 24,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
@@ -19,7 +19,7 @@
       }
     },
     "val": {
-      "batch_size": 32,
+      "batch_size": 24,
       "use_07_metric": true,
       "data_transformer": {
         "size_mode": "fix_size",
@@ -28,7 +28,7 @@
       }
     },
     "test": {
-      "_input_size": [512, 512],
+      "input_size": [512, 512],
       "scale_search": [1.0]
     },
     "train_trans": {

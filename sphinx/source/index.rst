@@ -1,9 +1,9 @@
 .. Encoding documentation master file
 
-:github_url: https://github.com/youansheng/PyTorchCV
+:github_url: https://github.com/CVBox/PyTorchCV
 
-Docs for PyTorch-Based CV Framework.
-========================
+Docs for PyTorchCV.
+===================
 
 Created by `Donny You <personal link>`_
 

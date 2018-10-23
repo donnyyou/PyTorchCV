@@ -82,17 +82,6 @@ class SingleShotDetectorTest(object):
 
     @staticmethod
     def decode(bbox, conf, default_boxes, configer, input_size):
-        """Transform predicted loc/conf back to real bbox locations and class labels.
-
-        Args:
-          loc: (tensor) predicted loc, sized [8732, 4].
-          conf: (tensor) predicted conf, sized [8732, 21].
-
-        Returns:
-          boxes: (tensor) bbox locations, sized [#obj, 4].
-          labels: (tensor) class labels, sized [#obj,1].
-
-        """
         loc = bbox.cpu()
         if configer.get('phase') != 'debug':
             conf = F.softmax(conf.cpu(), dim=-1)
@@ -133,7 +122,7 @@ class SingleShotDetectorTest(object):
                                      scores=valid_preds[:, 4],
                                      labels=valid_preds[:, 5],
                                      nms_threshold=configer.get('nms', 'max_threshold'),
-                                     mode=configer.get('nms', 'mode'),
+                                     iou_mode=configer.get('nms', 'mode'),
                                      cls_keep_num=configer.get('vis', 'cls_keep_num'))
 
             valid_preds = valid_preds[keep]

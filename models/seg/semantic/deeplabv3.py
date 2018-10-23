@@ -9,17 +9,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.backbones.backbone_selector import BackboneSelector
+from models.tools.module_helper import ModuleHelper
 
 
 class _ConvBatchNormReluBlock(nn.Module):
-    def __init__(self, inplanes, outplanes, kernel_size, stride, padding, dilation, relu=True):
+    def __init__(self, inplanes, outplanes, kernel_size, stride, padding, dilation, relu=True, bn_type=None):
         super(_ConvBatchNormReluBlock, self).__init__()
         self.relu = relu
         self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
                             kernel_size=kernel_size, stride=stride, padding = padding,
                             dilation = dilation, bias=False)
-        from extensions.layers.syncbn.module import BatchNorm2d
-        self.bn = BatchNorm2d(num_features=outplanes)
+        self.bn = ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
     def forward(self, x):
@@ -31,14 +31,14 @@ class _ConvBatchNormReluBlock(nn.Module):
 
 
 class _Bottleneck(nn.Module):
-    def __init__(self, inplanes, midplanes, outplanes, stride, dilation, downsample):
+    def __init__(self, inplanes, midplanes, outplanes, stride, dilation, downsample, bn_type):
         super(_Bottleneck, self).__init__()
-        self.reduce = _ConvBatchNormReluBlock(inplanes, midplanes, 1, stride, 0, 1)
-        self.conv3x3 = _ConvBatchNormReluBlock(midplanes, midplanes, 3, 1, dilation, dilation)
-        self.increase = _ConvBatchNormReluBlock(midplanes, outplanes, 1, 1, 0, 1, relu=False)
+        self.reduce = _ConvBatchNormReluBlock(inplanes, midplanes, 1, stride, 0, 1, bn_type=bn_type)
+        self.conv3x3 = _ConvBatchNormReluBlock(midplanes, midplanes, 3, 1, dilation, dilation, bn_type=bn_type)
+        self.increase = _ConvBatchNormReluBlock(midplanes, outplanes, 1, 1, 0, 1, relu=False, bn_type=bn_type)
         self.downsample = downsample
         if self.downsample:
-            self.proj = _ConvBatchNormReluBlock(inplanes, outplanes, 1, stride, 0, 1, relu=False)
+            self.proj = _ConvBatchNormReluBlock(inplanes, outplanes, 1, stride, 0, 1, relu=False, bn_type=bn_type)
 
     def forward(self, x):
         h = self.reduce(x)
@@ -52,11 +52,11 @@ class _Bottleneck(nn.Module):
 
 
 class _ResidualBlockMulGrid(nn.Module):
-    def __init__(self, inplanes, midplanes, outplanes, stride, dilation, mulgrid=[1,2,1]):
+    def __init__(self, inplanes, midplanes, outplanes, stride, dilation, mulgrid=[1,2,1], bn_type=None):
         super(_ResidualBlockMulGrid, self).__init__()
-        self.block1 = _Bottleneck(inplanes, midplanes, outplanes, stride, dilation * mulgrid[0], True)
-        self.block2 = _Bottleneck(outplanes, midplanes, outplanes, 1, dilation * mulgrid[1], False)
-        self.block3 = _Bottleneck(outplanes, midplanes, outplanes, 1, dilation * mulgrid[2], False)
+        self.block1 = _Bottleneck(inplanes, midplanes, outplanes, stride, dilation * mulgrid[0], True, bn_type)
+        self.block2 = _Bottleneck(outplanes, midplanes, outplanes, 1, dilation * mulgrid[1], False, bn_type)
+        self.block3 = _Bottleneck(outplanes, midplanes, outplanes, 1, dilation * mulgrid[2], False, bn_type)
 
     def forward(self, x):
         x = self.block1(x)
@@ -68,23 +68,21 @@ class _ResidualBlockMulGrid(nn.Module):
 class _ASPPModule(nn.Module):
     """Atrous Spatial Pyramid Pooling module with image pool (Deeplabv3)"""
 
-    def __init__(self, in_channels, out_channels, pyramids):
+    def __init__(self, in_channels, out_channels, pyramids, bn_type):
         super(_ASPPModule, self).__init__()
         self.stages = nn.Module()
         self.stages.add_module(
             'c0',
-            _ConvBatchNormReluBlock(in_channels, out_channels, 1, 1, 0, 1),
+            _ConvBatchNormReluBlock(in_channels, out_channels, 1, 1, 0, 1, bn_type=bn_type),
         )
         for i, (dilation, padding) in enumerate(zip(pyramids, pyramids)):
             self.stages.add_module(
                 'c{}'.format(i + 1),
-                _ConvBatchNormReluBlock(
-                    in_channels, out_channels, 3, 1, padding, dilation),
+                _ConvBatchNormReluBlock(in_channels, out_channels, 3, 1, padding, dilation, bn_type=bn_type),
             )
         self.imagepool = nn.Sequential(
                  nn.AdaptiveAvgPool2d(1),
-                _ConvBatchNormReluBlock(
-                    in_channels, out_channels, 1, 1, 0, 1)
+                _ConvBatchNormReluBlock(in_channels, out_channels, 1, 1, 0, 1, bn_type=bn_type)
         )
 
     def forward(self, x):
@@ -96,12 +94,11 @@ class _ASPPModule(nn.Module):
         return h
 
 
-class SyncBNDeepLabV3(nn.Module):
+class DeepLabV3(nn.Module):
     def __init__(self, configer):
-        super(SyncBNDeepLabV3, self).__init__()
+        super(DeepLabV3, self).__init__()
         self.configer = configer
         self.backbone = BackboneSelector(configer).get_backbone()
-        from extensions.layers.syncbn.module import BatchNorm2d
         
         self.backbone = nn.Sequential(
             self.backbone.conv1, self.backbone.bn1, self.backbone.relu1,
@@ -111,12 +108,13 @@ class SyncBNDeepLabV3(nn.Module):
         )
         self.MG_features = _ResidualBlockMulGrid(inplanes=1024, midplanes=512,
                                                  outplanes=2048, stride=1,
-                                                 dilation=2, mulgrid=self.configer.get('network', 'multi_grid'))
+                                                 dilation=2, mulgrid=self.configer.get('network', 'multi_grid'),
+                                                 bn_type=self.configer.get('network', 'bn_type'))
         pyramids = [6, 12, 18]
-        self.aspp = _ASPPModule(2048, 256, pyramids)
+        self.aspp = _ASPPModule(2048, 256, pyramids, bn_type=self.configer.get('network', 'bn_type'))
 
         self.fc1 = nn.Sequential(nn.Conv2d(1280, 256, kernel_size=1),  # 256 * 5 = 1280
-                                 BatchNorm2d(256))
+                                 ModuleHelper.BatchNorm2d(bn_type=self.configer.get('network', 'bn_type'))(256))
         self.fc2 = nn.Conv2d(256, self.configer.get('data', 'num_classes'), kernel_size=1)
 
     def forward(self, x):

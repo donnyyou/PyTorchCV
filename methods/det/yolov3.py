@@ -9,12 +9,10 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from loss.det_loss_manager import DetLossManager
 from methods.det.yolov3_test import YOLOv3Test
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -47,7 +45,6 @@ class YOLOv3(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -83,6 +80,22 @@ class YOLOv3(object):
 
         return params
 
+    def warm_lr(self, batch_len):
+        """Sets the learning rate
+        # Adapted from PyTorch Imagenet example:
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+        """
+        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
+        if self.configer.get('iters') < warm_iters:
+            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
+
+            base_lr_list = self.scheduler.get_lr()
+            for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
+                param_group['lr'] = base_lr * lr_ratio
+
+            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
+                Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
+
     def __train(self):
         """
           Train function of every epoch during train phase.
@@ -95,6 +108,9 @@ class YOLOv3(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
+            if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
+                self.warm_lr(len(self.train_loader))
+
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
@@ -150,11 +166,7 @@ class YOLOv3(object):
         self.det_net.eval()
         start_time = time.time()
         with torch.no_grad():
-            for j, batch_data in enumerate(self.val_loader):
-                data_dict = self.data_transformer(img_list=batch_data[0],
-                                                  bboxes_list=batch_data[1],
-                                                  labels_list=batch_data[2],
-                                                  trans_dict=self.configer.get('val', 'data_transformer'))
+            for i, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
@@ -172,7 +184,7 @@ class YOLOv3(object):
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = YOLOv3Test.decode(detections, self.configer)
-                batch_pred_bboxes = self.__get_object_list(batch_detections)
+                batch_pred_bboxes = self.__get_object_list(batch_detections, input_size)
 
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
@@ -180,7 +192,7 @@ class YOLOv3(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.det_net, metric='iters')
+            self.module_utilizer.save_net(self.det_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
@@ -192,16 +204,16 @@ class YOLOv3(object):
             self.val_losses.reset()
             self.det_net.train()
 
-    def __get_object_list(self, batch_detections):
+    def __get_object_list(self, batch_detections, input_size):
         batch_pred_bboxes = list()
         for idx, detections in enumerate(batch_detections):
             object_list = list()
             if detections is not None:
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                    xmin = x1.cpu().item()
-                    ymin = y1.cpu().item()
-                    xmax = x2.cpu().item()
-                    ymax = y2.cpu().item()
+                    xmin = x1.cpu().item() * input_size[0]
+                    ymin = y1.cpu().item() * input_size[1]
+                    xmax = x2.cpu().item() * input_size[0]
+                    ymax = y2.cpu().item() * input_size[1]
                     cf = conf.cpu().item()
                     cls_pred = cls_pred.cpu().item()
                     object_list.append([xmin, ymin, xmax, ymax, int(cls_pred), float('%.2f' % cf)])

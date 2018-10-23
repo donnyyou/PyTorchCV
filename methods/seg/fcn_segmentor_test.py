@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
 import cv2
 import numpy as np
 import torch
@@ -98,7 +97,7 @@ class FCNSegmentorTest(object):
         ImageHelper.save(image_canvas, save_path=vis_path)
         ImageHelper.save(ori_image, save_path=raw_path)
 
-        if not self.configer.is_empty('details', 'label_list'):
+        if not self.configer.is_empty('data', 'label_list'):
             label_img = self.__relabel(label_img)
 
         label_img = Image.fromarray(label_img, 'P')
@@ -154,7 +153,7 @@ class FCNSegmentorTest(object):
         height, width = label_map.shape
         label_dst = np.zeros((height, width), dtype=np.uint8)
         for i in range(self.configer.get('data', 'num_classes')):
-            label_dst[label_map == i] = self.configer.get('details', 'label_list')[i]
+            label_dst[label_map == i] = self.configer.get('data', 'label_list')[i]
 
         label_dst = np.array(label_dst, dtype=np.uint8)
 

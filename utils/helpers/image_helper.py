@@ -132,7 +132,7 @@ class ImageHelper(object):
             return img.size
 
         elif isinstance(img, np.ndarray):
-            height, width, _ = img.shape
+            height, width = img.shape[:2]
             return [width, height]
 
         else:

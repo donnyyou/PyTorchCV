@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -64,9 +63,6 @@ class FCNSegmentor(object):
 
         self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
 
-        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
-            self.pixel_loss = DataParallelCriterion(self.pixel_loss).cuda()
-
     def _get_parameters(self):
         lr_1 = []
         lr_10 = []
@@ -101,6 +97,7 @@ class FCNSegmentor(object):
 
             # Forward pass.
             outputs = self.seg_net(inputs)
+            outputs = self.module_utilizer.gather(outputs)
 
             # Compute the loss of the train batch & backward.
             loss = self.pixel_loss(outputs, targets)
@@ -151,18 +148,11 @@ class FCNSegmentor(object):
                 inputs, targets = self.module_utilizer.to_device(inputs, targets)
                 # Forward pass.
                 outputs = self.seg_net(inputs)
+                outputs = self.module_utilizer.gather(outputs)
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets)
 
-                if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
-                    tmp = []  # collect the data
-                    for i in range(len(outputs)):
-                        assert isinstance(outputs[i][0],torch.Tensor)
-                        tmp.append(outputs[i][0]) # append the output tensor
-
-                    pred = torch.cat(tmp, dim=0)
-                else:
-                    pred = outputs[0]
+                pred = outputs[0]
 
             self.val_losses.update(loss.item(), inputs.size(0))
             self.seg_running_score.update(pred.max(1)[1].cpu().numpy(), targets.cpu().numpy())
@@ -173,8 +163,8 @@ class FCNSegmentor(object):
 
         self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
         self.configer.update_value(['val_loss'], self.val_losses.avg)
-        self.module_utilizer.save_net(self.seg_net, metric='performance')
-        self.module_utilizer.save_net(self.seg_net, metric='val_loss')
+        self.module_utilizer.save_net(self.seg_net, save_mode='performance')
+        self.module_utilizer.save_net(self.seg_net, save_mode='val_loss')
 
         # Print the log info & reset the states.
         Log.info(

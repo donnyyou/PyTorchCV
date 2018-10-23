@@ -12,6 +12,7 @@ import os
 import math
 import torch
 import torch.nn as nn
+from torch.nn.parallel.scatter_gather import gather as torch_gather
 
 from utils.tools.logger import Logger as Log
 
@@ -32,6 +33,13 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
         self.configer.add_key_value(['network', 'parallel'], False)
+        if self.configer.is_empty('network', 'bn_type'):
+            self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
+
+        if len(self.configer.get('gpu')) == 1:
+            self.configer.update_value(['network', 'bn_type'], 'torchbn')
+
+        Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -42,14 +50,11 @@ class ModuleUtilizer(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if not self.configer.is_empty('network', 'syncbn') and self.configer.get('network', 'syncbn'):
-            if len(self.configer.get('gpu')) > 1:
-                from extensions.layers.syncbn.parallel import DataParallelModel
-                self.configer.update_value(['network', 'parallel'], True)
-                return DataParallelModel(net)
-            else:
-                self.configer.update_value(['network', 'syncbn'], False)
-                return net
+        if self.configer.get('network', 'bn_type') == 'syncbn':
+            assert len(self.configer.get('gpu')) > 1
+            from extensions.layers.syncbn.parallel import DataParallelModel
+            self.configer.update_value(['network', 'parallel'], True)
+            return DataParallelModel(net)
 
         elif len(self.configer.get('gpu')) > 1:
             self.configer.update_value(['network', 'parallel'], True)
@@ -116,7 +121,7 @@ class ModuleUtilizer(object):
 
         return net
 
-    def save_net(self, net, metric='iters'):
+    def save_net(self, net, save_mode='iters'):
         state = {
             'config_dict': self.configer.to_dict(),
             'state_dict': net.state_dict(),
@@ -131,19 +136,19 @@ class ModuleUtilizer(object):
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 
-        if metric == 'performance':
+        if save_mode == 'performance':
             if self.configer.get('performance') > self.configer.get('max_performance'):
                 latest_name = '{}_max_performance.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
                 self.configer.update_value(['max_performance'], self.configer.get('performance'))
 
-        elif metric == 'val_loss':
+        elif save_mode == 'val_loss':
             if self.configer.get('val_loss') < self.configer.get('min_val_loss'):
                 latest_name = '{}_min_loss.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
                 self.configer.update_value(['min_val_loss'], self.configer.get('val_loss'))
 
-        elif metric == 'iters':
+        elif save_mode == 'iters':
             if self.configer.get('iters') - self.configer.get('last_iters') >= \
                     self.configer.get('checkpoints', 'save_iters'):
                 latest_name = '{}_iters{}.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'),
@@ -151,7 +156,7 @@ class ModuleUtilizer(object):
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
                 self.configer.update_value(['last_iters'], self.configer.get('iters'))
 
-        elif metric == 'epoch':
+        elif save_mode == 'epoch':
             if self.configer.get('epoch') - self.configer.get('last_epoch') >= \
                     self.configer.get('checkpoints', 'save_epoch'):
                 latest_name = '{}_epoch{}.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'),
@@ -160,7 +165,7 @@ class ModuleUtilizer(object):
                 self.configer.update_value(['last_epoch'], self.configer.get('epoch'))
 
         else:
-            Log.error('Metric: {} is invalid.'.format(metric))
+            Log.error('Metric: {} is invalid.'.format(save_mode))
             exit(1)
 
     def freeze_bn(self, net, syncbn=False):
@@ -188,6 +193,20 @@ class ModuleUtilizer(object):
             if p.requires_grad:
                 p.grad.mul_(norm)
 
+    def gather(self, outputs, target_device=None, dim=0):
+        r"""
+        Gathers tensors from different GPUs on a specified device
+          (-1 means the CPU).
+        """
+        if self.configer.get('network', 'bn_type') == 'syncbn':
+            if target_device is None:
+                target_device = list(range(torch.cuda.device_count()))[0]
+
+            return torch_gather(outputs, target_device, dim=dim)
+
+        else:
+            assert isinstance(outputs, torch.Tensor)
+            return outputs
 
 
 

@@ -9,7 +9,6 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -150,7 +149,7 @@ class ConvPoseMachine(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.pose_net, metric='iters')
+            self.module_utilizer.save_net(self.pose_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'

@@ -79,7 +79,7 @@ class DataTransformer(object):
             target_width, target_height = trans_dict['input_size']
         elif trans_dict['size_mode'] == 'multi_size':
             ms_input_size = trans_dict['ms_input_size']
-            target_width, target_height = ms_input_size[random.randint(0, len(ms_input_size))]
+            target_width, target_height = ms_input_size[random.randint(0, len(ms_input_size) - 1)]
         elif trans_dict['size_mode'] == 'max_size':
             border_width = [img.size(2) for img in img_list]
             border_height = [img.size(1) for img in img_list]

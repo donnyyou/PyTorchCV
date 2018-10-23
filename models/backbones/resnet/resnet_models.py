@@ -17,6 +17,7 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
+from models.tools.module_helper import ModuleHelper
 from utils.tools.logger import Logger as Log
 
 
@@ -38,13 +39,13 @@ def conv3x3(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, bn_type=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
         self.downsample = downsample
         self.stride = stride
 
@@ -70,15 +71,15 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, bn_type=None):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
                                padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(planes * 4)
+        self.bn3 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * 4)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -108,19 +109,19 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000):
+    def __init__(self, block, layers, num_classes=1000, bn_type=None):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.layer1 = self._make_layer(block, 64, layers[0], bn_type=bn_type)
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, bn_type=bn_type)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, bn_type=bn_type)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, bn_type=bn_type)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -128,24 +129,24 @@ class ResNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, ModuleHelper.BatchNorm2d(bn_type=bn_type)):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, stride=1):
+    def _make_layer(self, block, planes, blocks, stride=1, bn_type=None):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * block.expansion),
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers.append(block(self.inplanes, planes, stride, downsample, bn_type=bn_type))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
+            layers.append(block(self.inplanes, planes, bn_type=bn_type))
 
         return nn.Sequential(*layers)
 
@@ -169,25 +170,25 @@ class ResNet(nn.Module):
 
 class CaffeResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000):
+    def __init__(self, block, layers, num_classes=1000, bn_type=None):
         self.inplanes = 128
         super(CaffeResNet, self).__init__()
         self.conv1 = conv3x3(3, 64, stride=2)
-        self.bn1 = nn.BatchNorm2d(64, momentum=0.1)
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=0.1)
         self.relu1 = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(64, 64)
-        self.bn2 = nn.BatchNorm2d(64, momentum=0.1)
+        self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=0.1)
         self.relu2 = nn.ReLU(inplace=True)
         self.conv3 = conv3x3(64, 128)
-        self.bn3 = nn.BatchNorm2d(128, momentum=0.1)
+        self.bn3 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(128, momentum=0.1)
         self.relu3 = nn.ReLU(inplace=True)
 
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.layer1 = self._make_layer(block, 64, layers[0], bn_type=bn_type)
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, bn_type=bn_type)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, bn_type=bn_type)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, bn_type=bn_type)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -195,17 +196,17 @@ class CaffeResNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, ModuleHelper.BatchNorm2d(bn_type=bn_type)):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, stride=1):
+    def _make_layer(self, block, planes, blocks, stride=1, bn_type=None):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * block.expansion),
             )
 
         layers = []
@@ -250,7 +251,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+        model = ResNet(BasicBlock, [2, 2, 2, 2], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
@@ -267,7 +268,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+        model = ResNet(BasicBlock, [3, 4, 6, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
@@ -284,7 +285,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+        model = ResNet(Bottleneck, [3, 4, 6, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
@@ -301,7 +302,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+        model = ResNet(Bottleneck, [3, 4, 23, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
@@ -319,7 +320,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
+        model = ResNet(Bottleneck, [3, 8, 36, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
@@ -336,7 +337,7 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = CaffeResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+        model = CaffeResNet(Bottleneck, [3, 4, 23, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
             if self.configer.get('network', 'pretrained_model') is not None:
                 Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))

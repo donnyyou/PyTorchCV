@@ -58,7 +58,7 @@ class CityscapeSegGenerator(object):
 
             for image_file in self.__list_dir(ori_train_img_dir):
                 image_name = '_'.join(image_file.split('_')[:-1])
-                label_file = '{}_gtFine_labelTrainIds.png'.format(image_name)
+                label_file = '{}_gtFine_labelIds.png'.format(image_name)
                 shotname, extension = os.path.splitext(image_file.split('/')[-1])
                 shutil.copy(os.path.join(ori_train_img_dir, image_file),
                             os.path.join(self.train_image_dir, '{}{}'.format(shotname, extension)))
@@ -67,7 +67,7 @@ class CityscapeSegGenerator(object):
 
             for image_file in self.__list_dir(ori_val_img_dir):
                 image_name = '_'.join(image_file.split('_')[:-1])
-                label_file = '{}_gtFine_labelTrainIds.png'.format(image_name)
+                label_file = '{}_gtFine_labelIds.png'.format(image_name)
                 shotname, extension = os.path.splitext(image_file.split('/')[-1])
                 shutil.copy(os.path.join(ori_val_img_dir, image_file),
                             os.path.join(self.val_image_dir, '{}{}'.format(shotname, extension)))
@@ -85,7 +85,7 @@ class CityscapeSegGenerator(object):
 
             for image_file in self.__list_dir(ori_train_img_dir):
                 image_name = '_'.join(image_file.split('_')[:-1])
-                label_file = '{}_gtCoarse_labelTrainIds.png'.format(image_name)
+                label_file = '{}_gtCoarse_labelIds.png'.format(image_name)
                 shotname, extension = os.path.splitext(image_file.split('/')[-1])
                 shutil.copy(os.path.join(ori_train_img_dir, image_file),
                             os.path.join(self.train_image_dir, '{}{}'.format(shotname, extension)))
@@ -94,7 +94,7 @@ class CityscapeSegGenerator(object):
 
             for image_file in self.__list_dir(ori_train_extra_img_dir):
                 image_name = '_'.join(image_file.split('_')[:-1])
-                label_file = '{}_gtCoarse_labelTrainIds.png'.format(image_name)
+                label_file = '{}_gtCoarse_labelIds.png'.format(image_name)
                 shotname, extension = os.path.splitext(image_file.split('/')[-1])
                 shutil.copy(os.path.join(ori_train_extra_img_dir, image_file),
                             os.path.join(self.train_image_dir, '{}{}'.format(shotname, extension)))
@@ -103,7 +103,7 @@ class CityscapeSegGenerator(object):
 
             for image_file in self.__list_dir(ori_val_img_dir):
                 image_name = '_'.join(image_file.split('_')[:-1])
-                label_file = '{}_gtCoarse_labelTrainIds.png'.format(image_name)
+                label_file = '{}_gtCoarse_labelIds.png'.format(image_name)
                 shotname, extension = os.path.splitext(image_file.split('/')[-1])
                 shutil.copy(os.path.join(ori_val_img_dir, image_file),
                             os.path.join(self.val_image_dir, '{}{}'.format(shotname, extension)))

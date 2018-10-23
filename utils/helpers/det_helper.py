@@ -10,8 +10,74 @@ from __future__ import print_function
 import numpy as np
 import torch
 
+import extensions.layers.nms.src.cython_nms as cython_nms
+import extensions.layers.iou.src.cython_iou as cython_iou
+from utils.tools.logger import Logger as Log
+
 
 class DetHelper(object):
+
+    @staticmethod
+    def cython_nms(bboxes, scores=None, nms_threshold=0.3):
+        """Apply classic DPM-style greedy NMS."""
+        is_torch = False
+        if not isinstance(bboxes, np.ndarray):
+            bboxes = bboxes.cpu().numpy()
+            if scores is None:
+                scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
+            else:
+                scores = scores.cpu().numpy()
+
+            is_torch = True
+
+        if scores is None:
+            scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
+
+        bboxes = bboxes.reshape(-1, 4)
+        scores = scores.reshape(-1, 1)
+
+        dets = np.concatenate((bboxes, scores), 1)
+        if dets.shape[0] == 0:
+            return []
+
+        keep = cython_nms.nms(dets, nms_threshold)
+        return keep if not is_torch else torch.from_numpy(keep).long()
+
+    @staticmethod
+    def cython_soft_nms(bboxes, scores=None, nms_threshold=0.0, score_threshold=0.001, sigma=0.5, method='linear'):
+        """Apply the soft NMS algorithm from https://arxiv.org/abs/1704.04503."""
+        is_torch = False
+        if not isinstance(bboxes, np.ndarray):
+            bboxes = bboxes.cpu().numpy()
+            if scores is None:
+                scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
+            else:
+                scores = scores.cpu().numpy()
+
+            is_torch = True
+
+        if scores is None:
+            scores = len(bboxes) - np.arange(len(bboxes), dtype=np.float32)
+
+        bboxes = bboxes.reshape(-1, 4)
+        scores = scores.reshape(-1, 1)
+
+        dets = np.concatenate((bboxes, scores), 1)
+
+        if dets.shape[0] == 0:
+            return dets, []
+
+        methods = {'hard': 0, 'linear': 1, 'gaussian': 2}
+        assert method in methods, 'Unknown soft_nms method: {}'.format(method)
+
+        dets, keep = cython_nms.soft_nms(
+            np.ascontiguousarray(dets, dtype=np.float32),
+            np.float32(sigma),
+            np.float32(nms_threshold),
+            np.float32(score_threshold),
+            np.uint8(methods[method])
+        )
+        return keep if not is_torch else torch.from_numpy(keep).long()
 
     @staticmethod
     def nms(bboxes, scores=None, nms_threshold=0.0, mode='union'):
@@ -77,7 +143,9 @@ class DetHelper(object):
         return torch.LongTensor(keep)
 
     @staticmethod
-    def cls_nms(bboxes, scores=None, labels=None, nms_threshold=0.0, mode='union', cls_keep_num=None):
+    def cls_nms(bboxes, scores=None, labels=None, nms_threshold=0.0,
+                iou_mode='union', cls_keep_num=None, nms_mode='nms',
+                score_threshold=0.001, soft_sigma=0.5, soft_method='linear'):
         unique_labels = labels.cpu().unique()
         bboxes = bboxes.contiguous().view(-1, 4)
         if scores is not None:
@@ -91,15 +159,28 @@ class DetHelper(object):
         cls_keep_list = list()
         for c in unique_labels:
             cls_index = torch.nonzero(labels == c).squeeze(1)
-            if scores is not None:
+            if nms_mode == 'nms':
                 cls_keep = DetHelper.nms(bboxes[cls_index],
-                                         scores=scores[cls_index],
+                                         scores=None if scores is None else scores[cls_index],
                                          nms_threshold=nms_threshold,
-                                         mode=mode)
+                                         mode=iou_mode)
+
+            elif nms_mode == 'cython_nms':
+                cls_keep = DetHelper.cython_nms(bboxes[cls_index],
+                                                scores=None if scores is None else scores[cls_index],
+                                                nms_threshold=nms_threshold)
+
+            elif nms_mode == 'cython_soft_nms':
+                cls_keep = DetHelper.cython_soft_nms(bboxes[cls_index],
+                                                    scores=None if scores is None else scores[cls_index],
+                                                    nms_threshold=nms_threshold,
+                                                    score_threshold=score_threshold,
+                                                    sigma=soft_sigma,
+                                                    method=soft_method)
+
             else:
-                cls_keep = DetHelper.nms(bboxes[cls_index],
-                                         nms_threshold=nms_threshold,
-                                         mode=mode)
+                Log.error('Not supported NMS mode: {}.'.format(nms_mode))
+                exit(1)
 
             if cls_keep_num is not None:
                 cls_keep = cls_keep[:cls_keep_num]
@@ -107,6 +188,17 @@ class DetHelper(object):
             cls_keep_list.append(cls_index[cls_keep])
 
         return torch.cat(cls_keep_list, 0)
+
+    @staticmethod
+    def cython_bbox_iou(bbox1, bbox2):
+        is_torch = False
+        if not isinstance(bbox1, np.ndarray):
+            is_torch = True
+            bbox1 = bbox1.numpy()
+            bbox2 = bbox2.numpy()
+
+        iou_matrix = cython_iou.bbox_overlaps(bbox1, bbox2)
+        return iou_matrix if not is_torch else torch.from_numpy(iou_matrix)
 
     @staticmethod
     def bbox_iou(box1, box2):
