@@ -18,12 +18,16 @@ segmentation, pose estimation, and so on.
    :caption: Notes
 
    notes/install.rst
+   notes/intro.rst
 
 .. toctree::
    :maxdepth: 1
    :caption: Experiments
 
-   experiments/*
+   experiments/cls.rst
+   experiments/det.rst
+   experiments/seg.rst
+   experiments/pose.rst
 
 .. toctree::
    :glob:
