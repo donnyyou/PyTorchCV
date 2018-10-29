@@ -76,7 +76,7 @@ class YOLOv3(object):
                 lr_1.append(value)
 
         params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
-                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 10.}]
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 1.}]
 
         return params
 
@@ -91,7 +91,7 @@ class YOLOv3(object):
 
             base_lr_list = self.scheduler.get_lr()
             for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
-                param_group['lr'] = base_lr * lr_ratio
+                param_group['lr'] = base_lr * lr_ratio ** 4
 
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))

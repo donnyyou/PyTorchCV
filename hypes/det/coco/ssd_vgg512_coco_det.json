@@ -163,7 +163,8 @@
       },
       "sgd":{
         "weight_decay": 0.0001,
-        "momentum": 0.9
+        "momentum": 0.9,
+        "nesterov": false
       }
     },
     "nms": {

@@ -11,7 +11,7 @@
       "workers": 8
     },
     "train": {
-      "batch_size": 32,
+      "batch_size": 64,
       "data_transformer": {
         "size_mode": "multi_size",
         "ms_input_size": [[320, 320], [416, 416], [608, 608]],
@@ -19,7 +19,7 @@
       }
     },
     "val": {
-      "batch_size": 32,
+      "batch_size": 64,
       "use_07_metric": true,
       "data_transformer": {
         "size_mode": "fix_size",
@@ -131,9 +131,9 @@
       "model_name": "darknet_yolov3",
       "stride_list": [32, 16, 8],
       "loss_weights": {
-        "coord_loss": 0.5,
-        "obj_loss": 2.5,
-        "noobj_loss": 0.5,
+        "coord_loss": 1.0,
+        "obj_loss": 1.0,
+        "noobj_loss": 0.2,
         "cls_loss": 1.0
       }
     },
@@ -147,20 +147,23 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_lr": 0.000001,
         "warm_epoch": 2
       },
       "base_lr": 0.001,
-      "lr_policy": "step",
+      "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
-        "step_size": 20
+        "step_size": 30
+      },
+      "multistep": {
+        "gamma": 0.1,
+        "stepvalue": [216, 243, 270]
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 100
+      "max_epoch": 270
     },
     "optim": {
       "optim_method": "sgd",
@@ -170,8 +173,9 @@
         "weight_decay": 0.0001
       },
       "sgd":{
-        "weight_decay": 0.00004,
-        "momentum": 0.9
+        "weight_decay": 0.0005,
+        "momentum": 0.9,
+        "nesterov": true
       }
     },
     "nms": {
