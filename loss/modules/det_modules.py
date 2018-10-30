@@ -200,8 +200,8 @@ class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(reduction='sum')
-        self.bce_loss = nn.BCELoss(reduction='sum')
+        self.mse_loss = nn.MSELoss(reduction='elementwise_mean')
+        self.bce_loss = nn.BCELoss(reduction='elementwise_mean')
 
     def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
@@ -234,7 +234,7 @@ class YOLOv3Loss(nn.Module):
                loss_noobj * self.configer.get('network', 'loss_weights')['noobj_loss'] + \
                loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
-        return loss / targets.size(0)
+        return loss * objmask.sum() / targets.size(0)
 
 
 class FRLocLoss(nn.Module):
