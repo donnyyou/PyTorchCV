@@ -133,7 +133,6 @@
       "loss_weights": {
         "coord_loss": 2.5,
         "obj_loss": 1.0,
-        "noobj_loss": 0.5,
         "cls_loss": 1.0
       }
     },
