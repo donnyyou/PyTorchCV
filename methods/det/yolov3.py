@@ -76,7 +76,7 @@ class YOLOv3(object):
                 lr_1.append(value)
 
         params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
-                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 1.}]
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr') * 10.}]
 
         return params
 
