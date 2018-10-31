@@ -85,6 +85,9 @@ class SingleShotDetector(object):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = lr
 
+            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
+                Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
+
     def __train(self):
         """
           Train function of every epoch during train phase.
