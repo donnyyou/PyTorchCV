@@ -172,6 +172,7 @@ class FCNSegmentor(object):
             'Loss {loss.avg:.8f}\n'.format(
                 batch_time=self.batch_time, loss=self.val_losses))
         Log.info('Mean IOU: {}\n'.format(self.seg_running_score.get_mean_iou()))
+        Log.info('Mean IOU: {}\n'.format(self.seg_running_score.get_pixel_acc()))
         self.batch_time.reset()
         self.val_losses.reset()
         self.seg_running_score.reset()

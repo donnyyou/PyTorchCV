@@ -36,6 +36,9 @@ class FSDataLoader(data.Dataset):
         if not self.configer.is_empty('data', 'label_list'):
             labelmap = self._encode_label(labelmap)
 
+        if self.configer.get('dataset') == 'ade20k':
+            labelmap = self._encode_label(labelmap)
+
         if self.aug_transform is not None:
             img, labelmap = self.aug_transform(img, labelmap=labelmap)
 
@@ -49,11 +52,14 @@ class FSDataLoader(data.Dataset):
 
     def _encode_label(self, labelmap):
         labelmap = np.array(labelmap)
-        shape = labelmap.shape
-        encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
-        for i in range(self.configer.get('data', 'num_classes')):
-            class_id = self.configer.get('data', 'label_list')[i]
-            encoded_labelmap[labelmap == class_id] = i
+        if self.configer.get('dataset') == 'ade20k':
+            encoded_labelmap = labelmap - 1
+        else:
+            shape = labelmap.shape
+            encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
+            for i in range(self.configer.get('data', 'num_classes')):
+                class_id = self.configer.get('data', 'label_list')[i]
+                encoded_labelmap[labelmap == class_id] = i
 
         if self.configer.get('data', 'image_tool') == 'pil':
             encoded_labelmap = ImageHelper.np2img(encoded_labelmap.astype(np.uint8))
