@@ -200,8 +200,8 @@ class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(reduction='elementwise_mean')  # 'sum'
-        self.bce_loss = nn.BCELoss(reduction='elementwise_mean')
+        self.mse_loss = nn.MSELoss(reduction='sum')  # 'sum'
+        self.bce_loss = nn.BCELoss(reduction='sum')
 
     def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
@@ -224,19 +224,18 @@ class YOLOv3Loss(nn.Module):
         loss_y = self.bce_loss(y * objmask, ty * objmask)
         loss_w = self.mse_loss(w * objmask, tw * objmask)
         loss_h = self.mse_loss(h * objmask, th * objmask)
-        loss_conf = self.bce_loss(conf * objmask, objmask) + \
-                    0.5 * self.bce_loss(conf * noobjmask, noobjmask * 0.0)
-        loss_cls = self.bce_loss(pred_cls[objmask == 1], tcls[objmask == 1])
-        if objmask.sum() == 0:
-            loss_cls = 0.0
+        loss_hasobj = self.bce_loss(conf * objmask, objmask)
+        loss_noobj = self.bce_loss(conf * noobjmask, noobjmask * 0.0)
+        loss_obj = loss_hasobj + 0.2 * loss_noobj
+        loss_cls = self.bce_loss(pred_cls * objmask.unsqueeze(2), tcls * objmask.unsqueeze(2))
 
         #  total loss = losses * weight
         loss = (loss_x + loss_y) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
                (loss_w + loss_h) * self.configer.get('network', 'loss_weights')['coord_loss'] + \
-               loss_conf * self.configer.get('network', 'loss_weights')['obj_loss'] + \
+               loss_obj * self.configer.get('network', 'loss_weights')['obj_loss'] + \
                loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
 
-        return loss
+        return loss / targets.size(0)
 
 
 class FRLocLoss(nn.Module):
