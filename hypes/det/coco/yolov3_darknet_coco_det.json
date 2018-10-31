@@ -146,10 +146,10 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_epoch": 1
+        "warm_epoch": 0.2
       },
-      "base_lr": 0.0001,
-      "lr_policy": "multistep",
+      "base_lr": 0.01,
+      "lr_policy": "step",
       "step": {
         "gamma": 0.1,
         "step_size": 30
