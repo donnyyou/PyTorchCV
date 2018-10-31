@@ -46,54 +46,56 @@ class FCNSegmentorTest(object):
         self.seg_net = self.module_utilizer.load_net(self.seg_net)
         self.seg_net.eval()
 
+    def _get_blob(self, ori_image, scale=None):
+        assert scale is not None
+        image = None
+        if not self.configer.is_empty('test', 'input_size'):
+            image = self.blob_helper.make_input(image=ori_image,
+                                                input_size=self.configer.get('test', 'input_size'),
+                                                scale=scale)
+
+        elif not self.configer.get('test', 'min_side_length'):
+            image = self.blob_helper.make_input(image=ori_image,
+                                                min_side_length=self.configer.get('test', 'min_side_length'),
+                                                scale=scale)
+
+        elif not self.configer.get('test', 'max_side_length'):
+            image = self.blob_helper.make_input(image=ori_image,
+                                                min_side_length=self.configer.get('test', 'max_side_length'),
+                                                scale=scale)
+
+        else:
+            Log.error('Test setting error')
+            exit(1)
+
+        return image
+
     def __test_img(self, image_path, label_path, vis_path, raw_path):
         Log.info('Image Path: {}'.format(image_path))
         ori_image = ImageHelper.read_image(image_path,
                                            tool=self.configer.get('data', 'image_tool'),
                                            mode=self.configer.get('data', 'input_mode'))
+        total_logits = None
+        if self.configer.get('test', 'mode') == 'ss_test':
+            total_logits = self.ss_test(ori_image)
 
-        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        elif self.configer.get('test', 'mode') == 'sscrop_test':
+            total_logits = self.sscrop_test(ori_image)
 
-        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
-        for scale in self.configer.get('test', 'scale_search'):
-            image = self.blob_helper.make_input(image=ori_image,
-                                                input_size=self.configer.get('test', 'input_size'),
-                                                scale=scale)
-            if self.configer.get('test', 'crop_test'):
-                crop_size = self.configer.get('test', 'crop_size')
-                if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
-                    results = self._crop_predict(image, crop_size)
-                else:
-                    results = self._predict(image)
-            else:
-                results = self._predict(image)
+        elif self.configer.get('test', 'mode') == 'ms_test':
+            total_logits = self.ss_test(ori_image)
 
-            results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
-            total_logits += results
+        elif self.configer.get('test', 'mode') == 'mscrop_test':
+            total_logits = self.mscrop_test(ori_image)
 
-        if self.configer.get('test', 'mirror'):
-            if self.configer.get('data', 'image_tool') == 'cv2':
-                image = cv2.flip(ori_image, 1)
-            else:
-                image = ori_image.transpose(Image.FLIP_LEFT_RIGHT)
-
-            image = self.blob_helper.make_input(image, input_size=self.configer.get('test', 'input_size'), scale=1.0)
-            if self.configer.get('test', 'crop_test'):
-                crop_size = self.configer.get('test', 'crop_size')
-                if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
-                    results = self._crop_predict(image, crop_size)
-                else:
-                    results = self._predict(image)
-            else:
-                results = self._predict(image)
-
-            results = cv2.resize(results[:, ::-1], (ori_width, ori_height), interpolation=cv2.INTER_LINEAR)
-            total_logits += results
+        else:
+            Log.error('Invalid test mode:{}'.format(self.configer.get('test', 'mode')))
+            exit(1)
 
         label_map = np.argmax(total_logits, axis=-1)
         label_img = np.array(label_map, dtype=np.uint8)
-        image_bgr = cv2.cvtColor(np.array(ori_image), cv2.COLOR_RGB2BGR)
-        image_canvas = self.seg_parser.colorize(label_img, image_canvas=image_bgr)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(ori_image, mode=self.configer.get('data', 'input_mode'))
+        image_canvas = self.seg_parser.colorize(label_img, image_canvas=ori_img_bgr)
         ImageHelper.save(image_canvas, save_path=vis_path)
         ImageHelper.save(ori_image, save_path=raw_path)
 
@@ -107,6 +109,65 @@ class FCNSegmentorTest(object):
         label_img = Image.fromarray(label_img, 'P')
         Log.info('Label Path: {}'.format(label_path))
         ImageHelper.save(label_img, label_path)
+
+    def ss_test(self, ori_image):
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
+        image = self._get_blob(ori_image, scale=1.0)
+        results = self._predict(image)
+        results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+        total_logits += results
+        return total_logits
+
+    def sscrop_test(self, ori_image):
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
+        image = self._get_blob(ori_image, scale=1.0)
+        crop_size = self.configer.get('test', 'crop_size')
+        if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
+            results = self._crop_predict(image, crop_size)
+        else:
+            results = self._predict(image)
+
+        results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+        total_logits += results
+        return total_logits
+
+    def mscrop_test(self, ori_image):
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
+        for scale in self.configer.get('test', 'scale_search'):
+            image = self._get_blob(ori_image, scale=scale)
+            crop_size = self.configer.get('test', 'crop_size')
+            if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
+                results = self._crop_predict(image, crop_size)
+            else:
+                results = self._predict(image)
+
+            results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+            total_logits += results
+
+        return total_logits
+
+    def ms_test(self, ori_image):
+        ori_width, ori_height = ImageHelper.get_size(ori_image)
+        total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
+        for scale in self.configer.get('test', 'scale_search'):
+            image = self._get_blob(ori_image, scale=scale)
+            results = self._predict(image)
+            results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+            total_logits += results
+
+        if self.configer.get('data', 'image_tool') == 'cv2':
+            mirror_image = cv2.flip(ori_image, 1)
+        else:
+            mirror_image = ori_image.transpose(Image.FLIP_LEFT_RIGHT)
+
+        image = self._get_blob(mirror_image, scale=1.0)
+        results = self._predict(image)
+        results = cv2.resize(results[:, ::-1], (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+        total_logits += results
+        return total_logits
 
     def _crop_predict(self, image, crop_size):
         height, width = image.size()[2:]
