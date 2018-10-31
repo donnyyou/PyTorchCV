@@ -200,8 +200,8 @@ class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
         super(YOLOv3Loss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(reduction='sum')#'elementwise_mean')
-        self.bce_loss = nn.BCELoss(reduction='sum')
+        self.mse_loss = nn.MSELoss(reduction='elementwise_mean')  # 'sum'
+        self.bce_loss = nn.BCELoss(reduction='elementwise_mean')
 
     def forward(self, prediction, targets, objmask, noobjmask):
         # Get outputs
