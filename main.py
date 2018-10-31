@@ -118,7 +118,7 @@ if __name__ == "__main__":
     configer.add_key_value(['project_dir'], project_dir)
 
     log_file = configer.get('logging', 'log_file')
-    new_log_file = '{}_{}'.format(log_file, time.time())
+    new_log_file = '{}_{}'.format(log_file, time.strftime("%Y-%m-%d_%X", time.localtime()))
     configer.update_value(['logging', 'log_file'], new_log_file)
 
     Log.init(logfile_level=configer.get('logging', 'logfile_level'),
