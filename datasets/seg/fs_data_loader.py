@@ -36,8 +36,8 @@ class FSDataLoader(data.Dataset):
         if not self.configer.is_empty('data', 'label_list'):
             labelmap = self._encode_label(labelmap)
 
-        if self.configer.get('dataset') == 'ade20k':
-            labelmap = self._encode_label(labelmap)
+        if not self.configer.is_empty('data', 'reduce_zero_label'):
+            labelmap = self._reduce_zero_label(labelmap)
 
         if self.aug_transform is not None:
             img, labelmap = self.aug_transform(img, labelmap=labelmap)
@@ -50,16 +50,25 @@ class FSDataLoader(data.Dataset):
 
         return img, labelmap
 
+    def _reduce_zero_label(self, labelmap):
+        if not self.configer.get('data', 'reduce_zero_label'):
+            return labelmap
+
+        labelmap = np.array(labelmap)
+        encoded_labelmap = labelmap - 1
+        if self.configer.get('data', 'image_tool') == 'pil':
+            encoded_labelmap = ImageHelper.np2img(encoded_labelmap.astype(np.uint8))
+
+        return encoded_labelmap
+
     def _encode_label(self, labelmap):
         labelmap = np.array(labelmap)
-        if self.configer.get('dataset') == 'ade20k':
-            encoded_labelmap = labelmap - 1
-        else:
-            shape = labelmap.shape
-            encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
-            for i in range(self.configer.get('data', 'num_classes')):
-                class_id = self.configer.get('data', 'label_list')[i]
-                encoded_labelmap[labelmap == class_id] = i
+
+        shape = labelmap.shape
+        encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
+        for i in range(self.configer.get('data', 'num_classes')):
+            class_id = self.configer.get('data', 'label_list')[i]
+            encoded_labelmap[labelmap == class_id] = i
 
         if self.configer.get('data', 'image_tool') == 'pil':
             encoded_labelmap = ImageHelper.np2img(encoded_labelmap.astype(np.uint8))

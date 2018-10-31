@@ -50,7 +50,7 @@ class SegDataLoader(object):
 
         self.label_transform = trans.Compose([
             trans.ToLabel(),
-            trans.ReLabel(255, self.configer.get('data', 'num_classes')), ])
+            trans.ReLabel(255, -1), ])
 
     def get_trainloader(self):
         if self.configer.get('method') == 'fcn_segmentor':

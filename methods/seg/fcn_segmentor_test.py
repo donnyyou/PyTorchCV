@@ -100,6 +100,10 @@ class FCNSegmentorTest(object):
         if not self.configer.is_empty('data', 'label_list'):
             label_img = self.__relabel(label_img)
 
+        if not self.configer.is_empty('data', 'reduce_zero_label') and self.configer.get('data', 'reduce_zero_label'):
+            label_img = label_img + 1
+            label_img = label_img.astype(np.uint8)
+
         label_img = Image.fromarray(label_img, 'P')
         Log.info('Label Path: {}'.format(label_path))
         ImageHelper.save(label_img, label_path)
