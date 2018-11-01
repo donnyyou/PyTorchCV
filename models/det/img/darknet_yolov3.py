@@ -117,13 +117,13 @@ class Yolov3Head(nn.Module):
 
         #  yolo branch 1
         x1_in = self.embedding1_cbl(x0_in)
-        x1_in = torch.cat([F.upsample(x1_in, scale_factor=2, mode='nearest'), tuple_features[-2]], 1)
+        x1_in = torch.cat([F.interpolate(x1_in, scale_factor=2, mode='nearest'), tuple_features[-2]], 1)
         x1_in = _branch(self.embedding1, x1_in)
         out1 = self.conv_out2(x1_in)
 
         #  yolo branch 2
         x2_in = self.embedding2_cbl(x1_in)
-        x2_in = torch.cat([F.upsample(x2_in, scale_factor=2, mode='nearest'), tuple_features[-3]], 1)
+        x2_in = torch.cat([F.interpolate(x2_in, scale_factor=2, mode='nearest'), tuple_features[-3]], 1)
         x2_in = _branch(self.embedding2, x2_in)
         out2 = self.conv_out3(x2_in)
         output = self.yolo_detection_layer([out0, out1, out2])

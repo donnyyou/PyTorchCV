@@ -63,10 +63,10 @@ class PPMBilinearDeepsup(nn.Module):
         ppm_out = [conv5]
 
         for pool_scale in self.ppm:
-            ppm_out.append(nn.functional.upsample(
+            ppm_out.append(nn.functional.interpolate(
                 pool_scale(conv5),
                 (input_size[2], input_size[3]),
-                mode='bilinear', align_corners=True))
+                mode='bilinear', align_corners=False))
 
         ppm_out = torch.cat(ppm_out, 1)
 

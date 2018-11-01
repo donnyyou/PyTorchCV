@@ -87,7 +87,7 @@ class _ASPPModule(nn.Module):
 
     def forward(self, x):
         h = self.imagepool(x)
-        h = [F.upsample(h, size=x.shape[2:], mode='bilinear')]
+        h = [F.interpolate(h, size=x.shape[2:], mode='bilinear', align_corners=False)]
         for stage in self.stages.children():
             h += [stage(x)]
         h = torch.cat(h, dim=1)
