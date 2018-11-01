@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from loss.pose_loss_manager import PoseLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -40,7 +39,6 @@ class ConvPoseMachine(object):
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
-        self.data_transformer = DataTransformer(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
 
         self.pose_net = None
@@ -79,8 +77,7 @@ class ConvPoseMachine(object):
         # data_tuple: (inputs, heatmap, maskmap, tagmap, num_objects)
         for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
-            input_size = [inputs.size(3), inputs.size(2)]
-            heatmap = self.heatmap_generator(data_dict['kpts'], input_size)
+            heatmap = data_dict['heatmap']
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
@@ -91,7 +88,7 @@ class ConvPoseMachine(object):
             outputs = self.pose_net(inputs)
 
             # Compute the loss of the train batch & backward.
-            loss = self.mse_loss(outputs, heatmap, maskmap)
+            loss = self.mse_loss(outputs, heatmap)
 
             self.train_losses.update(loss.item(), inputs.size(0))
             self.optimizer.zero_grad()
@@ -132,8 +129,7 @@ class ConvPoseMachine(object):
         with torch.no_grad():
             for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
-                input_size = [inputs.size(3), inputs.size(2)]
-                heatmap = self.heatmap_generator(data_dict['kpts'], input_size)
+                heatmap = data_dict['heatmap']
                 # Change the data type.
                 inputs, heatmap = self.module_utilizer.to_device(inputs, heatmap)
 

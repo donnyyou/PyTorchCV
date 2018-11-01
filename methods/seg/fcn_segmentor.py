@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from extensions.layers.syncbn.parallel import DataParallelCriterion
 from loss.seg_loss_manager import SegLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -39,7 +38,6 @@ class FCNSegmentor(object):
         self.seg_visualizer = SegVisualizer(configer)
         self.seg_loss_manager = SegLossManager(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.data_transformer = DataTransformer(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
         self.optim_scheduler = OptimScheduler(configer)

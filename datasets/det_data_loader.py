@@ -59,7 +59,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('train', 'data_transformer')
                 )
             )
@@ -76,7 +75,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'imgscale', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('train', 'data_transformer')
                 )
             )
@@ -93,7 +91,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('train', 'data_transformer')
                 )
             )
@@ -115,7 +112,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('val', 'data_transformer')
                 )
             )
@@ -132,7 +128,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'imgscale', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('val', 'data_transformer')
                 )
             )
@@ -149,7 +144,6 @@ class DetDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'bboxes', 'labels'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('val', 'data_transformer')
                 )
             )

@@ -14,7 +14,6 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from datasets.tools.transforms import BoundResize
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -45,7 +44,6 @@ class FastRCNNTest(object):
         self.rpn_target_generator = RPNTargetGenerator(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRRoiGenerator(configer)
-        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 

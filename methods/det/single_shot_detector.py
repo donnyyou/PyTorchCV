@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from loss.det_loss_manager import DetLossManager
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.tools.module_utilizer import ModuleUtilizer
@@ -46,7 +45,6 @@ class SingleShotDetector(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.det_net = None
         self.train_loader = None

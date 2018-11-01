@@ -24,52 +24,50 @@ class PafGenerator(object):
         vec_pair = self.configer.get('details', 'limb_seq')
         stride = self.configer.get('network', 'stride')
         theta = self.configer.get('heatmap', 'theta')
-        batch_size = len(gt_kpts)
-        vecmap = np.zeros((batch_size, len(vec_pair) * 2, height // stride, width // stride), dtype=np.float32)
+        vecmap = np.zeros((len(vec_pair) * 2, height // stride, width // stride), dtype=np.float32)
         start = stride / 2.0 - 0.5
 
-        for batch_id in range(batch_size):
-            cnt = np.zeros((len(vec_pair), height // stride, width // stride), dtype=np.int32)
-            channel, height, width = cnt.shape
-            for j in range(len(gt_kpts[batch_id])):
-                for i in range(channel):
-                    a = vec_pair[i][0] - 1
-                    b = vec_pair[i][1] - 1
-                    if gt_kpts[batch_id][j][a][2] < 0 or gt_kpts[batch_id][j][b][2] < 0:
-                        continue
+        cnt = np.zeros((len(vec_pair), height // stride, width // stride), dtype=np.int32)
+        channel, height, width = cnt.shape
+        for j in range(len(gt_kpts)):
+            for i in range(channel):
+                a = vec_pair[i][0] - 1
+                b = vec_pair[i][1] - 1
+                if gt_kpts[j][a][2] < 0 or gt_kpts[j][b][2] < 0:
+                    continue
 
-                    ax = (gt_kpts[batch_id][j][a][0].item() - start) * 1.0 / stride
-                    ay = (gt_kpts[batch_id][j][a][1].item() - start) * 1.0 / stride
-                    bx = (gt_kpts[batch_id][j][b][0].item() - start) * 1.0 / stride
-                    by = (gt_kpts[batch_id][j][b][1].item() - start) * 1.0 / stride
+                ax = (gt_kpts[j][a][0].item() - start) * 1.0 / stride
+                ay = (gt_kpts[j][a][1].item() - start) * 1.0 / stride
+                bx = (gt_kpts[j][b][0].item() - start) * 1.0 / stride
+                by = (gt_kpts[j][b][1].item() - start) * 1.0 / stride
 
-                    bax = bx - ax
-                    bay = by - ay
-                    # 1e-9 to aviod two points have same position.
-                    norm_ba = math.sqrt(1.0 * bax * bax + bay * bay) + 1e-9
-                    bax /= norm_ba
-                    bay /= norm_ba
+                bax = bx - ax
+                bay = by - ay
+                # 1e-9 to aviod two points have same position.
+                norm_ba = math.sqrt(1.0 * bax * bax + bay * bay) + 1e-9
+                bax /= norm_ba
+                bay /= norm_ba
 
-                    min_w = max(int(round(min(ax, bx) - theta)), 0)
-                    max_w = min(int(round(max(ax, bx) + theta)), width-1)
-                    min_h = max(int(round(min(ay, by) - theta)), 0)
-                    max_h = min(int(round(max(ay, by) + theta)), height-1)
+                min_w = max(int(round(min(ax, bx) - theta)), 0)
+                max_w = min(int(round(max(ax, bx) + theta)), width-1)
+                min_h = max(int(round(min(ay, by) - theta)), 0)
+                max_h = min(int(round(max(ay, by) + theta)), height-1)
 
-                    for h in range(min_h, max_h+1):
-                        for w in range(min_w, max_w+1):
-                            px = w - ax
-                            py = h - ay
+                for h in range(min_h, max_h+1):
+                    for w in range(min_w, max_w+1):
+                        px = w - ax
+                        py = h - ay
 
-                            dis = abs(bay * px - bax * py)
-                            if dis <= theta:
-                                temp = vecmap[batch_id][2*i][h][w]
-                                vecmap[batch_id][2*i][h][w] = (temp * cnt[i][h][w] + bax) / (cnt[i][h][w] + 1)
-                                temp = vecmap[batch_id][2*i+1][h][w]
-                                vecmap[batch_id][2*i+1][h][w] = (temp * cnt[i][h][w] + bay) / (cnt[i][h][w] + 1)
-                                cnt[i][h][w] += 1
+                        dis = abs(bay * px - bax * py)
+                        if dis <= theta:
+                            temp = vecmap[2*i][h][w]
+                            vecmap[2*i][h][w] = (temp * cnt[i][h][w] + bax) / (cnt[i][h][w] + 1)
+                            temp = vecmap[2*i+1][h][w]
+                            vecmap[2*i+1][h][w] = (temp * cnt[i][h][w] + bay) / (cnt[i][h][w] + 1)
+                            cnt[i][h][w] += 1
 
         vecmap = torch.from_numpy(vecmap)
         if maskmap is not None:
-            vecmap = vecmap * maskmap.unsqueeze(1)
+            vecmap = vecmap * maskmap.unsqueeze(0)
 
         return vecmap

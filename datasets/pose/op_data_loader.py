@@ -13,8 +13,10 @@ import torch
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
-from utils.helpers.json_helper import JsonHelper
 
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
+from utils.layers.pose.paf_generator import PafGenerator
+from utils.helpers.json_helper import JsonHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -28,6 +30,8 @@ class OPDataLoader(data.Dataset):
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
+        self.heatmap_generator = HeatmapGenerator(self.configer)
+        self.paf_generator = PafGenerator(self.configer)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -58,10 +62,12 @@ class OPDataLoader(data.Dataset):
         maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
         kpts = torch.from_numpy(kpts).float()
 
+        heatmap = self.heatmap_generator(kpts, [width, height], maskmap)
+        vecmap = self.paf_generator(kpts, [width, height], maskmap)
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, maskmap, kpts
+        return img, maskmap, heatmap, vecmap
 
     def __len__(self):
 

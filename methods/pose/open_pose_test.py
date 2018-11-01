@@ -16,7 +16,6 @@ import torch
 from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.module_utilizer import ModuleUtilizer
 from models.pose_model_manager import PoseModelManager
@@ -41,7 +40,6 @@ class OpenPoseTest(object):
         self.module_utilizer = ModuleUtilizer(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.paf_generator = PafGenerator(configer)
-        self.data_transformer = DataTransformer(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
 
@@ -339,9 +337,8 @@ class OpenPoseTest(object):
         for i, data_dict in enumerate(self.pose_data_loader.get_trainloader()):
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
-            input_size = [inputs.size(3), inputs.size(2)]
-            heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
-            vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+            heatmap = data_dict['heatmap']
+            vecmap = data_dict['vecmap']
             for j in range(inputs.size(0)):
                 count = count + 1
                 if count > 10:

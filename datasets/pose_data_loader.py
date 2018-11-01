@@ -56,10 +56,8 @@ class PoseDataLoader(object):
                               configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'kpts'],
-                    configer=self.configer,
-                    trans_dict=self.configer.get('train', 'data_transformer')
+                collate_fn=lambda *args: CollateFunctions._default_collate(
+                    *args, data_keys=['img', 'heatmap']
                 )
             )
 
@@ -73,10 +71,8 @@ class PoseDataLoader(object):
                              configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'maskmap', 'kpts'],
-                    configer=self.configer,
-                    trans_dict=self.configer.get('train', 'data_transformer')
+                collate_fn=lambda *args: CollateFunctions._default_collate(
+                    *args, data_keys=['img', 'maskmap', 'heatmap', 'vecmap']
                 )
             )
 
@@ -95,10 +91,8 @@ class PoseDataLoader(object):
                               configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'kpts'],
-                    configer=self.configer,
-                    trans_dict=self.configer.get('val', 'data_transformer')
+                collate_fn=lambda *args: CollateFunctions._default_collate(
+                    *args, data_keys=['img', 'heatmap']
                 )
             )
 
@@ -111,10 +105,8 @@ class PoseDataLoader(object):
                              img_transform=self.img_transform,
                              configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'maskmap', 'kpts'],
-                    configer=self.configer,
-                    trans_dict=self.configer.get('val', 'data_transformer')
+                collate_fn=lambda *args: CollateFunctions._default_collate(
+                    *args, data_keys=['img', 'maskmap', 'heatmap', 'vecmap']
                 )
             )
 

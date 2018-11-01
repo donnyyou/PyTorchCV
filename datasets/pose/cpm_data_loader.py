@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
+from utils.layers.pose.heatmap_generator import HeatmapGenerator
 from utils.helpers.json_helper import JsonHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
@@ -25,6 +26,7 @@ class CPMDataLoader(data.Dataset):
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
+        self.heatmap_generator = HeatmapGenerator(self.configer)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -37,10 +39,11 @@ class CPMDataLoader(data.Dataset):
             img, kpts, bboxes = self.aug_transform(img, kpts=kpts, bboxes=bboxes)
 
         kpts = torch.from_numpy(kpts).float()
+        heatmap = self.heatmap_generator(kpts, ImageHelper.get_size(img))
         if self.img_transform is not None:
             img = self.img_transform(img)
 
-        return img, kpts
+        return img, heatmap
 
     def __len__(self):
 
