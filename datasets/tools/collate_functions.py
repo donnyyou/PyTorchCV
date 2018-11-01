@@ -7,31 +7,153 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from datasets.tools.data_transformer import DataTransformer
+import random
+import numpy as np
+import torch
+import torch.nn.functional as F
+from PIL import Image
 
 
-DATA_KEYS_SEQ = ['img', 'label', 'imgscale', 'labelmap', 'maskmap', 'kpts', 'bboxes', 'labels', 'polygons']
+NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons']
 
 
 class CollateFunctions(object):
 
     @staticmethod
-    def our_collate(batch, data_keys=None, configer=None, trans_dict=None):
+    def our_collate(batch, data_keys=None, trans_dict=None):
         transposed = [list(sample) for sample in zip(*batch)]
-        new_transposed = []
-        index = 0
-        for key in DATA_KEYS_SEQ:
-            if key in data_keys:
-                new_transposed.append(transposed[index])
-                index += 1
-            else:
-                new_transposed.append(None)
-
-        new_transposed.append(trans_dict)
-        data_dict = DataTransformer(configer)(*new_transposed)
+        data_dict = CollateFunctions.trans(data_keys, transposed, trans_dict)
         return data_dict
 
     @staticmethod
-    def _default_collate(batch, configer=None,):
+    def _default_collate(batch, data_keys=None):
         transposed = [list(sample) for sample in zip(*batch)]
-        return [DataTransformer(configer).stack(item, 0) for item in transposed]
+        data_dict = {key: CollateFunctions.stack(value) for key, value in zip(data_keys, transposed)}
+        return data_dict
+
+    @staticmethod
+    def stack(batch):
+        if isinstance(batch, torch.Tensor) or isinstance(batch[0], (list, tuple)):
+            return batch
+
+        elif isinstance(batch[0], torch.Tensor):
+            return torch.stack(batch, 0)
+
+        elif isinstance(batch[0], np.ndarray):
+            return torch.stack([torch.from_numpy(b) for b in batch], 0)
+
+        elif isinstance(batch[0], Image.Image):
+            return torch.stack([torch.from_numpy(np.array(b)) for b in batch], 0)
+
+        elif isinstance(batch[0], int):
+            return torch.LongTensor(batch)
+
+        elif isinstance(batch[0], float):
+            return torch.DoubleTensor(batch)
+
+        error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
+        raise TypeError((error_msg.format(type(batch[0]))))
+
+    @staticmethod
+    def trans(data_keys, out_list, trans_dict):
+        if trans_dict['size_mode'] == 'random_size':
+            return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+                    for key, value in zip(data_keys, out_list)}
+
+        img_list = out_list[data_keys.index('img')]
+
+        if trans_dict['size_mode'] == 'fix_size':
+            target_width, target_height = trans_dict['input_size']
+        elif trans_dict['size_mode'] == 'multi_size':
+            ms_input_size = trans_dict['ms_input_size']
+            target_width, target_height = ms_input_size[random.randint(0, len(ms_input_size) - 1)]
+        elif trans_dict['size_mode'] == 'max_size':
+            border_width = [img.size(2) for img in img_list]
+            border_height = [img.size(1) for img in img_list]
+            target_width, target_height = max(border_width), max(border_height)
+        else:
+            raise NotImplementedError('Size Mode {} is invalid!'.format(trans_dict['size_mode']))
+
+        for i in range(len(img_list)):
+            channels, height, width = img_list[i].size()
+            if height == target_height and width == target_width:
+                continue
+
+            scaled_size = [width, height]
+
+            if trans_dict['align_method'] in ['only_scale', 'scale_and_pad']:
+                w_scale_ratio = target_width / width
+                h_scale_ratio = target_height / height
+                if trans_dict['align_method'] == 'scale_and_pad':
+                    w_scale_ratio = min(w_scale_ratio, h_scale_ratio)
+                    h_scale_ratio = w_scale_ratio
+
+                if 'kpts' in data_keys and out_list[data_keys.index('kpts')][i].numel() > 0:
+                    out_list[data_keys.index('kpts')][i][:, :, 0] *= w_scale_ratio
+                    out_list[data_keys.index('kpts')][i][:, :, 1] *= h_scale_ratio
+
+                if 'bboxes' in data_keys and out_list[data_keys.index('bboxes')][i].numel() > 0:
+                    out_list[data_keys.index('bboxes')][i][:, 0::2] *= w_scale_ratio
+                    out_list[data_keys.index('bboxes')][i][:, 1::2] *= h_scale_ratio
+
+                if 'polygons' in data_keys:
+                    for object_id in range(len(out_list[data_keys.index('polygons')][i])):
+                        for polygon_id in range(len(out_list[data_keys.index('polygons')][i][object_id])):
+                            out_list[data_keys.index('polygons')][i][object_id][polygon_id][0::2] *= w_scale_ratio
+                            out_list[data_keys.index('polygons')][i][object_id][polygon_id][1::2] *= h_scale_ratio
+
+                scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
+                img_list[i] = F.interpolate(img_list[i].unsqueeze(0), scaled_size, mode='bilinear').squeeze(0)
+                if 'labelmap' in data_keys:
+                    out_labelmap = F.interpolate(
+                        out_list[data_keys.index('labelmap')][i].unsqueeze(0).unsqueeze(0).float(),
+                        scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
+                    out_list[data_keys.index('labelmap')][i] = out_labelmap
+
+                if 'maskmap' in data_keys:
+                    out_maskmap = F.interpolate(
+                        out_list[data_keys.index('maskmap')][i].unsqueeze(0).unsqueeze(0).float(),
+                        scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
+                    out_list[data_keys.index('maskmap')][i] = out_maskmap
+
+            pad_width = target_width - scaled_size[0]
+            pad_height = target_height - scaled_size[1]
+            assert pad_height >= 0 and pad_width >= 0
+            if pad_width > 0 or pad_height > 0:
+                assert trans_dict['align_method'] in ['only_pad', 'scale_and_pad']
+                left_pad = random.randint(0, pad_width)  # pad_left
+                up_pad = random.randint(0, pad_height)  # pad_up
+
+                expand_image = torch.zeros((channels, target_height, target_width))
+                expand_image[:, up_pad:up_pad + height, left_pad:left_pad + width] = img_list[i]
+                img_list[i] = expand_image
+
+                if 'labelmap' in data_keys:
+                    labelmap = out_list[data_keys.index('labelmap')][i]
+                    expand_labelmap = torch.zeros((target_height, target_width)).long()
+                    expand_labelmap[:, :] = -1
+                    expand_labelmap[up_pad:up_pad + height, left_pad:left_pad + width] = labelmap
+                    out_list[data_keys.index('labelmap')][i] = expand_labelmap
+
+                if 'maskmap' in data_keys:
+                    maskmap = out_list[data_keys.index('maskmap')][i]
+                    expand_maskmap = torch.ones((target_height, target_width)).long()
+                    expand_maskmap[up_pad:up_pad + height, left_pad:left_pad + width] = maskmap
+                    out_list[data_keys.index('maskmap')][i] = expand_maskmap
+
+                if 'polygons' in data_keys:
+                    for object_id in range(len(out_list[data_keys.index('polygons')][i])):
+                        for polygon_id in range(len(out_list[data_keys.index('polygons')][i][object_id])):
+                            out_list[data_keys.index('polygons')][i][object_id][polygon_id][0::2] += left_pad
+                            out_list[data_keys.index('polygons')][i][object_id][polygon_id][1::2] += up_pad
+
+                if 'kpts' in data_keys and out_list[data_keys.index('kpts')][i].numel() > 0:
+                    out_list[data_keys.index('kpts')][i][:, :, 0] += left_pad
+                    out_list[data_keys.index('kpts')][i][:, :, 1] += up_pad
+
+                if 'bboxes' in data_keys and out_list[data_keys.index('bboxes')][i].numel() > 0:
+                    out_list[data_keys.index('bboxes')][i][:, 0::2] += left_pad
+                    out_list[data_keys.index('bboxes')][i][:, 1::2] += up_pad
+
+        return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+                for key, value in zip(data_keys, out_list)}

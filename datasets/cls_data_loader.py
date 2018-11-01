@@ -56,7 +56,6 @@ class ClsDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'label'],
-                    configer=self.configer,
                     trans_dict=self.configer.get('train', 'data_transformer')
                 )
             )
@@ -77,7 +76,7 @@ class ClsDataLoader(object):
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 collate_fn=lambda *args: CollateFunctions.our_collate(
                     *args, data_keys=['img', 'label'],
-                    configer=self.configer, trans_dict=self.configer.get('val', 'data_transformer')
+                    trans_dict=self.configer.get('val', 'data_transformer')
                 )
             )
 

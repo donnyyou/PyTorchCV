@@ -23,7 +23,8 @@ class OptimScheduler(object):
             optimizer = SGD(net_params,
                             lr=self.configer.get('lr', 'base_lr'),
                             momentum=self.configer.get('optim', 'sgd')['momentum'],
-                            weight_decay=self.configer.get('optim', 'sgd')['weight_decay'])
+                            weight_decay=self.configer.get('optim', 'sgd')['weight_decay'],
+                            nesterov=self.configer.get('optim', 'sgd')['nesterov'])
 
         elif self.configer.get('optim', 'optim_method') == 'adam':
             optimizer = Adam(net_params,

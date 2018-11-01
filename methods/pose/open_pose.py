@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
-from datasets.tools.data_transformer import DataTransformer
 from loss.pose_loss_manager import PoseLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -47,7 +46,6 @@ class OpenPose(object):
         self.optim_scheduler = OptimScheduler(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.paf_generator = PafGenerator(configer)
-        self.data_transformer = DataTransformer(configer)
 
         self.pose_net = None
         self.train_loader = None
@@ -107,9 +105,8 @@ class OpenPose(object):
         for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
-            input_size = [inputs.size(3), inputs.size(2)]
-            heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
-            vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+            heatmap = data_dict['heatmap']
+            vecmap = data_dict['vecmap']
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
@@ -170,9 +167,8 @@ class OpenPose(object):
             for i, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 maskmap = data_dict['maskmap']
-                input_size = [inputs.size(3), inputs.size(2)]
-                heatmap = self.heatmap_generator(data_dict['kpts'], input_size, maskmap=maskmap)
-                vecmap = self.paf_generator(data_dict['kpts'], input_size, maskmap=maskmap)
+                heatmap = data_dict['heatmap']
+                vecmap = data_dict['vecmap']
                 # Change the data type.
                 inputs, heatmap, maskmap, vecmap = self.module_utilizer.to_device(inputs, heatmap, maskmap, vecmap)
 

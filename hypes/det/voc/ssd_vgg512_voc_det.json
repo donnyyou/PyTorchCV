@@ -84,7 +84,7 @@
       "iou_threshold": 0.5,
       "num_anchor_list": [4, 6, 6, 6, 6, 4, 4],
       "feature_maps_wh": [[64, 64], [32, 32], [16, 16], [8, 8], [4, 4], [2, 2], [1, 1]],
-      "cur_anchor_sizes": [20, 51, 133, 215, 296, 278, 460, 543],
+      "cur_anchor_sizes": [35, 76, 153, 230, 307, 384, 460, 537],
       "aspect_ratio_list": [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]]
     },
     "details": {
@@ -148,7 +148,8 @@
       },
       "sgd":{
         "weight_decay": 0.0005,
-        "momentum": 0.9
+        "momentum": 0.9,
+        "nesterov": false
       }
     },
     "nms": {
