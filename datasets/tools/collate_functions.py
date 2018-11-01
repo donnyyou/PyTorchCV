@@ -14,6 +14,9 @@ import torch.nn.functional as F
 from PIL import Image
 
 
+NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons']
+
+
 class CollateFunctions(object):
 
     @staticmethod
@@ -54,7 +57,8 @@ class CollateFunctions(object):
     @staticmethod
     def trans(data_keys, out_list, trans_dict):
         if trans_dict['size_mode'] == 'random_size':
-            return {key: CollateFunctions.stack(value) for key, value in zip(data_keys, out_list)}
+            return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+                    for key, value in zip(data_keys, out_list)}
 
         img_list = out_list[data_keys.index('img')]
 
@@ -151,4 +155,5 @@ class CollateFunctions(object):
                     out_list[data_keys.index('bboxes')][i][:, 0::2] += left_pad
                     out_list[data_keys.index('bboxes')][i][:, 1::2] += up_pad
 
-        return {key: CollateFunctions.stack(value) for key, value in zip(data_keys, out_list)}
+        return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+                for key, value in zip(data_keys, out_list)}
