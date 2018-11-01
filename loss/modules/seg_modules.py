@@ -78,15 +78,11 @@ class SegEncodeLoss(nn.Module):
             weight = self.configer.get('seg_encode_loss', 'weight')
             weight = torch.FloatTensor(weight).cuda()
 
-        size_average = True
-        if not self.configer.is_empty('seg_encode_loss', 'size_average'):
-            size_average = self.configer.get('seg_encode_loss', 'size_average')
+        reduction = 'elementwise_mean'
+        if not self.configer.is_empty('seg_encode_loss', 'reduction'):
+            reduction = self.configer.get('seg_encode_loss', 'reduction')
 
-        reduce = True
-        if not self.configer.is_empty('seg_encode_loss', 'reduce'):
-            reduce = self.configer.get("seg_encode_loss", "reduce")
-
-        self.bce_loss = nn.BCELoss(weight, size_average, reduce=reduce)
+        self.bce_loss = nn.BCELoss(weight, reduction=reduction)
 
     def forward(self, preds, targets, grid_size=None):
         if len(targets.size()) == 2:
@@ -244,9 +240,6 @@ class FCNSegLoss(nn.Module):
         targets = targets_.clone().unsqueeze(1).float()
         targets = F.interpolate(targets, size=scaled_size, mode='nearest')
         return targets.squeeze(1).long()
-
-
-
 
 
 if __name__ == "__main__":
