@@ -62,6 +62,6 @@ class HeatmapGenerator(object):
 
         heatmap = torch.from_numpy(heatmap)
         if maskmap is not None:
-            heatmap = heatmap * maskmap.unsqueeze(0)
+            heatmap = heatmap * maskmap
 
         return heatmap

@@ -60,6 +60,7 @@ class OPDataLoader(data.Dataset):
                                      interpolation='nearest')
 
         maskmap = torch.from_numpy(np.array(maskmap, dtype=np.float32))
+        maskmap = maskmap.unsqueeze(0)
         kpts = torch.from_numpy(kpts).float()
 
         heatmap = self.heatmap_generator(kpts, [width, height], maskmap)
