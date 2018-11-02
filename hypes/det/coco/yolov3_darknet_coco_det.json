@@ -4,7 +4,7 @@
     "method": "yolov3",
     "data": {
       "num_classes": 80,
-      "data_dir": "~/DataSet/COCO_INS",
+      "data_dir": "~/DataSet/COCO_INS_2014",
       "image_tool": "pil",
       "input_mode": "RGB",
       "keep_difficult": false,
@@ -148,7 +148,7 @@
       "warm": {
         "warm_epoch": 0.2
       },
-      "base_lr": 0.001,
+      "base_lr": 0.0004,
       "lr_policy": "step",
       "step": {
         "gamma": 0.1,

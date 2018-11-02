@@ -42,6 +42,8 @@ if __name__ == "__main__":
     # ***********  Params for data.  **********
     parser.add_argument('--data_dir', default=None, type=str,
                         dest='data:data_dir', help='The Directory of the data.')
+    parser.add_argument('--workers', default=None, type=int,
+                        dest='data:workers', help='The number of workers to load data.')
     parser.add_argument('--train_batch_size', default=None, type=int,
                         dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
