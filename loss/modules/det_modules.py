@@ -243,7 +243,7 @@ class YOLOv3Loss(nn.Module):
 
             start = end
 
-        return loss
+        return loss / len(targets_list)
 
 
 class FRLocLoss(nn.Module):
