@@ -26,7 +26,7 @@ class CollateFunctions(object):
         return data_dict
 
     @staticmethod
-    def _default_collate(batch, data_keys=None):
+    def default_collate(batch, data_keys=None):
         transposed = [list(sample) for sample in zip(*batch)]
         data_dict = {key: CollateFunctions.stack(value) for key, value in zip(data_keys, transposed)}
         return data_dict
