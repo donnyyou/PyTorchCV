@@ -195,6 +195,7 @@ class YOLOv3Test(object):
 
             targets, _, _ = self.yolo_target_generator(feat_list, batch_gt_bboxes,
                                                        batch_gt_labels, input_size)
+            targets = torch.cat(targets, 1)
             targets = targets.to(self.device)
             anchors_list = self.configer.get('gt', 'anchors_list')
             output_list = list()

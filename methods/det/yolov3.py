@@ -127,7 +127,9 @@ class YOLOv3(object):
 
             targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
                                                                      batch_gt_labels, input_size)
-            targets, objmask, noobjmask = self.module_utilizer.to_device(targets, objmask, noobjmask)
+            targets = self.module_utilizer.to_device(*targets)
+            objmask = self.module_utilizer.to_device(*objmask)
+            noobjmask = self.module_utilizer.to_device(*noobjmask)
             # Compute the loss of the train batch & backward.
             loss = self.det_loss(predictions, targets, objmask, noobjmask)
 
@@ -179,7 +181,9 @@ class YOLOv3(object):
 
                 targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
                                                                          batch_gt_labels, input_size)
-                targets, objmask, noobjmask = self.module_utilizer.to_device(targets, objmask, noobjmask)
+                targets = self.module_utilizer.to_device(*targets)
+                objmask = self.module_utilizer.to_device(*objmask)
+                noobjmask = self.module_utilizer.to_device(*noobjmask)
 
                 # Compute the loss of the val batch.
                 loss = self.det_loss(predictions, targets, objmask, noobjmask)

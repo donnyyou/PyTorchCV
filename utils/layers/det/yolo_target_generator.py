@@ -92,8 +92,8 @@ class YOLOTargetGenerator(object):
             batch_objmask_list.append(obj_mask)
             batch_noobjmask_list.append(noobj_mask)
 
-        batch_target = torch.cat(batch_target_list, 1)
-        batch_objmask = torch.cat(batch_objmask_list, 1)
-        batch_noobjmask = torch.cat(batch_noobjmask_list, 1)
+        # batch_target = torch.cat(batch_target_list, 1)
+        # batch_objmask = torch.cat(batch_objmask_list, 1)
+        # batch_noobjmask = torch.cat(batch_noobjmask_list, 1)
 
-        return batch_target, batch_objmask, batch_noobjmask
+        return batch_target_list, batch_objmask_list, batch_noobjmask_list
