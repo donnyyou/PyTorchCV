@@ -105,20 +105,6 @@ class ReLabel(object):
         return inputs
 
 
-class BoundResize(object):
-    def __init__(self, resize_bound=(600, 1000)):
-        self.resize_bound = resize_bound
-
-    def __call__(self, img):
-        img_size = ImageHelper.get_size(img)
-        scale1 = self.resize_bound[0] / min(img_size)
-        scale2 = self.resize_bound[1] / max(img_size)
-        scale = min(scale1, scale2)
-        target_size = [int(round(i*scale)) for i in img_size]
-        img = ImageHelper.resize(img, target_size=target_size, interpolation='cubic')
-        return img, scale
-
-
 class Compose(object):
 
     def __init__(self, transforms):

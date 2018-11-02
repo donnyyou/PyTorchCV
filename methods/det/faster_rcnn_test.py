@@ -14,7 +14,6 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.transforms import BoundResize
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
@@ -56,12 +55,15 @@ class FastRCNNTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        img = ImageHelper.read_image(image_path,
+        image = ImageHelper.read_image(image_path,
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
-        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
-        img, scale = BoundResize()(img)
-        inputs = self.blob_helper.make_input(img, scale=1.0)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(image, mode=self.configer.get('data', 'input_mode'))
+        width, height = ImageHelper.get_size(image)
+        scale1 = self.configer.get('test', 'resize_bound')[0] / min(width, height)
+        scale2 = self.configer.get('test', 'resize_bound')[1] / max(width, height)
+        scale = min(scale1, scale2)
+        inputs = self.blob_helper.make_input(image, scale=scale)
         with torch.no_grad():
             # Forward pass.
             test_group = self.det_net(inputs, scale)
@@ -73,7 +75,7 @@ class FastRCNNTest(object):
                                        test_indices_and_rois,
                                        test_rois_num,
                                        self.configer,
-                                       ImageHelper.get_size(img))
+                                       ImageHelper.get_size(image))
         json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr, scale=scale)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),

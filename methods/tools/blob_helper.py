@@ -30,8 +30,6 @@ class BlobHelper(object):
 
     def make_input(self, image=None, input_size=None,
                    min_side_length=None, max_side_length=None, scale=None):
-        in_width, in_height = None, None
-
         if input_size is not None and min_side_length is None and max_side_length is None:
             if input_size[0] == -1 and input_size[1] == -1:
                 in_width, in_height = ImageHelper.get_size(image)
@@ -65,8 +63,7 @@ class BlobHelper(object):
             in_width, in_height = int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio))
 
         else:
-            Log.error('Incorrect target size setting.')
-            exit(1)
+            in_width, in_height = ImageHelper.get_size(image)
 
         image = ImageHelper.resize(image, (int(in_width * scale), int(in_height * scale)), interpolation='linear')
         img_tensor = ToTensor()(image)
