@@ -225,7 +225,7 @@ class YOLOv3Loss(nn.Module):
         loss_y = self.bce_loss(y * objmask, ty * objmask)
         loss_w = self.mse_loss(w * objmask, tw * objmask)
         loss_h = self.mse_loss(h * objmask, th * objmask)
-        loss_coord = (loss_x + loss_y + loss_w + loss_h) / (2 * obj_cnt)
+        loss_coord = (loss_x + loss_y + 0.5 * loss_w + 0.5 * loss_h) / obj_cnt
         loss_hasobj = self.bce_loss(conf * objmask, objmask)
         loss_noobj = self.bce_loss(conf * noobjmask, noobjmask * 0.0)
         loss_obj = (loss_hasobj + 0.2 * loss_noobj) / obj_cnt
