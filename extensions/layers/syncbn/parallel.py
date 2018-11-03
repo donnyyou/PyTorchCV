@@ -125,17 +125,16 @@ class DataParallelCriterion(DataParallel):
         >>> y = net(x)
         >>> loss = criterion(y, target)
     """
-    def forward(self, inputs, *targets, **kwargs):
+    def forward(self, inputs, targets, gathered=False, **kwargs):
         # input should be already scatterd
         # scattering the targets instead
-        if not self.device_ids:
-            return self.module(inputs, *targets, **kwargs)
+        assert self.device_ids and len(self.device_ids) > 1
+
         targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
-        if len(self.device_ids) == 1:
-            return self.module(inputs, *targets[0], **kwargs[0])
+        if gathered:
+            inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
-        targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
 
