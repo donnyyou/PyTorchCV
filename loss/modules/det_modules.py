@@ -245,8 +245,8 @@ class YOLOv3Loss(nn.Module):
                 axy = torch.zeros_like(tx, requires_grad=False).to(tx.device)
                 awh = torch.zeros_like(tw, requires_grad=False).to(tw.device)
                 axy.fill_(0.5)
-                a_loss = (self.mse_loss(x, axy) + self.mse_loss(y, axy)
-                          + self.mse_loss(w, awh) + self.mse_loss(h, awh)) / (2 * obj_cnt)
+                a_loss = (self.mse_loss(x[:, start:end], axy) + self.mse_loss(y[:, start:end], axy)
+                          + self.mse_loss(w[:, start:end], awh) + self.mse_loss(h[:, start:end], awh)) / (2 * obj_cnt)
 
                 loss = loss + 0.1 * a_loss
 
