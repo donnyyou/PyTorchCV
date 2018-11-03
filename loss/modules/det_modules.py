@@ -203,7 +203,7 @@ class YOLOv3Loss(nn.Module):
         self.mse_loss = nn.MSELoss(reduction='sum')  # 'sum'
         self.bce_loss = nn.BCELoss(reduction='sum')
 
-    def forward(self, prediction, targets_list, objmask_list, noobjmask_list):
+    def forward(self, prediction, targets_list, objmask_list, noobjmask_list, anchor_loss=False):
         # Get outputs
         x = prediction[..., 0]  # Center x
         y = prediction[..., 1]  # Center y
@@ -225,8 +225,8 @@ class YOLOv3Loss(nn.Module):
             tcls = targets[..., 5:]  # Cls pred.
 
             obj_cnt = max(objmask.sum(), 1.0)
-            loss_x = self.bce_loss(x[:, start:end] * objmask, tx * objmask)
-            loss_y = self.bce_loss(y[:, start:end] * objmask, ty * objmask)
+            loss_x = self.mse_loss(x[:, start:end] * objmask, tx * objmask)
+            loss_y = self.mse_loss(y[:, start:end] * objmask, ty * objmask)
             loss_w = self.mse_loss(w[:, start:end] * objmask, tw * objmask)
             loss_h = self.mse_loss(h[:, start:end] * objmask, th * objmask)
             loss_coord = (loss_x + loss_y + loss_w + loss_h) / (2 * obj_cnt)
@@ -240,6 +240,15 @@ class YOLOv3Loss(nn.Module):
             loss += loss_coord * self.configer.get('network', 'loss_weights')['coord_loss'] + \
                     loss_obj * self.configer.get('network', 'loss_weights')['obj_loss'] + \
                     loss_cls * self.configer.get('network', 'loss_weights')['cls_loss']
+
+            if anchor_loss:
+                axy = torch.zeros_like(tx, requires_grad=False).to(tx.device)
+                awh = torch.zeros_like(tw, requires_grad=False).to(tw.device)
+                axy.fill_(0.5)
+                a_loss = (self.mse_loss(x, axy) + self.mse_loss(y, axy)
+                          + self.mse_loss(w, awh) + self.mse_loss(h, awh)) / (2 * obj_cnt)
+
+                loss = loss + 0.1 * a_loss
 
             start = end
 

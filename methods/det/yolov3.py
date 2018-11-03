@@ -131,7 +131,12 @@ class YOLOv3(object):
             objmask = self.module_utilizer.to_device(*objmask)
             noobjmask = self.module_utilizer.to_device(*noobjmask)
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss(predictions, targets, objmask, noobjmask)
+            if self.configer.get('iters') > 12800:
+                anchor_loss = False
+            else:
+                anchor_loss = True
+
+            loss = self.det_loss(predictions, targets, objmask, noobjmask, anchor_loss=anchor_loss)
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
