@@ -59,7 +59,7 @@ class YOLOTargetGenerator(object):
                     gi = int(gx)
                     gj = int(gy)
 
-                    pred_box = feat_detections[b].contiguous().view(num_anchors, in_h, in_w, -1)[:, gj, gi, :4]
+                    pred_box = feat_detections[b].contiguous().view(num_anchors, in_h, in_w, -1)[:, gj, gi, :4].cpu()
                     gt_box_iou = torch.FloatTensor(np.array([gx / in_w, gy / in_h, gw / in_w, gh / in_h])).unsqueeze(0)
                     pred_ious = DetHelper.bbox_iou(pred_box, gt_box_iou)
 
@@ -84,7 +84,8 @@ class YOLOTargetGenerator(object):
                     tw[b, best_n, gj, gi] = math.log(gw / anchors[best_n][0] + 1e-16)
                     th[b, best_n, gj, gi] = math.log(gh / anchors[best_n][1] + 1e-16)
                     # object
-                    tconf[b, best_n, gj, gi] = pred_ious[best_n, 0]
+                    # print(pred_ious[best_n, 0])
+                    tconf[b, best_n, gj, gi] = pred_ious[best_n, 0].item()
                     # One-hot encoding of label
                     tcls[b, best_n, gj, gi, int(batch_gt_labels[b][t])] = 1
 
