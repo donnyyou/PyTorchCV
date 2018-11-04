@@ -22,16 +22,18 @@ class YOLOTargetGenerator(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, feat_list, batch_gt_bboxes, batch_gt_labels, input_size):
+    def __call__(self, feat_list, detections, batch_gt_bboxes, batch_gt_labels, input_size):
         batch_target_list = list()
         batch_objmask_list = list()
         batch_noobjmask_list = list()
+        start = 0
         for i, ori_anchors in enumerate(self.configer.get('gt', 'anchors_list')):
             in_h, in_w = feat_list[i].size()[2:]
             w_fm_stride, h_fm_stride = input_size[0] / in_w, input_size[1] / in_h
             anchors = [(a_w / w_fm_stride, a_h / h_fm_stride) for a_w, a_h in ori_anchors]
             batch_size = len(batch_gt_bboxes)
             num_anchors = len(anchors)
+            end = start + in_h * in_w * num_anchors
             obj_mask = torch.zeros(batch_size, num_anchors, in_h, in_w)
             noobj_mask = torch.ones(batch_size, num_anchors, in_h, in_w)
             tx = torch.zeros(batch_size, num_anchors, in_h, in_w)
@@ -40,6 +42,8 @@ class YOLOTargetGenerator(object):
             th = torch.zeros(batch_size, num_anchors, in_h, in_w)
             tconf = torch.zeros(batch_size, num_anchors, in_h, in_w)
             tcls = torch.zeros(batch_size, num_anchors, in_h, in_w, self.configer.get('data', 'num_classes'))
+            feat_detections = detections[:, start:end]
+            start = end
 
             for b in range(batch_size):
                 for t in range(batch_gt_bboxes[b].size(0)):
@@ -54,6 +58,11 @@ class YOLOTargetGenerator(object):
                     # Get grid box indices
                     gi = int(gx)
                     gj = int(gy)
+
+                    pred_box = feat_detections[b].contiguous().view(num_anchors, in_h, in_w, -1)[:, gj, gi, :4]
+                    gt_box_iou = torch.FloatTensor(np.array([gx / in_w, gy / in_h, gw / in_w, gh / in_h])).unsqueeze(0)
+                    pred_ious = DetHelper.bbox_iou(pred_box, gt_box_iou)
+
                     # Get shape of gt box
                     gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
                     # Get shape of anchor box
@@ -75,7 +84,7 @@ class YOLOTargetGenerator(object):
                     tw[b, best_n, gj, gi] = math.log(gw / anchors[best_n][0] + 1e-16)
                     th[b, best_n, gj, gi] = math.log(gh / anchors[best_n][1] + 1e-16)
                     # object
-                    tconf[b, best_n, gj, gi] = 1
+                    tconf[b, best_n, gj, gi] = pred_ious[best_n, 0]
                     # One-hot encoding of label
                     tcls[b, best_n, gj, gi, int(batch_gt_labels[b][t])] = 1
 

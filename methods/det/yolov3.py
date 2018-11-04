@@ -123,9 +123,9 @@ class YOLOv3(object):
             inputs = self.module_utilizer.to_device(inputs)
 
             # Forward pass.
-            feat_list, predictions, _ = self.det_net(inputs)
+            feat_list, predictions, detections = self.det_net(inputs)
 
-            targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
+            targets, objmask, noobjmask = self.yolo_target_generator(feat_list, detections, batch_gt_bboxes,
                                                                      batch_gt_labels, input_size)
             targets = self.module_utilizer.to_device(*targets)
             objmask = self.module_utilizer.to_device(*objmask)
@@ -184,7 +184,7 @@ class YOLOv3(object):
                 inputs = self.module_utilizer.to_device(inputs)
                 feat_list, predictions, detections = self.det_net(inputs)
 
-                targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
+                targets, objmask, noobjmask = self.yolo_target_generator(feat_list, detections, batch_gt_bboxes,
                                                                          batch_gt_labels, input_size)
                 targets = self.module_utilizer.to_device(*targets)
                 objmask = self.module_utilizer.to_device(*objmask)
