@@ -64,7 +64,7 @@ class YOLOTargetGenerator(object):
                     # Where the overlap is larger than threshold set mask to zero (ignore)
                     noobj_mask[b, anch_ious[0] > self.configer.get('gt', 'iou_threshold')] = 0
                     # Find the best matching anchor box
-                    best_n = np.argmax(anch_ious, axis=1)
+                    best_n = torch.argmax(anch_ious, dim=1)
                     if anch_ious[0, best_n] < self.configer.get('gt', 'iou_threshold'):
                         continue
 
