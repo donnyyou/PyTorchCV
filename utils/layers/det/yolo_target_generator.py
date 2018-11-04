@@ -65,6 +65,8 @@ class YOLOTargetGenerator(object):
                     noobj_mask[b, anch_ious[0] > self.configer.get('gt', 'iou_threshold')] = 0
                     # Find the best matching anchor box
                     best_n = np.argmax(anch_ious, axis=1)
+                    if anch_ious[0, best_n] < self.configer.get('gt', 'iou_threshold'):
+                        continue
 
                     # Masks
                     obj_mask[b, best_n, gj, gi] = 1
