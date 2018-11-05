@@ -105,8 +105,8 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, deep_base=False, bn_type=None):
-        self.inplanes = 64
         super(ResNet, self).__init__()
+        self.inplanes = 128 if deep_base else 64
         if deep_base:
             self.conv1 = nn.Sequential(
                 nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False),
@@ -120,7 +120,7 @@ class ResNet(nn.Module):
         else:
             self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
-        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 

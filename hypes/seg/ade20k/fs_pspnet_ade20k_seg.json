@@ -88,7 +88,7 @@
       "save_iters": 2000
     },
     "network":{
-      "backbone": "resnet101_dilated8",
+      "backbone": "deepbase_resnet101_dilated8",
       "model_name": "pspnet",
       "bn_type": "syncbn",
       "stride": 8,
@@ -126,7 +126,8 @@
       },
       "sgd":{
         "weight_decay": 0.0001,
-        "momentum": 0.9
+        "momentum": 0.9,
+        "nesterov": false
       }
     },
     "cross_entropy_loss": {

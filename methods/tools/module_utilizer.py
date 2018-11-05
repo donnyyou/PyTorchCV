@@ -205,7 +205,7 @@ class ModuleUtilizer(object):
             return torch_gather(outputs, target_device, dim=dim)
 
         else:
-            assert isinstance(outputs, torch.Tensor)
+            assert isinstance(outputs, torch.Tensor) or isinstance(outputs[0], torch.Tensor)
             return outputs
 
 

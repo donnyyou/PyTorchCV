@@ -38,12 +38,21 @@ class PPMBilinearDeepsup(nn.Module):
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
         for scale in pool_scales:
-            self.ppm.append(nn.Sequential(
-                nn.AdaptiveAvgPool2d(scale),
-                nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
-                ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
-                nn.ReLU(inplace=True)
-            ))
+            if bn_type == 'syncbn' or scale > 1:
+                self.ppm.append(nn.Sequential(
+                    nn.AdaptiveAvgPool2d(scale),
+                    nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
+                    ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
+                    nn.ReLU(inplace=True)
+                ))
+            else: # Torch BN can't handle spatial size with 1.
+                self.ppm.append(nn.Sequential(
+                    nn.AdaptiveAvgPool2d(scale),
+                    nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
+                    # ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
+                    nn.ReLU(inplace=True)
+                ))
+
         self.ppm = nn.ModuleList(self.ppm)
         self.cbr_deepsup = _ConvBatchNormReluBlock(fc_dim // 2, fc_dim // 4, 3, 1, bn_type=bn_type)
         self.conv_last = nn.Sequential(
@@ -86,20 +95,11 @@ class PSPNet(nn.Sequential):
 
         num_features = self.backbone.get_num_features()
 
-        if 'caffe' in self.configer.get('network', 'backbone'):
-            self.low_features = nn.Sequential(
-                self.backbone.conv1, self.backbone.bn1, self.backbone.relu1,
-                self.backbone.conv2, self.backbone.bn2, self.backbone.relu2,
-                self.backbone.conv3, self.backbone.bn3, self.backbone.relu3,
-                self.backbone.maxpool,
-                self.backbone.layer1,
-            )
-        else:
-            self.low_features = nn.Sequential(
-                self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
-                self.backbone.maxpool,
-                self.backbone.layer1,
-            )
+        self.low_features = nn.Sequential(
+            self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
+            self.backbone.maxpool,
+            self.backbone.layer1,
+        )
 
         self.high_features1 = nn.Sequential(self.backbone.layer2, self.backbone.layer3)
         self.high_features2 = nn.Sequential(self.backbone.layer4)
