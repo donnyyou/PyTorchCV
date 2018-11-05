@@ -53,6 +53,8 @@ class ModuleHelper(object):
             model_dict.update(load_dict)
             model.load_state_dict(model_dict)
 
+        return model
+
     @staticmethod
     def load_url(url, map_location=None):
         model_dir = os.path.join('~', '.PyTorchCV', 'models')
