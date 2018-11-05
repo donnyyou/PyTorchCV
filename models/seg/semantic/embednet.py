@@ -137,7 +137,7 @@ class EmbedNet(nn.Sequential):
         incr = self.embed_conv(aux)
         x = self.high_features2(aux+incr)
         x, aux = self.decoder([x, aux])
-        x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
+        x = F.interpolate(x, scale_factor=8, mode="bilinear", align_corners=False)
 
         return x, aux, incr
 

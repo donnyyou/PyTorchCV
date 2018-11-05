@@ -111,7 +111,7 @@ class PSPNet(nn.Sequential):
         aux = self.high_features1(low)
         x = self.high_features2(aux)
         x, aux = self.decoder([x, aux])
-        x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
+        x = F.interpolate(x, scale_factor=8, mode="bilinear", align_corners=False)
 
         return x, aux
 

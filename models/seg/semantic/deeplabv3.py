@@ -123,7 +123,7 @@ class DeepLabV3(nn.Module):
         x = self.aspp(x)
         x = self.fc1(x)
         x = self.fc2(x)
-        x = F.upsample(x, scale_factor=(16, 16), mode="bilinear")
+        x = F.interpolate(x, scale_factor=(16, 16), mode="bilinear", align_corners=False)
         return x
 
 

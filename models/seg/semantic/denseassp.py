@@ -60,8 +60,6 @@ class DenseASPP(nn.Module):
                       out_channels=self.configer.get('network', 'out_channels'), kernel_size=1, padding=0)
         )
 
-        self.upsample = nn.Sequential(F.interpolate(scale_factor=8, mode='bilinear', align_corners=False))
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.xavier_uniform_(m.weight.data)
@@ -90,7 +88,7 @@ class DenseASPP(nn.Module):
 
         cls = self.classification(feature)
 
-        out = self.upsample(cls)
+        out = F.interpolate(cls, scale_factor=8, mode='bilinear', align_corners=False)
 
         return out
 
