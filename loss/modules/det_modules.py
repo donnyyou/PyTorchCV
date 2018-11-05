@@ -81,7 +81,7 @@ class SSDFocalLoss(nn.Module):
         mask = pos.unsqueeze(2).expand_as(loc_preds)  # [N,#anchors,4]
         masked_loc_preds = loc_preds[mask].view(-1, 4)  # [#pos,4]
         masked_loc_targets = loc_targets[mask].view(-1, 4)  # [#pos,4]
-        loc_loss = F.smooth_l1_loss(masked_loc_preds, masked_loc_targets, size_average=False)
+        loc_loss = F.smooth_l1_loss(masked_loc_preds, masked_loc_targets, reduction='sum')
 
         # cls_loss = FocalLoss(loc_preds, loc_targets)
         pos_neg = cls_targets > -1  # exclude ignored anchors
@@ -172,7 +172,7 @@ class SSDMultiBoxLoss(nn.Module):
         pos_mask = pos.unsqueeze(2).expand_as(loc_preds)  # [N, 8732, 4]
         pos_loc_preds = loc_preds[pos_mask].view(-1, 4)  # [pos,4]
         pos_loc_targets = loc_targets[pos_mask].view(-1, 4)  # [pos,4]
-        loc_loss = F.smooth_l1_loss(pos_loc_preds, pos_loc_targets, size_average=False)
+        loc_loss = F.smooth_l1_loss(pos_loc_preds, pos_loc_targets, reduction='sum')
 
         # conf_loss.
         conf_loss = self._cross_entropy_loss(conf_preds.view(-1, self.num_classes), conf_targets.view(-1))  # [N*8732,]
@@ -183,7 +183,7 @@ class SSDMultiBoxLoss(nn.Module):
         pos_and_neg = (pos + neg).gt(0)
         preds = conf_preds[mask].view(-1, self.num_classes)  # [pos + neg,21]
         targets = conf_targets[pos_and_neg]                  # [pos + neg,]
-        conf_loss = F.cross_entropy(preds, targets, size_average=False, ignore_index=-1)
+        conf_loss = F.cross_entropy(preds, targets, reduction='sum', ignore_index=-1)
 
         if num_matched_boxes > 0:
             loc_loss = loc_loss / num_matched_boxes

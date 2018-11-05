@@ -66,7 +66,7 @@ class CapsuleLoss(nn.Module):
     def __init__(self, configer):
         super(CapsuleLoss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(size_average=self.configer.get('capsule_loss', 'size_average'))
+        self.mse_loss = nn.MSELoss(reduction=self.configer.get('capsule_loss', 'reduction'))
 
     def forward(self, inputs, targets, masks=None, is_focal=False):
         preds = torch.sqrt((inputs**2).sum(dim=1, keepdim=False))
