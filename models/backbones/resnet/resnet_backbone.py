@@ -146,6 +146,18 @@ class ResNetBackbone(object):
             orig_resnet = self.resnet_models.resnet50()
             arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
 
+        elif arch == 'deepbase_resnet50':
+            orig_resnet = self.resnet_models.deepbase_resnet50()
+            arch_net = NormalResnetBackbone(orig_resnet)
+
+        elif arch == 'deepbase_resnet50_dilated8':
+            orig_resnet = self.resnet_models.deepbase_resnet50()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8)
+
+        elif arch == 'deepbase_resnet50_dilated16':
+            orig_resnet = self.resnet_models.deepbase_resnet50()
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
+
         elif arch == 'resnet101':
             orig_resnet = self.resnet_models.resnet101()
             arch_net = NormalResnetBackbone(orig_resnet)
@@ -160,7 +172,7 @@ class ResNetBackbone(object):
 
         elif arch == 'deepbase_resnet101':
             orig_resnet = self.resnet_models.deepbase_resnet101()
-            arch_net = NormalCaffeResnetBackbone(orig_resnet)
+            arch_net = NormalResnetBackbone(orig_resnet)
 
         elif arch == 'deepbase_resnet101_dilated8':
             orig_resnet = self.resnet_models.deepbase_resnet101()
@@ -168,7 +180,7 @@ class ResNetBackbone(object):
 
         elif arch == 'deepbase_resnet101_dilated16':
             orig_resnet = self.resnet_models.deepbase_resnet101()
-            arch_net = DilatedCaffeResnetBackbone(orig_resnet, dilate_scale=16)
+            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16)
 
         else:
             raise Exception('Architecture undefined!')
