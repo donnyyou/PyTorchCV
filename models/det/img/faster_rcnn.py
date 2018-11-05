@@ -32,9 +32,9 @@ class VGGModel(object):
     def __call__(self):
         # the 30th layer of features is relu of conv5_3
         model = vgg16(pretrained=False)
-        if self.configer.get('network', 'pretrained_model') is not None :
-            Log.info('Loading pretrained model: {}'.format(self.configer.get('network', 'pretrained_model')))
-            model.load_state_dict(torch.load(self.configer.get('network', 'pretrained_model')))
+        if self.configer.get('network', 'pretrained') is not None :
+            Log.info('Loading pretrained model: {}'.format(self.configer.get('network', 'pretrained')))
+            model.load_state_dict(torch.load(self.configer.get('network', 'pretrained')))
 
         features = list(model.features)[:30]
         classifier = model.classifier
