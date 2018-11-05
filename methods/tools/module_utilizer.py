@@ -51,9 +51,8 @@ class ModuleUtilizer(object):
 
     def make_loss_parallel(self, loss):
         if self.configer.get('network', 'memory_balance'):
-            assert self.configer.get('network', 'bn_type') == 'syncbn'
             from extensions.layers.syncbn.parallel import DataParallelCriterion
-            loss = DataParallelCriterion(loss)
+            loss = DataParallelCriterion(loss, bn_type=self.configer.get('network', 'bn_type'))
             return loss
 
         return loss
