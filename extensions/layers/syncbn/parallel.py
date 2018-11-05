@@ -125,13 +125,17 @@ class DataParallelCriterion(DataParallel):
         >>> y = net(x)
         >>> loss = criterion(y, target)
     """
-    def forward(self, inputs, targets, gathered=False, **kwargs):
+    def __init__(self, module, device_ids=None, output_device=None, dim=0, bn_type=None):
+        super(DataParallelCriterion, self).__init__(module, device_ids, output_device, dim)
+        self.bn_type = bn_type
+
+    def forward(self, inputs, targets, **kwargs):
         # input should be already scatterd
         # scattering the targets instead
         assert self.device_ids and len(self.device_ids) > 1
 
         targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
-        if gathered:
+        if self.bn_type == 'torchbn':
             inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])

@@ -49,6 +49,14 @@ class ModuleUtilizer(object):
 
         return return_list[0] if len(params) == 1 else return_list
 
+    def make_loss_parallel(self, loss):
+        if self.configer.get('network', 'memory_balance'):
+            from extensions.layers.syncbn.parallel import DataParallelCriterion
+            loss = DataParallelCriterion(loss, bn_type=self.configer.get('network', 'bn_type'))
+            return loss
+
+        return loss
+
     def _make_parallel(self, net):
         if self.configer.get('network', 'bn_type') == 'syncbn':
             assert len(self.configer.get('gpu')) > 1
