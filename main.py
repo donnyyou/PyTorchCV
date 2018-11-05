@@ -64,10 +64,8 @@ if __name__ == "__main__":
                         dest='network:model_name', help='The name of model.')
     parser.add_argument('--backbone', default=None, type=str,
                         dest='network:backbone', help='The base network of model.')
-    parser.add_argument('--pretrained', type=str2bool, nargs='?', default=False,
-                        dest='network:pretrained', help='Whether to use pretrained models.')
-    parser.add_argument('--pretrained_model', type=str, default=None,
-                        dest='network:pretrained_model', help='The path to pretrained model.')
+    parser.add_argument('--pretrained', type=str, default=None,
+                        dest='network:pretrained', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
                         dest='network:resume', help='The path of checkpoints.')
     parser.add_argument('--resume_level', default='full', type=str,

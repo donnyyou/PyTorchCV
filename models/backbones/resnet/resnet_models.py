@@ -12,11 +12,6 @@ import math
 import torch
 import torch.nn as nn
 
-try:
-    from urllib import urlretrieve
-except ImportError:
-    from urllib.request import urlretrieve
-
 from models.tools.module_helper import ModuleHelper
 from utils.tools.logger import Logger as Log
 
@@ -191,8 +186,7 @@ class ResNetModels(object):
         """
         model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=False,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def deepbase_resnet18(self, **kwargs):
@@ -202,8 +196,7 @@ class ResNetModels(object):
         """
         model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet34(self, **kwargs):
@@ -213,8 +206,7 @@ class ResNetModels(object):
         """
         model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=False,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def deepbase_resnet34(self, **kwargs):
@@ -224,8 +216,7 @@ class ResNetModels(object):
         """
         model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet50(self, **kwargs):
@@ -235,8 +226,7 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 6, 3], deep_base=False,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def deepbase_resnet50(self, **kwargs):
@@ -246,8 +236,7 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 6, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet101(self, **kwargs):
@@ -257,8 +246,7 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=False,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def deepbase_resnet101(self, **kwargs):
@@ -268,8 +256,7 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet152(self, **kwargs):
@@ -280,8 +267,7 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 8, 36, 3], deep_base=False,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
-
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def deepbase_resnet152(self, **kwargs):
@@ -292,28 +278,5 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 8, 36, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = self.load_model(model)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
-
-    def load_model(self, model):
-        if self.configer.get('network', 'pretrained_model') is not None:
-            Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-            pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            model.load_state_dict(pretrained_dict)
-
-        return model
-
-    def load_url(self, url, map_location=None):
-        model_dir = os.path.join(self.configer.get('project_dir'), 'models/backbones/resnet/pretrained')
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-
-        filename = url.split('/')[-1]
-        cached_file = os.path.join(model_dir, filename)
-        if not os.path.exists(cached_file):
-            Log.info('Downloading: "{}" to {}\n'.format(url, cached_file))
-            urlretrieve(url, cached_file)
-
-        Log.info('Loading pretrained model:{}'.format(cached_file))
-
-        return torch.load(cached_file, map_location=map_location)
