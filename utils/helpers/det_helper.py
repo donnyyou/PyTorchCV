@@ -245,7 +245,7 @@ class DetHelper(object):
         return iou
 
     @staticmethod
-    def bbox_kmeans(bboxes, cluster_number, dist=np.median):
+    def bbox_kmeans(bboxes, cluster_number, dist=np.mean):
         box_number = bboxes.shape[0]
         last_nearest = np.zeros((box_number,))
         np.random.seed()
