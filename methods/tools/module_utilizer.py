@@ -104,7 +104,7 @@ class ModuleUtilizer(object):
                 else:
                     key = norm_key
 
-                if net_dict[key].size() == value.size():
+                if key in net_dict and net_dict[key].size() == value.size():
                     net_dict[key] = value
                 else:
                     not_match_list.append(key)
