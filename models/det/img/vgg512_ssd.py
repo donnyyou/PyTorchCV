@@ -149,7 +149,10 @@ class SSDHead(nn.Module):
 
         self.feature6 = nn.Sequential(
             nn.Conv2d(256, 128, kernel_size=1, stride=1),
-            nn.Conv2d(128, 256, kernel_size=4, stride=1, padding=1))
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=2, stride=1, padding=0),
+            nn.ReLU()
+        )
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
