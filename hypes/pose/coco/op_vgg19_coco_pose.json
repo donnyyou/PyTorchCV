@@ -114,6 +114,10 @@
       "rewrite": true
     },
     "lr": {
+      "is_warm": true,
+      "warm": {
+        "warm_epoch": 5
+      },
       "base_lr": 0.00004,
       "lr_policy": "step",
       "step": {
@@ -124,7 +128,7 @@
     "solver": {
       "display_iter": 100,
       "test_interval": 1000,
-      "max_epoch": 150
+      "max_epoch": 200
     },
     "optim": {
       "optim_method": "sgd",

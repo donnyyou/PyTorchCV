@@ -74,7 +74,7 @@ class OpenPose(object):
         lr_8 = []
         params_dict = dict(self.pose_net.named_parameters())
         for key, value in params_dict.items():
-            if ('model1_' not in key) and ('model0.' not in key) and ('backbone.' not in key):
+            if 'backbone.' not in key:
                 if key[-4:] == 'bias':
                     lr_8.append(value)
                 else:
@@ -91,20 +91,15 @@ class OpenPose(object):
 
         return params
 
-    def warm_lr(self, batch_len):
+    def freeze_backbone(self, batch_len):
         """Sets the learning rate
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
         if self.configer.get('iters') < warm_iters:
-            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
-
-            base_lr_list = self.scheduler.get_lr()
-            for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
-                param_group['lr'] = base_lr * (lr_ratio ** 4)
-
             self.optimizer.param_groups[0]['lr'] = 0.0
+            self.optimizer.param_groups[1]['lr'] = 0.0
 
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
@@ -122,7 +117,7 @@ class OpenPose(object):
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
             if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-                self.warm_lr(len(self.train_loader))
+                self.freeze_backbone(len(self.train_loader))
 
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
@@ -139,7 +134,7 @@ class OpenPose(object):
             # Compute the loss of the train batch & backward.
             loss_heatmap = self.mse_loss(heatmap_out, heatmap, mask=maskmap, weights=self.weights)
             loss_associate = self.mse_loss(paf_out, vecmap, mask=maskmap, weights=self.weights)
-            loss = loss_heatmap + loss_associate
+            loss = 2.0 * loss_heatmap + loss_associate
 
             self.train_losses.update(loss.item(), inputs.size(0))
             self.train_loss_heatmap.update(loss_heatmap.item(), inputs.size(0))
@@ -198,7 +193,7 @@ class OpenPose(object):
                 # Compute the loss of the val batch.
                 loss_heatmap = self.mse_loss(heatmap_out[-1], heatmap, maskmap)
                 loss_associate = self.mse_loss(paf_out[-1], vecmap, maskmap)
-                loss = loss_heatmap + loss_associate
+                loss = 2.0 * loss_heatmap + loss_associate
 
                 self.val_losses.update(loss.item(), inputs.size(0))
                 self.val_loss_heatmap.update(loss_heatmap.item(), inputs.size(0))
