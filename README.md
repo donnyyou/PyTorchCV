@@ -22,20 +22,20 @@ This repository provides source code for some deep learning based cv problems. W
     - ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
     - ShuffleNet V2: Practical Guidelines for Ecient CNN Architecture Design
 
-- [Pose Estimation](https://github.com/youansheng/PyTorchCV/tree/master/methods/pose)
-    - CPM: Convolutional Pose Machines
-    - OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields
+- [Semantic Segmentation](https://github.com/youansheng/PyTorchCV/tree/master/methods/seg)
+    - DeepLabV3: Rethinking Atrous Convolution for Semantic Image Segmentation
+    - PSPNet: Pyramid Scene Parsing Network
+    - DenseASPP: DenseASPP for Semantic Segmentation in Street Scenes
     
 - [Object Detection](https://github.com/youansheng/PyTorchCV/tree/master/methods/det)
     - SSD: Single Shot MultiBox Detector
     - Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks
     - YOLOv3: An Incremental Improvement
     - FPN: Feature Pyramid Networks for Object Detection
-    
-- [Semantic Segmentation](https://github.com/youansheng/PyTorchCV/tree/master/methods/seg)
-    - DeepLabV3: Rethinking Atrous Convolution for Semantic Image Segmentation
-    - PSPNet: Pyramid Scene Parsing Network
-    - DenseASPP: DenseASPP for Semantic Segmentation in Street Scenes
+
+- [Pose Estimation](https://github.com/youansheng/PyTorchCV/tree/master/methods/pose)
+    - CPM: Convolutional Pose Machines
+    - OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields
 
 - [Instance Segmentation](https://github.com/youansheng/PyTorchCV/tree/master/methods/seg)
     - Mask R-CNN
@@ -43,25 +43,41 @@ This repository provides source code for some deep learning based cv problems. W
 
 ## Performances with PyTorchCV
 
+#### Image Classification
+- ResNet: Deep Residual Learning for Image Recognition
+
+#### Semantic Segmentation
+- PSPNet: Pyramid Scene Parsing Network
+
+| Model | Backbone | Training data  | Testing data | mIOU | Pixel Acc | Setting |
+|--------|:---------:|:------:|:------:|:------:|:------:|:------:|
+| PSPNet Origin | 3x3-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | - |
+| PSPNet Ours | 7x7-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | [PSPNet](https://github.com/youansheng/PyTorchCV/blob/master/hypes/seg/ade20k/fs_pspnet_ade20k_seg.json) |
+
 #### Object Detection
-- SSD: Single Shot MultiBox Detector [[SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json), [SSD512](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg512_voc_det.json)]
+- SSD: Single Shot MultiBox Detector
 
-| Model | Training data  | Testing data | mAP | FPS  |
-|--------|:---------:|:------:|:------:|:------:|
-| [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.772 | - |
-| [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | VOC07+12 trainval | VOC07 test | 0.786 | - |
-| [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.798 | - |
-| [SSD-512 Ours](https://drive.google.com/open?id=1eQ8eEOPVqHxH0hzenmzXDOF-8Zrvv8lg) | VOC07+12 trainval | VOC07 test | 0.804 | - |
+| Model | Training data  | Testing data | mAP | FPS  | Setting |
+|--------|:---------:|:------:|:------:|:------:|:------:|
+| [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.772 | - | - |
+| [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | VOC07+12 trainval | VOC07 test | 0.786 | - | [SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json) |
+| [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.798 | - | - |
+| [SSD-512 Ours](https://drive.google.com/open?id=1eQ8eEOPVqHxH0hzenmzXDOF-8Zrvv8lg) | VOC07+12 trainval | VOC07 test | 0.804 | - | [SSD512](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg512_voc_det.json) |
 
-- Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks [[Faster R-CNN](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json)]
+- Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks
 
-| Model |  Training data  | Testing data | mAP | FPS  |
-|--------|:---------:|:------:|:------:|:------:|
-| [Faster R-CNN Origin](https://github.com/rbgirshick/py-faster-rcnn) | VOC07 trainval | VOC07 test | 0.699 | - |
-| [Faster R-CNN Ours](https://drive.google.com/open?id=15SfklRiI1McVWEq9EAceznK-9sxXSQR4) | VOC07 trainval | VOC07 test | 0.706 | - |
+| Model |  Training data  | Testing data | mAP | FPS  | Setting |
+|--------|:---------:|:------:|:------:|:------:|:------:|
+| [Faster R-CNN Origin](https://github.com/rbgirshick/py-faster-rcnn) | VOC07 trainval | VOC07 test | 0.699 | - | - |
+| [Faster R-CNN Ours](https://drive.google.com/open?id=15SfklRiI1McVWEq9EAceznK-9sxXSQR4) | VOC07 trainval | VOC07 test | 0.706 | - | [Faster R-CNN](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json) |
 
 - YOLOv3: An Incremental Improvement
 
+#### Pose Estimation
+- OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields
+
+#### Instance Segmentation
+- Mask R-CNN
 
 ## Commands with PyTorchCV
 
