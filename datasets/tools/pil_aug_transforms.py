@@ -863,6 +863,9 @@ class RandomFocusCrop(object):
         if kpts is not None and kpts.size > 0:
             kpts[:, :, 0] -= offset_left
             kpts[:, :, 1] -= offset_up
+            mask = np.logical_or.reduce((kpts[:, :, 0] >= self.size[0], kpts[:, :, 0] < 0,
+                                         kpts[:, :, 1] >= self.size[1], kpts[:, :, 1] < 0))
+            kpts[mask == 1, 2] = -1
 
         if bboxes is not None and bboxes.size > 0:
             if self.allow_outside_center:
