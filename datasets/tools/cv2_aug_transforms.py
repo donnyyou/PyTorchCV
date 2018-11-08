@@ -765,13 +765,11 @@ class RandomFocusCrop(object):
             return [x, y], -1
 
         else:
-            max_index = 0
-            bboxes = np.array(bboxes)
             border = bboxes[:, 2:] - bboxes[:, 0:2]
-            for i in range(len(border)):
-                if border[i][0] * border[i][1] >= border[max_index][0] * border[max_index][1]:
-                    max_index = i
-                    max_center = [(bboxes[i][0] + bboxes[i][2]) / 2, (bboxes[i][1] + bboxes[i][3]) / 2]
+            area = border[:, 0] * border[:, 1]
+            max_index = np.argmax(area)
+            max_center = [(bboxes[max_index][0] + bboxes[max_index][2]) / 2,
+                          (bboxes[max_index][1] + bboxes[max_index][3]) / 2]
 
             if self.center_jitter is not None:
                 jitter = random.randint(-self.center_jitter, self.center_jitter)
