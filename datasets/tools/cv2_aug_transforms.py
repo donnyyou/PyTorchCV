@@ -524,7 +524,7 @@ class RandomRotate(object):
         if random.random() < self.ratio:
             rotate_degree = random.uniform(-self.max_degree, self.max_degree)
         else:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         height, width, _ = img.shape
 
@@ -749,8 +749,6 @@ class RandomFocusCrop(object):
             raise TypeError('Got inappropriate size arg: {}'.format(crop_size))
 
     def get_center(self, img_size, bboxes):
-        max_center = [img_size[0] // 2, img_size[1] // 2]
-
         if bboxes is None or bboxes.size == 0:
             if img_size[0] > self.size[0]:
                 x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)

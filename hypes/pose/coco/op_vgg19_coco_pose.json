@@ -118,16 +118,16 @@
       "warm": {
         "warm_epoch": 5
       },
-      "base_lr": 0.00004,
+      "base_lr": 0.00002,
       "lr_policy": "step",
       "step": {
         "gamma": 0.333,
-        "step_size": 30
+        "step_size": 50
       }
     },
     "solver": {
       "display_iter": 100,
-      "test_interval": 1000,
+      "test_interval": 5000,
       "max_epoch": 200
     },
     "optim": {
