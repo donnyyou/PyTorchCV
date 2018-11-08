@@ -58,6 +58,17 @@ class OptimScheduler(object):
             lambda_linear = lambda epoch: 1.0 - (epoch / self.configer.get('solver', 'max_epoch'))
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_linear)
 
+        elif policy == 'plateau':
+            scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                       mode=self.configer.get('lr', 'plateau')['mode'],
+                                                       factor=self.configer.get('lr', 'plateau')['factor'],
+                                                       patience=self.configer.get('lr', 'plateau')['patience'],
+                                                       threshold=self.configer.get('lr', 'plateau')['threshold'],
+                                                       threshold_mode=self.configer.get('lr', 'plateau')['thre_mode'],
+                                                       cooldown=self.configer.get('lr', 'plateau')['cooldown'],
+                                                       min_lr=self.configer.get('lr', 'plateau')['min_lr'],
+                                                       eps=self.configer.get('lr', 'plateau')['eps'])
+
         else:
             Log.error('Policy:{} is not valid.'.format(policy))
             exit(1)
