@@ -60,7 +60,6 @@ class FCNSegmentor(object):
         self.val_loader = self.seg_data_loader.get_valloader()
 
         self.pixel_loss = self.seg_loss_manager.get_seg_loss('fcn_seg_loss')
-        self.pixel_loss = self.module_utilizer.make_loss_parallel(self.pixel_loss)
 
     def _get_parameters(self):
         lr_1 = []
@@ -98,7 +97,7 @@ class FCNSegmentor(object):
             outputs = self.seg_net(inputs)
             # outputs = self.module_utilizer.gather(outputs)
             # Compute the loss of the train batch & backward.
-            loss = self.pixel_loss(outputs, targets)
+            loss = self.pixel_loss(outputs, targets, gathered=self.configer.get('network', 'gathered'))
             self.train_losses.update(loss.item(), inputs.size(0))
             self.optimizer.zero_grad()
             loss.backward()
@@ -147,7 +146,7 @@ class FCNSegmentor(object):
                 # Forward pass.
                 outputs = self.seg_net(inputs)
                 # Compute the loss of the val batch.
-                loss = self.pixel_loss(outputs, targets)
+                loss = self.pixel_loss(outputs, targets, gathered=self.configer.get('network', 'gathered'))
                 outputs = self.module_utilizer.gather(outputs)
                 pred = outputs[0]
 
