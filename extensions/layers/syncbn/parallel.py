@@ -105,17 +105,6 @@ class DataParallelModel(DataParallel):
         return modules
 
 
-class DataParallelNotGathered(DataParallel):
-    """
-    Example::
-
-        >>> net = DataParallelNotGathered(model, device_ids=[0, 1, 2])
-        >>> y = net(x)
-    """
-    def gather(self, outputs, output_device):
-        return outputs
-
-
 class DataParallelCriterion(DataParallel):
     """
     Calculate loss in multiple-GPUs, which balance the memory usage for
@@ -156,7 +145,6 @@ class DataParallelCriterion(DataParallel):
         # targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
-        #return self.gather(outputs, self.output_device).mean()
 
 
 def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices=None):

@@ -145,7 +145,7 @@ class SSDMultiBoxLoss(nn.Module):
         neg = rank < num_neg.unsqueeze(1).expand_as(rank)  # [N,8732]
         return neg
 
-    def forward(self, outputs, *targets):
+    def forward(self, outputs, *targets, **kwargs):
         """Compute loss between (loc_preds, loc_targets) and (conf_preds, conf_targets).
 
         Args:

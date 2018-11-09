@@ -50,18 +50,12 @@ class ModuleUtilizer(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if self.configer.get('network', 'bn_type') == 'syncbn':
+        if self.configer.get('network', 'bn_type') == 'syncbn' or not self.configer.get('network', 'gathered'):
             assert len(self.configer.get('gpu')) > 1
             from extensions.layers.syncbn.parallel import DataParallelModel
             self.configer.update_value(['network', 'parallel'], True)
             self.configer.update_value(['network', 'gathered'], False)
             return DataParallelModel(net)
-
-        elif not self.configer.get('network', 'gathered'):
-            assert len(self.configer.get('gpu')) > 1
-            from extensions.layers.syncbn.parallel import DataParallelNotGathered
-            self.configer.update_value(['network', 'parallel'], True)
-            return DataParallelNotGathered(net)
 
         elif len(self.configer.get('gpu')) > 1:
             self.configer.update_value(['network', 'parallel'], True)
