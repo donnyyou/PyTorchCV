@@ -61,7 +61,7 @@ class SSDFocalLoss(nn.Module):
 
         return conf_loss
 
-    def forward(self, loc_preds, loc_targets, cls_preds, cls_targets):
+    def forward(self, outputs, *targets):
         """Compute loss between (loc_preds, loc_targets) and (cls_preds, cls_targets).
 
         Args:
@@ -73,6 +73,8 @@ class SSDFocalLoss(nn.Module):
           (tensor) loss = SmoothL1Loss(loc_preds, loc_targets) + FocalLoss(cls_preds, cls_targets).
 
         """
+        loc_preds, cls_preds = outputs
+        loc_targets, cls_targets = targets
 
         pos = cls_targets > 0  # [N,#anchors]
         num_pos = pos.data.long().sum()
@@ -143,7 +145,7 @@ class SSDMultiBoxLoss(nn.Module):
         neg = rank < num_neg.unsqueeze(1).expand_as(rank)  # [N,8732]
         return neg
 
-    def forward(self, loc_preds, loc_targets, conf_preds, conf_targets):
+    def forward(self, outputs, *targets):
         """Compute loss between (loc_preds, loc_targets) and (conf_preds, conf_targets).
 
         Args:
@@ -161,6 +163,8 @@ class SSDMultiBoxLoss(nn.Module):
                     + CrossEntropyLoss(neg_conf_preds, neg_conf_targets)
 
         """
+        loc_preds, conf_preds = outputs
+        loc_targets, conf_targets = targets
         batch_size, num_boxes, _ = loc_preds.size()
 
         pos = conf_targets > 0  # [N,8732], pos means the box matched.

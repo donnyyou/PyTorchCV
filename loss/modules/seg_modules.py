@@ -199,7 +199,8 @@ class FCNSegLoss(nn.Module):
         self.focal_loss = FocalLoss(self.configer)
         self.embed_loss = EmbeddingLoss(self.configer)
 
-    def forward(self, outputs, targets):
+    def forward(self, outputs, *targets_list):
+        targets = targets_list[0]
         if self.configer.get('network', 'model_name') == 'grid_encnet':
             seg_out, se_out, aux_out = outputs
             seg_loss = self.ce_loss(seg_out, targets)
