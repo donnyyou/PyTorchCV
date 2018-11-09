@@ -109,14 +109,15 @@ class SingleShotDetector(object):
 
             self.data_time.update(time.time() - start_time)
             # Forward pass.
-            feat_list, loc, cls = self.det_net(inputs)
+            outputs = self.det_net(inputs)
+            feat_list, loc, cls = self.module_utilizer.gather(outputs)
 
             bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                        batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss(loc, bboxes, cls, labels)
+            loss = self.det_loss([loc, cls], bboxes, labels, gathered=True)
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
@@ -168,7 +169,7 @@ class SingleShotDetector(object):
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
-                loss = self.det_loss(loc, bboxes, cls, labels)
+                loss = self.det_loss([loc, cls], bboxes, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,

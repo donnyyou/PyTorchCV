@@ -105,6 +105,17 @@ class DataParallelModel(DataParallel):
         return modules
 
 
+class DataParallelNotGathered(DataParallel):
+    """
+    Example::
+
+        >>> net = DataParallelNotGathered(model, device_ids=[0, 1, 2])
+        >>> y = net(x)
+    """
+    def gather(self, outputs, output_device):
+        return outputs
+
+
 class DataParallelCriterion(DataParallel):
     """
     Calculate loss in multiple-GPUs, which balance the memory usage for
@@ -121,29 +132,28 @@ class DataParallelCriterion(DataParallel):
         >>> y = net(x)
         >>> loss = criterion(y, target)
     """
-    def __init__(self, module, device_ids=None, output_device=None, dim=0, bn_type=None):
+    def __init__(self, module, device_ids=None, output_device=None, dim=0):
         super(DataParallelCriterion, self).__init__(module, device_ids, output_device, dim)
-        self.bn_type = bn_type
 
-    def forward(self, inputs, *targets, **kwargs):
+    def forward(self, inputs, *targets, gathered=True, **kwargs):
         # input should be already scatterd
         # scattering the targets instead
-        if self.bn_type == 'torchbn':
+        if gathered:
             if isinstance(inputs, (list, tuple)):
                 inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
             else:
                 inputs, kwargs = self.scatter([inputs], kwargs, self.device_ids)
-                inputs = tuple(inputs_per_gpu[0] for inputs_per_gpu in inputs)
+                # inputs = tuple(inputs_per_gpu[0] for inputs_per_gpu in inputs)
 
         if not self.device_ids:
             return self.module(inputs, *targets, **kwargs)
 
-        targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
+        targets, _ = self.scatter(targets, kwargs, self.device_ids)
         if len(self.device_ids) == 1:
-            return self.module(inputs, *targets[0], **kwargs[0])
+            return self.module(inputs[0], *targets[0], **kwargs[0])
 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
-        targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
+        # targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
         #return self.gather(outputs, self.output_device).mean()
@@ -173,7 +183,7 @@ def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices
             device = get_a_var(input).get_device()
         try:
             with torch.cuda.device(device):
-                output = module(input, target)
+                output = module(input, *target, **kwargs)
             with lock:
                 results[i] = output
         except Exception as e:

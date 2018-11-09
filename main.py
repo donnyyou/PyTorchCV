@@ -74,8 +74,10 @@ if __name__ == "__main__":
                         dest='network:resume_continue', help='Whether to continue training.')
     parser.add_argument('--resume_val', type=str2bool, nargs='?', default=True,
                         dest='network:resume_val', help='Whether to validate during resume.')
-    parser.add_argument('--memory_balance', type=str2bool, nargs='?', default=False,
-                        dest='network:memory_balance', help='Whether to balance GPU usage.')
+    parser.add_argument('--gathered', type=str2bool, nargs='?', default=True,
+                        dest='network:gathered', help='Whether to gather the output of model.')
+    parser.add_argument('--loss_balance', type=str2bool, nargs='?', default=False,
+                        dest='network:loss_balance', help='Whether to balance GPU usage.')
 
     # ***********  Params for solver.  **********
     parser.add_argument('--optim_method', default=None, type=str,
