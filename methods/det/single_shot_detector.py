@@ -110,14 +110,17 @@ class SingleShotDetector(object):
             self.data_time.update(time.time() - start_time)
             # Forward pass.
             outputs = self.det_net(inputs)
-            feat_list, loc, cls = self.module_utilizer.gather(outputs)
+            if self.configer.get('network', 'gathered'):
+                feat_list = outputs[0]
+            else:
+                feat_list = outputs[0][0]
 
             bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                        batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss([loc, cls], bboxes, labels, gathered=True)
+            loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
@@ -163,13 +166,15 @@ class SingleShotDetector(object):
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
-                feat_list, loc, cls = self.det_net(inputs)
+                outputs = self.det_net(inputs)
+                feat_list, loc, cls = self.module_utilizer.gather(outputs)
+
                 bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                            batch_gt_labels, input_size)
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
-                loss = self.det_loss([loc, cls], bboxes, labels)
+                loss = self.det_loss(outputs, bboxes, labels)
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,

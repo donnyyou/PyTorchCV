@@ -73,7 +73,7 @@ class SSDFocalLoss(nn.Module):
           (tensor) loss = SmoothL1Loss(loc_preds, loc_targets) + FocalLoss(cls_preds, cls_targets).
 
         """
-        loc_preds, cls_preds = outputs
+        _, loc_preds, cls_preds = outputs
         loc_targets, cls_targets = targets
 
         pos = cls_targets > 0  # [N,#anchors]
@@ -163,7 +163,7 @@ class SSDMultiBoxLoss(nn.Module):
                     + CrossEntropyLoss(neg_conf_preds, neg_conf_targets)
 
         """
-        loc_preds, conf_preds = outputs
+        _, loc_preds, conf_preds = outputs
         loc_targets, conf_targets = targets
         batch_size, num_boxes, _ = loc_preds.size()
 
