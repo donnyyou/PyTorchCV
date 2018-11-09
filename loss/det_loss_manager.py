@@ -33,4 +33,8 @@ class DetLossManager(object):
 
         loss = DET_LOSS_DICT[key](self.configer)
 
+        if self.configer.get('network', 'memory_balance'):
+            from extensions.layers.syncbn.parallel import DataParallelCriterion
+            loss = DataParallelCriterion(loss)
+
         return loss

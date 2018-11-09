@@ -33,6 +33,7 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
         self.configer.add_key_value(['network', 'parallel'], False)
+        self.configer.add_key_value(['network', 'gathered'], True)
         if self.configer.is_empty('network', 'bn_type'):
             self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
 
@@ -49,19 +50,12 @@ class ModuleUtilizer(object):
 
         return return_list[0] if len(params) == 1 else return_list
 
-    def make_loss_parallel(self, loss):
-        if self.configer.get('network', 'memory_balance'):
-            from extensions.layers.syncbn.parallel import DataParallelCriterion
-            loss = DataParallelCriterion(loss, bn_type=self.configer.get('network', 'bn_type'))
-            return loss
-
-        return loss
-
     def _make_parallel(self, net):
-        if self.configer.get('network', 'bn_type') == 'syncbn':
+        if self.configer.get('network', 'bn_type') == 'syncbn' or self.configer.get('network', 'memory_balance'):
             assert len(self.configer.get('gpu')) > 1
             from extensions.layers.syncbn.parallel import DataParallelModel
             self.configer.update_value(['network', 'parallel'], True)
+            self.configer.update_value(['network', 'gathered'], False)
             return DataParallelModel(net)
 
         elif len(self.configer.get('gpu')) > 1:
@@ -206,14 +200,13 @@ class ModuleUtilizer(object):
         Gathers tensors from different GPUs on a specified device
           (-1 means the CPU).
         """
-        if self.configer.get('network', 'bn_type') == 'syncbn':
+        if not self.configer.get('network', 'gathered'):
             if target_device is None:
                 target_device = list(range(torch.cuda.device_count()))[0]
 
             return torch_gather(outputs, target_device, dim=dim)
 
         else:
-            assert isinstance(outputs, torch.Tensor) or isinstance(outputs[0], torch.Tensor)
             return outputs
 
 
