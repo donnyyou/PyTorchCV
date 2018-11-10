@@ -57,17 +57,25 @@ class SingleShotDetector(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
-
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
-
         self.det_loss = self.det_loss_manager.get_det_loss('ssd_multibox_loss')
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_10 = []
+        params_dict = dict(self.det_net.named_parameters())
+        for key, value in params_dict.items():
+            if 'backbone' not in key:
+                lr_10.append(value)
+            else:
+                lr_1.append(value)
 
-        return self.det_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr')}]
+
+        return params
 
     def warm_lr(self, batch_len):
         """Sets the learning rate
@@ -75,13 +83,15 @@ class SingleShotDetector(object):
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
-        warm_lr = self.configer.get('lr', 'warm')['warm_lr']
         if self.configer.get('iters') < warm_iters:
-            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('iters') / warm_iters
-            lr = warm_lr + lr_delta
+            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
 
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] = lr
+            base_lr_list = self.scheduler.get_lr()
+            for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
+                param_group['lr'] = base_lr * (lr_ratio ** 4)
+
+            if self.configer.get('lr', 'warm')['freeze_backbone']:
+                self.optimizer.param_groups[0]['lr'] = 0.0
 
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))

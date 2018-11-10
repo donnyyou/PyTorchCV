@@ -21,6 +21,7 @@
     "val": {
       "batch_size": 32,
       "use_07_metric": false,
+      "start_val": 20,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
@@ -143,10 +144,10 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_lr": 0.000001,
-        "warm_epoch": 6
+        "warm_epoch": 1,
+        "freeze_backbone": true
       },
-      "base_lr": 0.004,
+      "base_lr": 0.001,
       "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
@@ -179,8 +180,9 @@
       "mode": "union",
       "max_threshold": 0.45
     },
-    "vis": {
-      "conf_threshold": 0.01,
+    "res": {
+      "val_conf_thre": 0.01,
+      "vis_conf_thre": 0.5,
       "max_per_image": 200,
       "cls_keep_num": 50
     }

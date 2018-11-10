@@ -4,7 +4,7 @@
     "method": "single_shot_detector",
     "data": {
       "num_classes": 81,
-      "data_dir": "~/DataSet/COCO_INS_2014",
+      "data_dir": "~/DataSet/COCO_INS",
       "image_tool": "cv2",
       "input_mode": "BGR",
       "keep_difficult": false,
@@ -143,10 +143,10 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_lr": 0.000001,
-        "warm_epoch": 6
+        "warm_epoch": 1,
+        "freeze_backbone": true
       },
-      "base_lr": 0.004,
+      "base_lr": 0.001,
       "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
@@ -179,8 +179,9 @@
       "mode": "union",
       "max_threshold": 0.45
     },
-    "vis": {
-      "conf_threshold": 0.01,
+    "res": {
+      "val_conf_thre": 0.01,
+      "vis_conf_thre": 0.5,
       "max_per_image": 200,
       "cls_keep_num": 50
     }
