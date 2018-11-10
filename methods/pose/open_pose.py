@@ -74,7 +74,7 @@ class OpenPose(object):
         lr_8 = []
         params_dict = dict(self.pose_net.named_parameters())
         for key, value in params_dict.items():
-            if 'backbone.' not in key:
+            if 'backbone' not in key:
                 if key[-4:] == 'bias':
                     lr_8.append(value)
                 else:

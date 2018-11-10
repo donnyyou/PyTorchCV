@@ -70,7 +70,7 @@ class YOLOv3(object):
         lr_10 = []
         params_dict = dict(self.det_net.named_parameters())
         for key, value in params_dict.items():
-            if 'backbone.' not in key:
+            if 'backbone' not in key:
                 lr_10.append(value)
             else:
                 lr_1.append(value)

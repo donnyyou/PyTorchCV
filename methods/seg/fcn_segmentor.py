@@ -66,7 +66,7 @@ class FCNSegmentor(object):
         lr_10 = []
         params_dict = dict(self.seg_net.named_parameters())
         for key, value in params_dict.items():
-            if 'backbone.' not in key:
+            if 'backbone' not in key:
                 lr_10.append(value)
             else:
                 lr_1.append(value)
