@@ -40,14 +40,14 @@ class SSDPriorBoxLayer(object):
                 s_w = self.configer.get('gt', 'cur_anchor_sizes')[i]
                 s_h = self.configer.get('gt', 'cur_anchor_sizes')[i]
                 boxes.append((stride_offset_w, stride_offset_h, s_w, s_h))
-                for ar in self.configer.get('gt', 'aspect_ratio_list')[i]:
-                    boxes.append((stride_offset_w, stride_offset_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
-                    boxes.append((stride_offset_w, stride_offset_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
-
                 extra_s = math.sqrt(self.configer.get('gt', 'cur_anchor_sizes')[i]
                                     * self.configer.get('gt', 'cur_anchor_sizes')[i + 1])
 
                 boxes.append((stride_offset_w, stride_offset_h, extra_s, extra_s))
+
+                for ar in self.configer.get('gt', 'aspect_ratio_list')[i]:
+                    boxes.append((stride_offset_w, stride_offset_h, s_w * math.sqrt(ar), s_h / math.sqrt(ar)))
+                    boxes.append((stride_offset_w, stride_offset_h, s_w / math.sqrt(ar), s_h * math.sqrt(ar)))
 
             elif self.configer.get('gt', 'anchor_method') == 'retina':
                 s_w = self.configer.get('gt', 'cur_anchor_sizes')[i]
