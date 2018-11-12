@@ -13,6 +13,8 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
+from utils.tools.logger import Logger as Log
+
 
 NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons']
 
@@ -138,6 +140,22 @@ class CollateFunctions(object):
                 if 'pad_mode' not in trans_dict or trans_dict['pad_mode'] == 'random':
                     left_pad = random.randint(0, pad_width)  # pad_left
                     up_pad = random.randint(0, pad_height)  # pad_up
+
+                elif trans_dict['pad_mode'] == 'pad_left_up':
+                    left_pad = pad_width
+                    up_pad = pad_height
+
+                elif trans_dict['pad_mode'] == 'pad_right_down':
+                    left_pad = 0
+                    up_pad = 0
+
+                elif trans_dict['pad_mode'] == 'pad_center':
+                    left_pad = pad_width // 2
+                    up_pad = pad_height // 2
+
+                else:
+                    Log.error('Invalid pad mode: {}'.format(trans_dict['pad_mode']))
+                    exit(1)
 
                 expand_image = torch.zeros((channels, target_height, target_width))
                 expand_image[:, up_pad:up_pad + height, left_pad:left_pad + width] = img_list[i]

@@ -35,9 +35,11 @@ class _ConvBatchNormReluBlock(nn.Module):
 class PPMBilinearDeepsup(nn.Module):
     def __init__(self, num_class=150, fc_dim=4096, bn_type=None):
         super(PPMBilinearDeepsup, self).__init__()
+        self.bn_type = bn_type
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
-        assert bn_type == 'syncbn' or not self.training
+        # assert bn_type == 'syncbn' or not self.training
+        # Torch BN can't handle feature map size with 1x1.
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
@@ -60,6 +62,7 @@ class PPMBilinearDeepsup(nn.Module):
         self.dropout_deepsup = nn.Dropout2d(0.1)
 
     def forward(self, conv_out):
+        assert self.bn_type == 'syncbn' or not self.training
         conv5, conv4 = conv_out
         input_size = conv5.size()
         ppm_out = [conv5]
