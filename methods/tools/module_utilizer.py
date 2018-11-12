@@ -232,7 +232,3 @@ class ModuleUtilizer(object):
                 param_group['lr'] = base_lr * (lr_ratio ** 4)
 
         return optimizer
-
-
-
-

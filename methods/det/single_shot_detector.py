@@ -165,7 +165,7 @@ class SingleShotDetector(object):
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
-                loss = self.det_loss(outputs, bboxes, labels)
+                loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,
