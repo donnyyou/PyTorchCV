@@ -99,12 +99,12 @@ class PSPNet(nn.Sequential):
         self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features,
                                           bn_type=self.configer.get('network', 'bn_type'))
 
-    def forward(self, x):
-        low = self.low_features(x)
+    def forward(self, x_):
+        low = self.low_features(x_)
         aux = self.high_features1(low)
         x = self.high_features2(aux)
         x, aux = self.decoder([x, aux])
-        x = F.interpolate(x, scale_factor=8, mode="bilinear", align_corners=False)
+        x = F.interpolate(x, size=(x_.size(2), x_.size(3)), mode="bilinear", align_corners=False)
 
         return x, aux
 

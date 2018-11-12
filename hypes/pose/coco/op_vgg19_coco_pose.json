@@ -39,7 +39,8 @@
         "ratio": 1.0,
         "scale_range": [0.5, 1.1],
         "method": "focus",
-        "target_size": [368, 368]
+        "target_size": [368, 368],
+        "aspect_range": [0.9, 1.1]
       },
       "random_rotate": {
         "ratio": 0.5,

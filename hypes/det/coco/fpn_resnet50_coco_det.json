@@ -38,11 +38,18 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [800, 1333]
-      },
+        "resize_bound": [800, 1333],
+        "aspect_range": [0.9, 1.1]
+      }
     },
     "val_trans": {
-      "trans_seq": []
+      "trans_seq": ["random_resize"],
+      "random_resize": {
+        "ratio": 1.0,
+        "method": "bound",
+        "resize_bound": [800, 1333],
+        "aspect_range": [0.9, 1.1]
+      }
     },
     "normalize": {
       "div_value": 255,

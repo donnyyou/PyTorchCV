@@ -34,7 +34,8 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [600, 1000]
+        "resize_bound": [600, 1000],
+        "aspect_range": [0.9, 1.1]
       }
     },
     "val_trans": {
@@ -42,17 +43,15 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [600, 1000]
+        "resize_bound": [600, 1000],
+        "aspect_range": [1.0, 1.0]
       }
     },
-    "trans_params": {
-
-      "normalize": {
-        "div_value": 1.0,
-        "mean_value": [123, 116, 103],
-        "mean": [122.7717, 115.9465, 102.9801],
-        "std": [1.0, 1.0, 1.0]
-      }
+    "normalize": {
+      "div_value": 1.0,
+      "mean_value": [123, 116, 103],
+      "mean": [122.7717, 115.9465, 102.9801],
+      "std": [1.0, 1.0, 1.0]
     },
     "rpn": {
       "head_index_list": [0],

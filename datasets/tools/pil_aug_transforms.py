@@ -386,11 +386,11 @@ class RandomResizedCrop(object):
         interpolation: Default: PIL.Image.BILINEAR
     """
 
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR):
+    def __init__(self, size, scale_range=(0.08, 1.0), aspect_range=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR):
         self.size = size
         self.interpolation = interpolation
-        self.scale = scale
-        self.ratio = ratio
+        self.scale = scale_range
+        self.ratio = aspect_range
 
     @staticmethod
     def get_params(img, scale, ratio):
@@ -450,9 +450,10 @@ class RandomResize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_range=(0.75, 1.25), target_size=None,
+    def __init__(self, scale_range=(0.75, 1.25), aspect_range=(0.9, 1.1), target_size=None,
                  resize_bound=None, method='random', resize_ratio=0.5):
         self.scale_range = scale_range
+        self.aspect_range = aspect_range
         self.resize_bound = resize_bound
         self.method = method
         self.ratio = resize_ratio
@@ -514,22 +515,28 @@ class RandomResize(object):
 
         width, height = img.size
         if random.random() < self.ratio:
-            scale_ratio = self.get_scale(img.size, bboxes)
+            scale_ratio = self.get_scale([width, height], bboxes)
+            aspect_ratio = random.uniform(*self.aspect_range)
+            w_scale_ratio = math.sqrt(aspect_ratio) * scale_ratio
+            h_scale_ratio = math.sqrt(1.0 / aspect_ratio) * scale_ratio
         else:
-            scale_ratio = 1.0
+            w_scale_ratio, h_scale_ratio = 1.0, 1.0
 
         if kpts is not None and kpts.size > 0:
-            kpts[:, :, :2] *= scale_ratio
+            kpts[:, :, 0] *= w_scale_ratio
+            kpts[:, :, 1] *= h_scale_ratio
 
         if bboxes is not None and bboxes.size > 0:
-            bboxes *= scale_ratio
+            bboxes[:, 0::2] *= w_scale_ratio
+            bboxes[:, 1::2] *= h_scale_ratio
 
         if polygons is not None:
             for object_id in range(len(polygons)):
                 for polygon_id in range(len(polygons[object_id])):
-                    polygons[object_id][polygon_id] *= scale_ratio
+                    polygons[object_id][polygon_id][0::2] *= w_scale_ratio
+                    polygons[object_id][polygon_id][1::2] *= h_scale_ratio
 
-        converted_size = (int(width*scale_ratio), int(height*scale_ratio))
+        converted_size = (int(width * w_scale_ratio), int(height * h_scale_ratio))
 
         img = img.resize(converted_size, Image.BILINEAR)
         if labelmap is not None:
@@ -1209,6 +1216,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
 
@@ -1216,6 +1224,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         target_size=self.configer.get('train_trans', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
@@ -1223,6 +1232,7 @@ class PILAugCompose(object):
                 elif self.configer.get('train_trans', 'random_resize')['method'] == 'bound':
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_bound=self.configer.get('train_trans', 'random_resize')['resize_bound'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
@@ -1278,7 +1288,9 @@ class PILAugCompose(object):
 
             if 'random_resized_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_resized_crop'] = RandomResizedCrop(
-                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size']
+                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size'],
+                    scale_range=self.configer.get('train_trans', 'random_resized_crop')['scale_range'],
+                    aspect_range=self.configer.get('train_trans', 'random_resized_crop')['aspect_range']
                 )
 
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
@@ -1373,6 +1385,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )
 
@@ -1380,6 +1393,7 @@ class PILAugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         target_size=self.configer.get('val_trans', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )
@@ -1387,6 +1401,7 @@ class PILAugCompose(object):
                 elif self.configer.get('val_trans', 'random_resize')['method'] == 'bound':
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_bound=self.configer.get('val_trans', 'random_resize')['resize_bound'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )

@@ -36,7 +36,8 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [600, 1000]
+        "resize_bound": [600, 1000],
+        "aspect_range": [0.9, 1.1]
       },
       "random_crop":{
         "ratio": 1.0,
@@ -52,7 +53,8 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [600, 1000]
+        "resize_bound": [600, 1000],
+        "aspect_range": [1.0, 1.0]
       }
     },
     "normalize": {
