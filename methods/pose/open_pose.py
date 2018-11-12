@@ -32,6 +32,7 @@ class OpenPose(object):
         self.configer = configer
         self.batch_time = AverageMeter()
         self.data_time = AverageMeter()
+        self.train_schedule_loss = AverageMeter()
         self.train_losses = AverageMeter()
         self.train_loss_heatmap = AverageMeter()
         self.train_loss_associate = AverageMeter()
@@ -99,8 +100,8 @@ class OpenPose(object):
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
-        self.scheduler.step(self.configer.get('epoch'))
-
+        self.scheduler.step(self.train_schedule_loss.avg, epoch=self.configer.get('epoch'))
+        self.train_schedule_loss.reset()
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
             if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
@@ -125,6 +126,7 @@ class OpenPose(object):
             loss = 2.0 * loss_heatmap + loss_associate
 
             self.train_losses.update(loss.item(), inputs.size(0))
+            self.train_schedule_loss.update(loss.item(), inputs.size(0))
             self.train_loss_heatmap.update(loss_heatmap.item(), inputs.size(0))
             self.train_loss_associate.update(loss_associate.item(), inputs.size(0))
 

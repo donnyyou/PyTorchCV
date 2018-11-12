@@ -120,7 +120,7 @@
         "freeze_backbone": true
       },
       "base_lr": 0.00002,
-      "lr_policy": "step",
+      "lr_policy": "plateau",
       "step": {
         "gamma": 0.333,
         "step_size": 50
