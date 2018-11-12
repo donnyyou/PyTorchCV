@@ -181,7 +181,8 @@
       "mode": "union",
       "max_threshold": 0.45
     },
-    "vis": {
-      "obj_threshold": 0.5
+    "res": {
+      "val_conf_thre": 0.5,
+      "vis_conf_thre": 0.5
     }
 }

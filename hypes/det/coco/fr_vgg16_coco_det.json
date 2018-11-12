@@ -176,8 +176,9 @@
       "mode": "union",
       "overlap_threshold": 0.45
     },
-    "vis": {
-      "conf_threshold": 0.01
+    "res": {
+      "val_conf_thre": 0.01,
+      "vis_conf_thre": 0.5
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

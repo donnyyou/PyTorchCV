@@ -80,7 +80,7 @@ class FastRCNNTest(object):
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
-                                                   conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                   conf_threshold=self.configer.get('res', 'vis_conf_thre'))
         cv2.imwrite(vis_path, image_canvas)
         cv2.imwrite(raw_path, ori_img_bgr)
 
@@ -133,7 +133,7 @@ class FastRCNNTest(object):
             tmp_cls_label = cls_label[start_index:start_index+test_rois_num[i]]
             start_index += test_rois_num[i]
 
-            mask = (tmp_cls_prob > configer.get('vis', 'conf_threshold')) & (tmp_cls_label > 0)
+            mask = (tmp_cls_prob > configer.get('res', 'val_conf_thre')) & (tmp_cls_label > 0)
 
             tmp_dst_bbox = tmp_dst_bbox[mask].contiguous().view(-1, 4)
             if tmp_dst_bbox.numel() == 0:
