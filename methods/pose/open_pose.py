@@ -87,8 +87,8 @@ class OpenPose(object):
 
         params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
                   {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr') * 2., 'weight_decay': 0.0},
-                  {'params': lr_4, 'lr': self.configer.get('lr', 'base_lr') * 4.},
-                  {'params': lr_8, 'lr': self.configer.get('lr', 'base_lr') * 8., 'weight_decay': 0.0}]
+                  {'params': lr_4, 'lr': self.configer.get('lr', 'base_lr') * 2.},
+                  {'params': lr_8, 'lr': self.configer.get('lr', 'base_lr') * 4., 'weight_decay': 0.0}]
 
         return params
 
