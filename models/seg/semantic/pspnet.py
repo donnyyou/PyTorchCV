@@ -37,21 +37,14 @@ class PPMBilinearDeepsup(nn.Module):
         super(PPMBilinearDeepsup, self).__init__()
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
+        assert bn_type == 'syncbn' or not self.training
         for scale in pool_scales:
-            if bn_type == 'syncbn' or scale > 1:
-                self.ppm.append(nn.Sequential(
-                    nn.AdaptiveAvgPool2d(scale),
-                    nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
-                    ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
-                    nn.ReLU(inplace=True)
-                ))
-            else: # Torch BN can't handle spatial size with 1.
-                self.ppm.append(nn.Sequential(
-                    nn.AdaptiveAvgPool2d(scale),
-                    nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
-                    # ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
-                    nn.ReLU(inplace=True)
-                ))
+            self.ppm.append(nn.Sequential(
+                nn.AdaptiveAvgPool2d(scale),
+                nn.Conv2d(fc_dim, 512, kernel_size=1, bias=False),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
+                nn.ReLU(inplace=True)
+            ))
 
         self.ppm = nn.ModuleList(self.ppm)
         self.cbr_deepsup = _ConvBatchNormReluBlock(fc_dim // 2, fc_dim // 4, 3, 1, bn_type=bn_type)
