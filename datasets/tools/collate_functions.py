@@ -64,13 +64,24 @@ class CollateFunctions(object):
 
         if trans_dict['size_mode'] == 'fix_size':
             target_width, target_height = trans_dict['input_size']
+
+        elif trans_dict['size_mode'] == 'stride_size':
+            w = img_list[0].size(2)
+            h = img_list[0].size(1)
+            pad_w = 0 if (w % trans_dict['stride'] == 0) else trans_dict['stride'] - (w % trans_dict['stride'])  # right
+            pad_h = 0 if (h % trans_dict['stride'] == 0) else trans_dict['stride'] - (h % trans_dict['stride'])  # down
+            target_width = w + pad_w
+            target_height = h + pad_h
+
         elif trans_dict['size_mode'] == 'multi_size':
             ms_input_size = trans_dict['ms_input_size']
             target_width, target_height = ms_input_size[random.randint(0, len(ms_input_size) - 1)]
+
         elif trans_dict['size_mode'] == 'max_size':
             border_width = [img.size(2) for img in img_list]
             border_height = [img.size(1) for img in img_list]
             target_width, target_height = max(border_width), max(border_height)
+
         else:
             raise NotImplementedError('Size Mode {} is invalid!'.format(trans_dict['size_mode']))
 
@@ -122,8 +133,11 @@ class CollateFunctions(object):
             assert pad_height >= 0 and pad_width >= 0
             if pad_width > 0 or pad_height > 0:
                 assert trans_dict['align_method'] in ['only_pad', 'scale_and_pad']
-                left_pad = random.randint(0, pad_width)  # pad_left
-                up_pad = random.randint(0, pad_height)  # pad_up
+                left_pad = 0
+                up_pad = 0
+                if 'pad_mode' not in trans_dict or trans_dict['pad_mode'] == 'random':
+                    left_pad = random.randint(0, pad_width)  # pad_left
+                    up_pad = random.randint(0, pad_height)  # pad_up
 
                 expand_image = torch.zeros((channels, target_height, target_width))
                 expand_image[:, up_pad:up_pad + height, left_pad:left_pad + width] = img_list[i]
