@@ -120,7 +120,7 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_epoch": 2,
+        "warm_epoch": 6,
         "freeze_backbone": false
       },
       "base_lr": 0.004,
