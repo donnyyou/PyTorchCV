@@ -212,23 +212,21 @@ class ModuleUtilizer(object):
 
         return [param_group['lr'] for param_group in optimizer.param_groups]
 
-    def warm_lr(self, batch_len, scheduler, optimizer, backbone_list=(0, )):
+    def warm_lr(self, iters, batch_len, scheduler, optimizer, backbone_list=(0, )):
         """Sets the learning rate
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
-        if self.configer.get('lr', 'warm')['freeze_backbone']:
-            for backbone_index in backbone_list:
-                optimizer.param_groups[backbone_index]['lr'] = 0.0
+        if iters < warm_iters:
+            if self.configer.get('lr', 'warm')['freeze_backbone']:
+                for backbone_index in backbone_list:
+                    optimizer.param_groups[backbone_index]['lr'] = 0.0
 
-            return optimizer
+            else:
+                lr_ratio = (self.configer.get('iters') + 1) / warm_iters
 
-        if self.configer.get('iters') < warm_iters:
-            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
+                base_lr_list = scheduler.get_lr()
+                for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
+                    param_group['lr'] = base_lr * (lr_ratio ** 4)
 
-            base_lr_list = scheduler.get_lr()
-            for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
-                param_group['lr'] = base_lr * (lr_ratio ** 4)
-
-        return optimizer
