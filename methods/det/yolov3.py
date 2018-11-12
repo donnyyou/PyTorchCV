@@ -80,24 +80,6 @@ class YOLOv3(object):
 
         return params
 
-    def warm_lr(self, batch_len):
-        """Sets the learning rate
-        # Adapted from PyTorch Imagenet example:
-        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
-        """
-        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
-        if self.configer.get('iters') < warm_iters:
-            lr_ratio = (self.configer.get('iters') + 1) / warm_iters
-
-            base_lr_list = self.scheduler.get_lr()
-            for param_group, base_lr in zip(self.optimizer.param_groups, base_lr_list):
-                param_group['lr'] = base_lr * (lr_ratio ** 4)
-
-            self.optimizer.param_groups[0]['lr'] = 0.0
-
-            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
-                Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
-
     def __train(self):
         """
           Train function of every epoch during train phase.
@@ -111,7 +93,7 @@ class YOLOv3(object):
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
             if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-                self.warm_lr(len(self.train_loader))
+                self.optimizer = self.module_utilizer.warm_lr(len(self.train_loader), self.scheduler, self.optimizer)
 
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
@@ -150,7 +132,7 @@ class YOLOv3(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.scheduler.get_lr(), batch_time=self.batch_time,
+                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()

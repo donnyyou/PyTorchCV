@@ -121,7 +121,7 @@
       "is_warm": true,
       "warm": {
         "warm_epoch": 2,
-        "freeze_backbone": true
+        "freeze_backbone": false
       },
       "base_lr": 0.004,
       "lr_policy": "multistep",
