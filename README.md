@@ -60,7 +60,7 @@ This repository provides source code for some deep learning based cv problems. W
 | Model | Backbone | Training data  | Testing data | mAP | FPS  | Setting |
 |--------|:-------:|:---------:|:------:|:------:|:------:|:------:|
 | [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VGG16 | VOC07+12 trainval | VOC07 test | 0.772 | - | - |
-| [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | [VGG16](https://drive.google.com/open?id=1nM0UwmqR4lIHzmRWvs71jfP_gAekjuKy) | VOC07+12 trainval | VOC07 test | 0.786 | - | [SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json) |
+| [SSD-300 Ours](https://drive.google.com/open?id=15J5blVyZq7lqCePh-Q8S2pxim3-f_8LP) | [VGG16](https://drive.google.com/open?id=1nM0UwmqR4lIHzmRWvs71jfP_gAekjuKy) | VOC07+12 trainval | VOC07 test | 0.786 | - | [SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json) |
 | [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VGG16 | VOC07+12 trainval | VOC07 test | 0.798 | - | - |
 | [SSD-512 Ours](https://drive.google.com/open?id=1eQ8eEOPVqHxH0hzenmzXDOF-8Zrvv8lg) | [VGG16](https://drive.google.com/open?id=1nM0UwmqR4lIHzmRWvs71jfP_gAekjuKy) | VOC07+12 trainval | VOC07 test | 0.804 | - | [SSD512](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg512_voc_det.json) |
 
