@@ -52,12 +52,12 @@ class FCNSegmentorTest(object):
                                                 input_size=self.configer.get('test', 'input_size'),
                                                 scale=scale)
 
-        elif not self.configer.get('test', 'min_side_length'):
+        elif not self.configer.is_empty('test', 'min_side_length'):
             image = self.blob_helper.make_input(image=ori_image,
                                                 min_side_length=self.configer.get('test', 'min_side_length'),
                                                 scale=scale)
 
-        elif not self.configer.get('test', 'max_side_length'):
+        elif not self.configer.is_empty('test', 'max_side_length'):
             image = self.blob_helper.make_input(image=ori_image,
                                                 min_side_length=self.configer.get('test', 'max_side_length'),
                                                 scale=scale)
@@ -66,7 +66,19 @@ class FCNSegmentorTest(object):
             Log.error('Test setting error')
             exit(1)
 
-        return image
+        b, c, h, w = image.size()
+        border_hw = [h, w]
+        if not self.configer.is_empty('test', 'fit_stride'):
+            stride = self.configer.get('test', 'fit_stride')
+
+            pad_w = 0 if (w % stride == 0) else stride - (w % stride)  # right
+            pad_h = 0 if (h % stride == 0) else stride - (h % stride)  # down
+
+            expand_image = torch.zeros((b, c, h + pad_h, w + pad_w)).to(image.device)
+            expand_image[:, :, 0:h, 0:w] = image
+            image = expand_image
+
+        return image, border_hw
 
     def __test_img(self, image_path, label_path, vis_path, raw_path):
         Log.info('Image Path: {}'.format(image_path))
@@ -111,16 +123,17 @@ class FCNSegmentorTest(object):
     def ss_test(self, ori_image):
         ori_width, ori_height = ImageHelper.get_size(ori_image)
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
-        image = self._get_blob(ori_image, scale=1.0)
+        image, border_hw = self._get_blob(ori_image, scale=1.0)
         results = self._predict(image)
-        results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+        results = cv2.resize(results[:border_hw[0], :border_hw[1]],
+                             (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
         total_logits += results
         return total_logits
 
     def sscrop_test(self, ori_image):
         ori_width, ori_height = ImageHelper.get_size(ori_image)
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
-        image = self._get_blob(ori_image, scale=1.0)
+        image, _ = self._get_blob(ori_image, scale=1.0)
         crop_size = self.configer.get('test', 'crop_size')
         if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
             results = self._crop_predict(image, crop_size)
@@ -135,7 +148,7 @@ class FCNSegmentorTest(object):
         ori_width, ori_height = ImageHelper.get_size(ori_image)
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
         for scale in self.configer.get('test', 'scale_search'):
-            image = self._get_blob(ori_image, scale=scale)
+            image, _ = self._get_blob(ori_image, scale=scale)
             crop_size = self.configer.get('test', 'crop_size')
             if image.size()[3] > crop_size[0] and image.size()[2] > crop_size[1]:
                 results = self._crop_predict(image, crop_size)
@@ -151,9 +164,10 @@ class FCNSegmentorTest(object):
         ori_width, ori_height = ImageHelper.get_size(ori_image)
         total_logits = np.zeros((ori_height, ori_width, self.configer.get('data', 'num_classes')), np.float32)
         for scale in self.configer.get('test', 'scale_search'):
-            image = self._get_blob(ori_image, scale=scale)
+            image, border_hw = self._get_blob(ori_image, scale=scale)
             results = self._predict(image)
-            results = cv2.resize(results, (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
+            results = cv2.resize(results[:-border_hw[0], :-border_hw[1]],
+                                 (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
             total_logits += results
 
         if self.configer.get('data', 'image_tool') == 'cv2':

@@ -51,8 +51,8 @@ This repository provides source code for some deep learning based cv problems. W
 
 | Model | Backbone | Training data  | Testing data | mIOU | Pixel Acc | Setting |
 |--------|:---------:|:------:|:------:|:------:|:------:|:------:|
-| PSPNet Origin | 3x3-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | - |
-| PSPNet Ours | 7x7-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | [PSPNet](https://github.com/youansheng/PyTorchCV/blob/master/hypes/seg/ade20k/fs_pspnet_ade20k_seg.json) |
+| [PSPNet Origin](https://github.com/hszhao/PSPNet) | 3x3-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | - |
+| [PSPNet Ours](https://drive.google.com/open?id=1Q6oYBpq9Y53z_CJz7Km9BaiSVJjcHP4h) | 7x7-ResNet101 | ADE20K train | ADE20K val | 44.18 | 80.91 | [PSPNet](https://github.com/youansheng/PyTorchCV/blob/master/hypes/seg/ade20k/fs_pspnet_ade20k_seg.json) |
 
 #### Object Detection
 - SSD: Single Shot MultiBox Detector
