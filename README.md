@@ -52,24 +52,24 @@ This repository provides source code for some deep learning based cv problems. W
 | Model | Backbone | Training data  | Testing data | mIOU | Pixel Acc | Setting |
 |--------|:---------:|:------:|:------:|:------:|:------:|:------:|
 | [PSPNet Origin](https://github.com/hszhao/PSPNet) | 3x3-ResNet101 | ADE20K train | ADE20K val | 41.96 | 80.64 | - |
-| [PSPNet Ours](https://drive.google.com/open?id=1Q6oYBpq9Y53z_CJz7Km9BaiSVJjcHP4h) | 7x7-ResNet101 | ADE20K train | ADE20K val | 44.18 | 80.91 | [PSPNet](https://github.com/youansheng/PyTorchCV/blob/master/hypes/seg/ade20k/fs_pspnet_ade20k_seg.json) |
+| [PSPNet Ours](https://drive.google.com/open?id=1Q6oYBpq9Y53z_CJz7Km9BaiSVJjcHP4h) | [7x7-ResNet101](https://drive.google.com/open?id=1ROewKyaGPynox_-a50wHkSv1-0jYWyvc) | ADE20K train | ADE20K val | 44.18 | 80.91 | [PSPNet](https://github.com/youansheng/PyTorchCV/blob/master/hypes/seg/ade20k/fs_pspnet_ade20k_seg.json) |
 
 #### Object Detection
 - SSD: Single Shot MultiBox Detector
 
-| Model | Training data  | Testing data | mAP | FPS  | Setting |
-|--------|:---------:|:------:|:------:|:------:|:------:|
-| [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.772 | - | - |
-| [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | VOC07+12 trainval | VOC07 test | 0.786 | - | [SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json) |
-| [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VOC07+12 trainval | VOC07 test | 0.798 | - | - |
-| [SSD-512 Ours](https://drive.google.com/open?id=1eQ8eEOPVqHxH0hzenmzXDOF-8Zrvv8lg) | VOC07+12 trainval | VOC07 test | 0.804 | - | [SSD512](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg512_voc_det.json) |
+| Model | Backbone | Training data  | Testing data | mAP | FPS  | Setting |
+|--------|:-------:|:---------:|:------:|:------:|:------:|:------:|
+| [SSD-300 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VGG16 | VOC07+12 trainval | VOC07 test | 0.772 | - | - |
+| [SSD-300 Ours](https://drive.google.com/open?id=1iQfUe7u3kAMHmn0yEa9SRAJFj3Y5h0Dy) | [VGG16](https://drive.google.com/open?id=1nM0UwmqR4lIHzmRWvs71jfP_gAekjuKy) | VOC07+12 trainval | VOC07 test | 0.786 | - | [SSD300](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg300_voc_det.json) |
+| [SSD-512 Origin](https://github.com/weiliu89/caffe/tree/ssd) | VGG16 | VOC07+12 trainval | VOC07 test | 0.798 | - | - |
+| [SSD-512 Ours](https://drive.google.com/open?id=1eQ8eEOPVqHxH0hzenmzXDOF-8Zrvv8lg) | [VGG16](https://drive.google.com/open?id=1nM0UwmqR4lIHzmRWvs71jfP_gAekjuKy) | VOC07+12 trainval | VOC07 test | 0.804 | - | [SSD512](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/ssd_vgg512_voc_det.json) |
 
 - Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks
 
-| Model |  Training data  | Testing data | mAP | FPS  | Setting |
-|--------|:---------:|:------:|:------:|:------:|:------:|
-| [Faster R-CNN Origin](https://github.com/rbgirshick/py-faster-rcnn) | VOC07 trainval | VOC07 test | 0.699 | - | - |
-| [Faster R-CNN Ours](https://drive.google.com/open?id=15SfklRiI1McVWEq9EAceznK-9sxXSQR4) | VOC07 trainval | VOC07 test | 0.706 | - | [Faster R-CNN](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json) |
+| Model | Backbone |  Training data  | Testing data | mAP | FPS  | Setting |
+|--------|:--------:|:---------:|:------:|:------:|:------:|:------:|
+| [Faster R-CNN Origin](https://github.com/rbgirshick/py-faster-rcnn) | VGG16 | VOC07 trainval | VOC07 test | 0.699 | - | - |
+| [Faster R-CNN Ours](https://drive.google.com/open?id=15SfklRiI1McVWEq9EAceznK-9sxXSQR4) | [VGG16](https://drive.google.com/open?id=1ZL9SS9KRzsDQhMe8kyPQ1LHA60wx_Vcj) | VOC07 trainval | VOC07 test | 0.706 | - | [Faster R-CNN](https://github.com/youansheng/PyTorchCV/blob/master/hypes/det/voc/fr_vgg16_voc_det.json) |
 
 - YOLOv3: An Incremental Improvement
 
