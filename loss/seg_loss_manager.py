@@ -30,7 +30,7 @@ class SegLossManager(object):
 
         loss = SEG_LOSS_DICT[key](self.configer)
 
-        if self.configer.get('network', 'loss_balance'):
+        if self.configer.get('network', 'loss_balance') and len(self.configer.get('gpu')) > 1:
             from extensions.layers.syncbn.parallel import DataParallelCriterion
             loss = DataParallelCriterion(loss)
 
