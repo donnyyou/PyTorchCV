@@ -175,8 +175,9 @@ class FCNSegmentorTest(object):
         else:
             mirror_image = ori_image.transpose(Image.FLIP_LEFT_RIGHT)
 
-        image = self._get_blob(mirror_image, scale=1.0)
+        image, border_hw = self._get_blob(mirror_image, scale=1.0)
         results = self._predict(image)
+        results = results[:-border_hw[0], :-border_hw[1]]
         results = cv2.resize(results[:, ::-1], (ori_width, ori_height), interpolation=cv2.INTER_CUBIC)
         total_logits += results
         return total_logits
