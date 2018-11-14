@@ -14,6 +14,7 @@ import functools
 import torch
 from torch.autograd import Variable, Function
 import torch.cuda.comm as comm
+from torch.nn.parallel.scatter_gather import gather
 from torch.nn.parallel.data_parallel import DataParallel
 from torch.nn.parallel.parallel_apply import get_a_var
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
@@ -96,7 +97,14 @@ class DataParallelModel(DataParallel):
         >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
         >>> y = net(x)
     """
+    def __init__(self, module, device_ids=None, output_device=None, dim=0, gather=True):
+        super(DataParallelModel, self).__init__(module, device_ids, output_device, dim)
+        self.gather = gather
+
     def gather(self, outputs, output_device):
+        if self.gather:
+            return gather(outputs, output_device, dim=self.dim)
+
         return outputs
 
     def replicate(self, module, device_ids):
