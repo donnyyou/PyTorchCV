@@ -102,10 +102,10 @@ class OpenPoseTest(object):
         json_dict['image_width'] = width
         object_list = list()
         for n in range(len(subset)):
-            if subset[n][-1] < self.configer.get('vis', 'num_threshold'):
+            if subset[n][-1] < self.configer.get('res', 'num_threshold'):
                 continue
 
-            if subset[n][-2] / subset[n][-1] < self.configer.get('vis', 'avg_threshold'):
+            if subset[n][-2] / subset[n][-1] < self.configer.get('res', 'avg_threshold'):
                 continue
 
             object_dict = dict()
@@ -147,7 +147,7 @@ class OpenPoseTest(object):
 
             peaks_binary = np.logical_and.reduce(
                 (map_gau >= map_left, map_gau >= map_right, map_gau >= map_up,
-                 map_gau >= map_down, map_gau > self.configer.get('vis', 'part_threshold')))
+                 map_gau >= map_down, map_gau > self.configer.get('res', 'part_threshold')))
 
             peaks = zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0])  # note reverse
             peaks = list(peaks)
@@ -178,7 +178,7 @@ class OpenPoseTest(object):
     def __extract_paf_info(self, img_raw, paf_avg, all_peaks):
         connection_all = []
         special_k = []
-        mid_num = self.configer.get('vis', 'mid_point_num')
+        mid_num = self.configer.get('res', 'mid_point_num')
 
         for k in range(len(self.configer.get('details', 'limb_seq'))):
             score_mid = paf_avg[:, :, [k*2, k*2+1]]
@@ -207,8 +207,8 @@ class OpenPoseTest(object):
                         score_with_dist_prior = sum(score_midpts) / len(score_midpts)
                         score_with_dist_prior += min(0.5 * img_raw.shape[0] / norm - 1, 0)
 
-                        num_positive = len(np.nonzero(score_midpts > self.configer.get('vis', 'limb_threshold'))[0])
-                        criterion1 = num_positive > int(self.configer.get('vis', 'limb_pos_ratio') * len(score_midpts))
+                        num_positive = len(np.nonzero(score_midpts > self.configer.get('res', 'limb_threshold'))[0])
+                        criterion1 = num_positive > int(self.configer.get('res', 'limb_pos_ratio') * len(score_midpts))
                         criterion2 = score_with_dist_prior > 0
                         if criterion1 and criterion2:
                             connection_candidate.append(

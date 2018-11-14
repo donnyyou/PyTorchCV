@@ -81,7 +81,7 @@ class PoseParser(object):
                     continue
 
                 cv2.circle(image_canvas, (int(object['kpts'][i][0]), int(object['kpts'][i][1])),
-                           self.configer.get('vis', 'circle_radius'),
+                           self.configer.get('res', 'vis_circle_radius'),
                            self.configer.get('details', 'color_list')[i], thickness=-1)
 
         return image_canvas
@@ -103,7 +103,7 @@ class PoseParser(object):
                 angle = math.degrees(math.atan2(Y[0] - Y[1], X[0] - X[1]))
                 polygon = cv2.ellipse2Poly((int(mX), int(mY)),
                                            (int(length / 2),
-                                            self.configer.get('vis', 'stick_width')), int(angle), 0, 360, 1)
+                                            self.configer.get('res', 'vis_stick_width')), int(angle), 0, 360, 1)
                 cv2.fillConvexPoly(cur_canvas, polygon, self.configer.get('details', 'color_list')[i])
                 image_canvas = cv2.addWeighted(image_canvas, 0.4, cur_canvas, 0.6, 0)
 
