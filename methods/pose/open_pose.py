@@ -97,7 +97,7 @@ class OpenPose(object):
         for i, data_dict in enumerate(self.train_loader):
             if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
                 self.module_utilizer.warm_lr(self.configer.get('iters'), len(self.train_loader),
-                                             self.scheduler, self.optimizer, backbone_list=[0, 1])
+                                             self.scheduler, self.optimizer, backbone_list=[0])
 
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
