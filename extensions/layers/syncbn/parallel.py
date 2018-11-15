@@ -97,12 +97,12 @@ class DataParallelModel(DataParallel):
         >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
         >>> y = net(x)
     """
-    def __init__(self, module, device_ids=None, output_device=None, dim=0, gather=True):
+    def __init__(self, module, device_ids=None, output_device=None, dim=0, gather_=True):
         super(DataParallelModel, self).__init__(module, device_ids, output_device, dim)
-        self.gather = gather
+        self.gather_ = gather_
 
     def gather(self, outputs, output_device):
-        if self.gather:
+        if self.gather_:
             return gather(outputs, output_device, dim=self.dim)
 
         return outputs

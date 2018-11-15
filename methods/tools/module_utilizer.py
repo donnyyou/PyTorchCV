@@ -53,7 +53,7 @@ class ModuleUtilizer(object):
         if len(self.configer.get('gpu')) > 1:
             from extensions.layers.syncbn.parallel import DataParallelModel
             self.configer.update_value(['network', 'parallel'], True)
-            return DataParallelModel(net, gather=self.configer.get('network', 'gathered'))
+            return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
         else:
             self.configer.update_value(['network', 'gathered'], True)
