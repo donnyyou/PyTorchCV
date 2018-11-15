@@ -71,24 +71,15 @@ class OpenPose(object):
     def _get_parameters(self):
         lr_1 = []
         lr_2 = []
-        lr_4 = []
-        lr_8 = []
         params_dict = dict(self.pose_net.named_parameters())
         for key, value in params_dict.items():
             if 'backbone' not in key:
-                if key[-4:] == 'bias':
-                    lr_8.append(value)
-                else:
-                    lr_4.append(value)
-            elif key[-4:] == 'bias':
                 lr_2.append(value)
             else:
                 lr_1.append(value)
 
-        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
-                  {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr') * 2., 'weight_decay': 0.0},
-                  {'params': lr_4, 'lr': self.configer.get('lr', 'base_lr') * 2.},
-                  {'params': lr_8, 'lr': self.configer.get('lr', 'base_lr') * 4., 'weight_decay': 0.0}]
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr'), 'weight_decay': 0.0},
+                  {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr'), 'weight_decay': 0.0},]
 
         return params
 
@@ -193,7 +184,7 @@ class OpenPose(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.pose_net, save_mode='iters')
+            self.module_utilizer.save_net(self.pose_net, save_mode='val_loss')
             Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.val_loss_heatmap.avg, self.val_loss_associate.avg))
             # Print the log info & reset the states.
             Log.info(
