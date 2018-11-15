@@ -223,4 +223,7 @@ class ModuleUtilizer(object):
                 base_lr_list = scheduler.get_lr()
                 for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
                     param_group['lr'] = base_lr * (lr_ratio ** 4)
+        else:
+            for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
+                param_group['lr'] = base_lr
 
