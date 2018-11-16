@@ -181,7 +181,7 @@ class Cifar10ClsGenerator(object):
             img_dict = dict()
             img_dict['image_path'] = '{}/{}'.format(IMAGE_DIR, filename)
             img_dict['label'] = target
-            train_json_list.append(img_dict)
+            val_json_list.append(img_dict)
 
         fw = open(self.train_json_file, 'w')
         fw.write(json.dumps(train_json_list))
