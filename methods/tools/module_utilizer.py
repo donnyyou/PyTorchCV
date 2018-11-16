@@ -76,7 +76,7 @@ class ModuleUtilizer(object):
                 checkpoint_dict = resume_dict
 
             net_dict = net.state_dict()
-
+            match_list = list()
             not_match_list = list()
             for key, value in checkpoint_dict.items():
                 if key.split('.')[0] == 'module':
@@ -86,21 +86,22 @@ class ModuleUtilizer(object):
                     module_key = 'module.{}'.format(key)
                     norm_key = key
 
-                if self.configer.get('network', 'parallel'):
-                    key = module_key
-                else:
-                    key = norm_key
+                key = module_key if self.configer.get('network', 'parallel') else norm_key
 
                 if key in net_dict and net_dict[key].size() == value.size():
                     net_dict[key] = value
+                    match_list.append(key)
                 else:
                     not_match_list.append(key)
 
+            model_miss_list = [k for k in net_dict.keys() if k not in match_list]
             if self.configer.get('network', 'resume_level') == 'full':
-                assert len(not_match_list) == 0
+                assert len(not_match_list) == 0, 'Checkpoint Miss Keys: {}'.format(not_match_list)
+                assert len(match_list) == len(net_dict.keys()), 'Model Miss Keys: {}'.format(model_miss_list)
 
             elif self.configer.get('network', 'resume_level') == 'part':
-                Log.info('Not Matched Keys: {}'.format(not_match_list))
+                Log.info('Checkpoint Miss Keys: {}'.format(not_match_list))
+                Log.info('Model Miss Keys: {}'.format(model_miss_list))
 
             else:
                 Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
@@ -111,6 +112,8 @@ class ModuleUtilizer(object):
                 self.configer.update_value(['iters'], resume_dict['config_dict']['iters'])
                 self.configer.update_value(['performance'], resume_dict['config_dict']['performance'])
                 self.configer.update_value(['val_loss'], resume_dict['config_dict']['val_loss'])
+                self.configer.update_value(['min_val_loss'], resume_dict['config_dict']['min_val_loss'])
+                self.configer.update_value(['max_performance'], resume_dict['config_dict']['max_performance'])
 
             net.load_state_dict(net_dict)
 
