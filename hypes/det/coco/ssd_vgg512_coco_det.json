@@ -145,7 +145,7 @@
       "is_warm": true,
       "warm": {
         "warm_epoch": 1,
-        "freeze_backbone": true
+        "freeze_backbone": false
       },
       "base_lr": 0.001,
       "lr_policy": "multistep",
@@ -161,7 +161,7 @@
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 62
+      "max_epoch": 142
     },
     "optim": {
       "optim_method": "sgd",
