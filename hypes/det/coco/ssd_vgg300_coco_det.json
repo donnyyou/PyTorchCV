@@ -4,7 +4,7 @@
     "method": "single_shot_detector",
     "data": {
       "num_classes": 81,
-      "data_dir": "~/DataSet/COCO_INS",
+      "data_dir": "~/DataSet/COCO_INS_2014",
       "image_tool": "cv2",
       "input_mode": "BGR",
       "keep_difficult": false,
@@ -33,7 +33,7 @@
     },
     "train_trans": {
       "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
-      "trans_seq": ["random_hflip"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"],
       "random_saturation": {
         "ratio": 0.5,
         "lower": 0.5,
@@ -144,7 +144,7 @@
       "is_warm": true,
       "warm": {
         "warm_epoch": 1,
-        "freeze_backbone": true
+        "freeze_backbone": false
       },
       "base_lr": 0.001,
       "lr_policy": "multistep",
@@ -154,7 +154,7 @@
       },
       "multistep": {
         "gamma": 0.1,
-        "stepvalue": [40, 50, 60]
+        "stepvalue": [90, 120, 140]
       }
     },
     "solver": {

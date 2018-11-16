@@ -34,7 +34,7 @@
     },
     "train_trans": {
       "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
-      "trans_seq": ["random_hflip"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"],
       "random_saturation": {
         "ratio": 0.5,
         "lower": 0.5,
@@ -155,7 +155,7 @@
       },
       "multistep": {
         "gamma": 0.1,
-        "stepvalue": [40, 50, 60]
+        "stepvalue": [90, 120, 140]
       }
     },
     "solver": {
