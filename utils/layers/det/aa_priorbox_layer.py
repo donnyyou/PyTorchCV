@@ -47,10 +47,10 @@ class AAPriorBoxLayer(object):
 
                 x_y_offset = torch.cat((x_offset, y_offset), 1).contiguous().view(-1, 1, 2)
                 x_y_offset = x_y_offset.repeat(1, self.configer.get('gt', 'num_anchor_list')[i], 1).contiguous().view(-1, 2)
-                anchors = torch.cat(x_y_offset, anchor_bases)
+                anchors = torch.cat((x_y_offset, anchor_bases), 1)
                 b_anchors.append(anchors)
 
-            anchors = torch.cat(b_anchors, 1)
+            anchors = torch.cat(b_anchors, 0)
             anchor_boxes_list.append(anchors)
 
         anchor_boxes = torch.stack(anchor_boxes_list, 0)
