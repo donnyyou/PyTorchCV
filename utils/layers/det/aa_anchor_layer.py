@@ -38,7 +38,7 @@ class AAAnchorLayer(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, feat_list):
-        anchors = []
+        anchor_preds = []
 
         for i, x in enumerate(feat_list):
             anchor = self.anchor_layers[i](x)
@@ -46,8 +46,6 @@ class AAAnchorLayer(nn.Module):
             N = anchor.size(0)
             anchor = anchor.permute(0, 2, 3, 1).contiguous()
             anchor = anchor.view(N, -1, 2)
-            anchors.append(anchor)
-
-        anchor_preds = torch.cat(anchors, 1)
+            anchor_preds.append(anchor)
 
         return anchor_preds
