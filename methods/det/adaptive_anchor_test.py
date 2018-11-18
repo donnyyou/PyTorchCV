@@ -84,7 +84,7 @@ class AdaptiveAnchorTest(object):
         if configer.get('phase') != 'debug':
             conf = F.softmax(conf.cpu(), dim=-1)
 
-        default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
+        # default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
 
         variances = [0.1, 0.2]
         wh = torch.exp(loc[:, :, 2:] * variances[1]) * default_boxes[:, :, 2:]

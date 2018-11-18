@@ -25,10 +25,11 @@ class AATargetGenerator(object):
         self.aa_proirbox_layer = AAPriorBoxLayer(configer)
 
     def __call__(self, feat_list, anchor_out_list, gt_bboxes, gt_labels, input_size):
-        anchor_boxes = self.aa_proirbox_layer(feat_list, anchor_out_list, input_size)
+        all_anchor_boxes = self.aa_proirbox_layer(feat_list, anchor_out_list, input_size)
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):
+            anchor_boxes = all_anchor_boxes[i]
             if gt_bboxes[i] is None or len(gt_bboxes[i]) == 0:
                 loc = torch.zeros_like(anchor_boxes)
                 conf = torch.zeros((anchor_boxes.size(0),)).long()
