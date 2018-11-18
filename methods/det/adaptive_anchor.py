@@ -18,8 +18,8 @@ from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
-from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
-from utils.layers.det.ssd_target_generator import SSDTargetGenerator
+from utils.layers.det.aa_priorbox_layer import AAPriorBoxLayer
+from utils.layers.det.aa_target_generator import AATargetGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
@@ -40,8 +40,8 @@ class AdaptiveAnchor(object):
         self.det_loss_manager = DetLossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.ssd_target_generator = SSDTargetGenerator(configer)
-        self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
+        self.aa_target_generator = AATargetGenerator(configer)
+        self.aa_priorbox_layer = AAPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -102,13 +102,10 @@ class AdaptiveAnchor(object):
             self.data_time.update(time.time() - start_time)
             # Forward pass.
             outputs = self.det_net(inputs)
-            if self.configer.get('network', 'gathered'):
-                feat_list = outputs[0]
-            else:
-                feat_list = outputs[0][0]
+            feat_list, anchor_out_list, loc, cls = self.module_utilizer.gather(outputs)
 
-            bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
-                                                       batch_gt_labels, [inputs.size(3), inputs.size(2)])
+            bboxes, labels = self.aa_target_generator(feat_list, anchor_out_list, batch_gt_bboxes,
+                                                      batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
@@ -159,10 +156,10 @@ class AdaptiveAnchor(object):
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
                 outputs = self.det_net(inputs)
-                feat_list, loc, cls = self.module_utilizer.gather(outputs)
+                feat_list, anchor_out_list, loc, cls = self.module_utilizer.gather(outputs)
 
-                bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
-                                                           batch_gt_labels, input_size)
+                bboxes, labels = self.aa_target_generator(feat_list, anchor_out_list, batch_gt_bboxes,
+                                                          batch_gt_labels, input_size)
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
@@ -170,7 +167,8 @@ class AdaptiveAnchor(object):
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,
-                                                                 self.ssd_priorbox_layer(feat_list, input_size),
+                                                                 self.aa_priorbox_layer(feat_list,
+                                                                                        anchor_out_list, input_size),
                                                                  self.configer, input_size)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 # batch_pred_bboxes = self._get_gt_object_list(batch_gt_bboxes, batch_gt_labels)

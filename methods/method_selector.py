@@ -13,6 +13,8 @@ from methods.det.faster_rcnn import FasterRCNN
 from methods.det.faster_rcnn_test import FastRCNNTest
 from methods.det.single_shot_detector import SingleShotDetector
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
+from methods.det.adaptive_anchor import AdaptiveAnchor
+from methods.det.adaptive_anchor_test import AdaptiveAnchorTest
 from methods.det.yolov3 import YOLOv3
 from methods.det.yolov3_test import YOLOv3Test
 from methods.pose.conv_pose_machine import ConvPoseMachine
@@ -44,11 +46,13 @@ DET_METHOD_DICT = {
     'faster_rcnn': FasterRCNN,
     'single_shot_detector': SingleShotDetector,
     'yolov3': YOLOv3,
+    'adaptive_anchor': AdaptiveAnchor
 }
 DET_TEST_DICT = {
     'faster_rcnn': FastRCNNTest,
     'single_shot_detector': SingleShotDetectorTest,
     'yolov3': YOLOv3Test,
+    'adaptive_anchor': AdaptiveAnchorTest
 }
 
 CLS_METHOD_DICT = {

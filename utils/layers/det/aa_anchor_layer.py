@@ -13,10 +13,10 @@ import torch
 import torch.nn as nn
 
 
-class AADetectionLayer(nn.Module):
+class AAAnchorLayer(nn.Module):
 
     def __init__(self, configer):
-        super(AADetectionLayer, self).__init__()
+        super(AAAnchorLayer, self).__init__()
 
         self.num_classes = configer.get('data', 'num_classes')
         self.num_anchors = configer.get('gt', 'num_anchor_list')
@@ -42,6 +42,7 @@ class AADetectionLayer(nn.Module):
 
         for i, x in enumerate(feat_list):
             anchor = self.anchor_layers[i](x)
+            anchor = torch.sigmoid(anchor) + 1.0
             N = anchor.size(0)
             anchor = anchor.permute(0, 2, 3, 1).contiguous()
             anchor = anchor.view(N, -1, 2)
