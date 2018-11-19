@@ -29,7 +29,7 @@ class AATargetGenerator(object):
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):
-            anchor_boxes = all_anchor_boxes[i]
+            anchor_boxes = all_anchor_boxes[i].to(gt_bboxes[i].device)
             if gt_bboxes[i] is None or len(gt_bboxes[i]) == 0:
                 loc = torch.zeros_like(anchor_boxes)
                 conf = torch.zeros((anchor_boxes.size(0),)).long()

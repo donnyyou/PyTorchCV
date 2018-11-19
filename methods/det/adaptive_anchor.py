@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
 from loss.det_loss_manager import DetLossManager
-from methods.det.single_shot_detector_test import SingleShotDetectorTest
+from methods.det.adaptive_anchor_test import AdaptiveAnchorTest
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
@@ -109,7 +109,7 @@ class AdaptiveAnchor(object):
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
+            loss = self.det_loss([feat_list, loc, cls], bboxes, labels, gathered=self.configer.get('network', 'gathered'))
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
@@ -163,10 +163,10 @@ class AdaptiveAnchor(object):
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
-                loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
+                loss = self.det_loss([feat_list, loc, cls], bboxes, labels, gathered=self.configer.get('network', 'gathered'))
                 self.val_losses.update(loss.item(), inputs.size(0))
 
-                batch_detections = SingleShotDetectorTest.decode(loc, cls,
+                batch_detections = AdaptiveAnchorTest.decode(loc, cls,
                                                                  self.aa_priorbox_layer(feat_list,
                                                                                         anchor_out_list, input_size),
                                                                  self.configer, input_size)
