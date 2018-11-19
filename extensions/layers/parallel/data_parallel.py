@@ -1,6 +1,6 @@
 from torch.nn.parallel import DataParallel
 
-from .scatter_gather import scatter_kwargs
+from extensions.layers.parallel.scatter_gather import scatter_kwargs
 
 
 class MMDataParallel(DataParallel):
