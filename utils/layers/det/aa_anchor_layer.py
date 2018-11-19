@@ -42,7 +42,7 @@ class AAAnchorLayer(nn.Module):
 
         for i, x in enumerate(feat_list):
             anchor = self.anchor_layers[i](x)
-            anchor = torch.sigmoid(anchor) + 1.0
+            anchor = torch.sigmoid(anchor) * 3.0
             N = anchor.size(0)
             anchor = anchor.permute(0, 2, 3, 1).contiguous()
             anchor = anchor.view(N, -1, 2)
