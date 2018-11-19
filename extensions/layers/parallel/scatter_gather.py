@@ -1,8 +1,8 @@
 import torch
 from torch.nn.parallel._functions import Scatter as OrigScatter
 
-from ._functions import Scatter
-from .data_container import DataContainer
+from extensions.layers.parallel._functions import Scatter
+from extensions.layers.parallel.data_container import DataContainer
 
 
 def scatter(inputs, target_gpus, dim=0):
@@ -28,6 +28,7 @@ def scatter(inputs, target_gpus, dim=0):
         if isinstance(obj, dict) and len(obj) > 0:
             out = list(map(type(obj), zip(*map(scatter_map, obj.items()))))
             return out
+
         return [obj for targets in target_gpus]
 
     # After scatter_map is called, a scatter_map cell will exist. This cell

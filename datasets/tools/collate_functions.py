@@ -119,16 +119,16 @@ class CollateFunctions(object):
                 img_list[i] = F.interpolate(img_list[i].unsqueeze(0),
                                             scaled_size, mode='bilinear', align_corners=False).squeeze(0)
                 if 'labelmap' in data_keys:
-                    out_labelmap = F.interpolate(
-                        out_list[data_keys.index('labelmap')][i].unsqueeze(0).unsqueeze(0).float(),
-                        scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
-                    out_list[data_keys.index('labelmap')][i] = out_labelmap
+                    labelmap = out_list[data_keys.index('labelmap')][i].unsqueeze(0).unsqueeze(0).float()
+                    labelmap = F.interpolate(labelmap, scaled_size, mode='nearest')
+                    labelmap = labelmap.long().squeeze(0).squeeze(0)
+                    out_list[data_keys.index('labelmap')][i] = labelmap
 
                 if 'maskmap' in data_keys:
-                    out_maskmap = F.interpolate(
-                        out_list[data_keys.index('maskmap')][i].unsqueeze(0).unsqueeze(0).float(),
-                        scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
-                    out_list[data_keys.index('maskmap')][i] = out_maskmap
+                    maskmap = out_list[data_keys.index('maskmap')][i].unsqueeze(0).unsqueeze(0).float()
+                    maskmap = F.interpolate(maskmap, scaled_size, mode='nearest')
+                    maskmap = maskmap.long().squeeze(0).squeeze(0)
+                    out_list[data_keys.index('maskmap')][i] = maskmap
 
             pad_width = target_width - scaled_size[0]
             pad_height = target_height - scaled_size[1]
@@ -157,22 +157,17 @@ class CollateFunctions(object):
                     Log.error('Invalid pad mode: {}'.format(trans_dict['pad_mode']))
                     exit(1)
 
-                expand_image = torch.zeros((channels, target_height, target_width))
-                expand_image[:, up_pad:up_pad + height, left_pad:left_pad + width] = img_list[i]
-                img_list[i] = expand_image
+                pad = (left_pad, pad_width-left_pad, up_pad, pad_height-up_pad)
+
+                img_list[i] = F.pad(img_list[i], pad=pad, value=0)
 
                 if 'labelmap' in data_keys:
                     labelmap = out_list[data_keys.index('labelmap')][i]
-                    expand_labelmap = torch.zeros((target_height, target_width)).long()
-                    expand_labelmap[:, :] = -1
-                    expand_labelmap[up_pad:up_pad + height, left_pad:left_pad + width] = labelmap
-                    out_list[data_keys.index('labelmap')][i] = expand_labelmap
+                    out_list[data_keys.index('labelmap')][i] = F.pad(labelmap, pad=pad, value=-1)
 
                 if 'maskmap' in data_keys:
                     maskmap = out_list[data_keys.index('maskmap')][i]
-                    expand_maskmap = torch.ones((target_height, target_width)).long()
-                    expand_maskmap[up_pad:up_pad + height, left_pad:left_pad + width] = maskmap
-                    out_list[data_keys.index('maskmap')][i] = expand_maskmap
+                    out_list[data_keys.index('maskmap')][i] = F.pad(maskmap, pad=pad, value=1)
 
                 if 'polygons' in data_keys:
                     for object_id in range(len(out_list[data_keys.index('polygons')][i])):
