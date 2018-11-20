@@ -36,7 +36,8 @@ class AAPriorBoxLayer(object):
             for i in range(len(feat_list)):
                 stride_offset_w, stride_offset_h = 0.5 * stride_w_list[i], 0.5 * stride_h_list[i]
                 s = self.configer.get('gt', 'cur_anchor_sizes')[i]
-                anchor_bases = out_list[i][bs, :, :].detach() * s
+                anchor_bases = out_list[i][bs, :, :] * s
+                # anchor_bases.register_hook(print)
                 grid_len_h = np.arange(0, img_h - stride_offset_h, stride_h_list[i])
                 grid_len_w = np.arange(0, img_w - stride_offset_w, stride_w_list[i])
                 a, b = np.meshgrid(grid_len_w, grid_len_h)

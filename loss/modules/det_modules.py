@@ -145,6 +145,14 @@ class SSDMultiBoxLoss(nn.Module):
         neg = rank < num_neg.unsqueeze(1).expand_as(rank)  # [N,8732]
         return neg
 
+    @staticmethod
+    def smooth_l1_loss(x, t):
+        diff = (x - t)
+        abs_diff = diff.abs()
+        flag = (abs_diff.data < 1.).float()
+        y = flag * (diff ** 2) * 0.5 + (1 - flag) * (abs_diff - 0.5)
+        return y.sum()
+
     def forward(self, outputs, *targets, **kwargs):
         """Compute loss between (loc_preds, loc_targets) and (conf_preds, conf_targets).
 
@@ -176,7 +184,7 @@ class SSDMultiBoxLoss(nn.Module):
         pos_mask = pos.unsqueeze(2).expand_as(loc_preds)  # [N, 8732, 4]
         pos_loc_preds = loc_preds[pos_mask].view(-1, 4)  # [pos,4]
         pos_loc_targets = loc_targets[pos_mask].view(-1, 4)  # [pos,4]
-        loc_loss = F.smooth_l1_loss(pos_loc_preds, pos_loc_targets, reduction='sum')
+        loc_loss = self.smooth_l1_loss(pos_loc_preds, pos_loc_targets)  # F.smooth_l1_loss(pos_loc_preds, pos_loc_targets, reduction='sum')
 
         # conf_loss.
         conf_loss = self._cross_entropy_loss(conf_preds.view(-1, self.num_classes), conf_targets.view(-1))  # [N*8732,]

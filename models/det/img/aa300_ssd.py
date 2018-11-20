@@ -102,6 +102,19 @@ class AA300SSD(nn.Module):
         self.ssd_head = SSDHead(configer)
         self.ssd_detection_layer = SSDDetectionLayer(configer)
         self.aa_anchor_layer = AAAnchorLayer(configer)
+        self.num_anchors = configer.get('gt', 'num_anchor_list')
+        self.num_features = configer.get('network', 'num_feature_list')
+        self.deal_layers = nn.ModuleList()
+        for i in range(len(self.num_anchors)):
+            self.deal_layers.append(
+                nn.Sequential(
+                    nn.Conv2d(self.num_features[i] + self.num_anchors[i] * 2, self.num_features[i] // 2,
+                              kernel_size=3, padding=1),
+                    nn.ReLU(),
+                    nn.Conv2d(self.num_features[i] // 2, self.num_features[i], kernel_size=1),
+                    nn.ReLU()
+                )
+            )
 
     def forward(self, x):
         out = []
@@ -116,10 +129,21 @@ class AA300SSD(nn.Module):
         out_head = self.ssd_head(x)
         final_out = out + out_head
 
-        loc_preds, conf_preds = self.ssd_detection_layer(final_out)
         anchors_preds = self.aa_anchor_layer(final_out)
+        anchor_out = []
+        for anchor in anchors_preds:
+            anchor = anchor * 3.0
+            N = anchor.size(0)
+            anchor = anchor.permute(0, 2, 3, 1).contiguous()
+            anchor = anchor.view(N, -1, 2)
+            anchor_out.append(anchor)
 
-        return final_out, anchors_preds, loc_preds, conf_preds
+        feat_out = []
+        for i, (feat, anchor) in enumerate(zip(final_out, anchors_preds)):
+            feat_out.append(self.deal_layers[i](torch.cat((feat, anchor), 1)))
+
+        loc_preds, conf_preds = self.ssd_detection_layer(feat_out)
+        return feat_out, anchor_out, loc_preds, conf_preds
 
 
 class SSDHead(nn.Module):
