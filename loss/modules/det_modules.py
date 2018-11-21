@@ -319,14 +319,15 @@ class AnchorLoss(nn.Module):
         self.mse_loss = nn.MSELoss(reduction='sum')
 
     def forward(self, anchors_list, batch_gt_bboxes, input_size):
-        twh_list = list()
-        mask_list = list()
+        loss = 0.0
         for i, anchor_size in enumerate(self.configer.get('gt', 'cur_anchor_sizes')):
             num_anchors = self.configer.get('gt', 'num_anchor_list')[i]
-            in_h, in_w = anchors_list[i].size()[2:]
+            anchors = anchors_list[i]
+            in_h, in_w = anchors.size()[2:]
             batch_size = len(batch_gt_bboxes)
             twh = torch.zeros(batch_size, num_anchors*2, in_h, in_w)
             mask = torch.zeros(batch_size, num_anchors*2, in_h, in_w)
+            match_cnt = 0
             for b in range(batch_size):
                 for t in range(batch_gt_bboxes[b].size(0)):
                     # Convert to position relative to box
@@ -344,8 +345,8 @@ class AnchorLoss(nn.Module):
                     gi = int(grid_x)
                     gj = int(grid_y)
 
-                    anchors = anchors_list[i][b, :, gj, gi].contiguous().view(num_anchors, 2)
-                    pred_box = anchors.cpu() * anchor_size
+                    index_anchors = anchors[b, :, gj, gi].contiguous().view(num_anchors, 2)
+                    pred_box = index_anchors.cpu() * anchor_size
                     pred_box = torch.cat((torch.zeros_like(pred_box), pred_box), 1)
 
                     gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
@@ -354,12 +355,9 @@ class AnchorLoss(nn.Module):
                     twh[b, best_n * 2, gj, gi] = gw / anchor_size
                     twh[b, best_n * 2 + 1, gj, gi] = gh / anchor_size
                     mask[b, best_n * 2: best_n * 2 + 2, gj, gi] = 1
+                    match_cnt += 1
 
-            mask_list.append(mask)
-            twh_list.append(twh)
-
-        loss = 0.0
-        for anchors, twh, mask in zip(anchors_list, twh_list, mask_list):
-            loss += self.mse_loss(anchors * mask.to(anchors.device), twh.to(anchors.device) * mask.to(anchors.device))
+            loss += self.mse_loss(anchors * mask.to(anchors.device),
+                                  twh.to(anchors.device) * mask.to(anchors.device)) / max(match_cnt, 1)
 
         return loss
