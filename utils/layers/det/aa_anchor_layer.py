@@ -42,7 +42,6 @@ class AAAnchorLayer(nn.Module):
 
         for i, x in enumerate(feat_list):
             anchor = self.anchor_layers[i](x)
-            anchor = torch.sigmoid(anchor)
             anchor_preds.append(anchor)
 
         return anchor_preds

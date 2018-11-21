@@ -130,20 +130,13 @@ class AA300SSD(nn.Module):
         final_out = out + out_head
 
         anchors_preds = self.aa_anchor_layer(final_out)
-        anchor_out = []
-        for anchor in anchors_preds:
-            anchor = anchor * 3.0
-            N = anchor.size(0)
-            anchor = anchor.permute(0, 2, 3, 1).contiguous()
-            anchor = anchor.view(N, -1, 2)
-            anchor_out.append(anchor)
 
         feat_out = []
         for i, (feat, anchor) in enumerate(zip(final_out, anchors_preds)):
             feat_out.append(self.deal_layers[i](torch.cat((feat, anchor), 1)))
 
         loc_preds, conf_preds = self.ssd_detection_layer(feat_out)
-        return feat_out, anchor_out, loc_preds, conf_preds
+        return feat_out, anchors_preds, loc_preds, conf_preds
 
 
 class SSDHead(nn.Module):

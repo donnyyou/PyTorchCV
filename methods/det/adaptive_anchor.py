@@ -24,6 +24,7 @@ from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
+from loss.modules.det_modules import AnchorLoss
 
 
 class AdaptiveAnchor(object):
@@ -45,6 +46,7 @@ class AdaptiveAnchor(object):
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)
+        self.anchor_loss = AnchorLoss(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -111,6 +113,7 @@ class AdaptiveAnchor(object):
             # Compute the loss of the train batch & backward.
             loss = self.det_loss([feat_list, loc, cls], bboxes, labels, gathered=self.configer.get('network', 'gathered'))
 
+            loss += self.anchor_loss(anchor_out_list, batch_gt_bboxes, [inputs.size(3), inputs.size(2)])
             self.train_losses.update(loss.item(), inputs.size(0))
 
             self.optimizer.zero_grad()
@@ -164,6 +167,7 @@ class AdaptiveAnchor(object):
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
                 loss = self.det_loss([feat_list, loc, cls], bboxes, labels, gathered=self.configer.get('network', 'gathered'))
+                loss += self.anchor_loss(anchor_out_list, batch_gt_bboxes, [inputs.size(3), inputs.size(2)])
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = AdaptiveAnchorTest.decode(loc, cls,
