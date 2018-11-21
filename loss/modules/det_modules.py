@@ -320,6 +320,7 @@ class AnchorLoss(nn.Module):
 
     def forward(self, anchors_list, batch_gt_bboxes, input_size):
         loss = 0.0
+        match_cnt = 0
         for i, anchor_size in enumerate(self.configer.get('gt', 'cur_anchor_sizes')):
             num_anchors = self.configer.get('gt', 'num_anchor_list')[i]
             anchors = anchors_list[i]
@@ -327,7 +328,6 @@ class AnchorLoss(nn.Module):
             batch_size = len(batch_gt_bboxes)
             twh = torch.zeros(batch_size, num_anchors*2, in_h, in_w)
             mask = torch.zeros(batch_size, num_anchors*2, in_h, in_w)
-            match_cnt = 0
             for b in range(batch_size):
                 for t in range(batch_gt_bboxes[b].size(0)):
                     # Convert to position relative to box
@@ -358,6 +358,6 @@ class AnchorLoss(nn.Module):
                     match_cnt += 1
 
             loss += self.mse_loss(anchors * mask.to(anchors.device),
-                                  twh.to(anchors.device) * mask.to(anchors.device)) / max(match_cnt, 1)
+                                  twh.to(anchors.device) * mask.to(anchors.device))
 
-        return loss
+        return loss / max(match_cnt, 1)
