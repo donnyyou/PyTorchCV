@@ -1,15 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
-# VGG11/13/16/19 in Pytorch.
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from collections import OrderedDict
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -22,31 +15,12 @@ cfg = {
 }
 
 
-def make_layers(cfg, batch_norm=False):
-    layers = []
-    in_channels = 3
-    for v in cfg:
-        if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        else:
-            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
-            if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
-            else:
-                layers += [conv2d, nn.ReLU(inplace=True)]
-            in_channels = v
-    return nn.Sequential(*layers)
-
-
-class VGG19(nn.Module):
+class VGG(nn.Module):
     def __init__(self, configer):
-        super(VGG19, self).__init__()
+        super(VGG, self).__init__()
         self.configer = configer
-        self.features = make_layers(cfg['vgg19'])
+        self.features = self._make_layers(cfg[self.configer.get('network', 'model_name')])
         self.classifier = nn.Linear(512, self.configer.get('data', 'num_classes'))
-
-        if self.configer.get('network', 'pretrained') is not None:
-            self._load_pretrained_weight(torch.load(self.configer.get('network', 'pretrained')))
 
     def forward(self, x):
         out = self.features(x)
@@ -55,17 +29,17 @@ class VGG19(nn.Module):
         out = self.classifier(out)
         return out
 
-    def _load_pretrained_weight(self, net):
-        new_state_dict = OrderedDict()
-        model_dict = self.state_dict()
-        for k, v in net.items():
-            k_name = k.split('.')
-            if k_name[0] == 'features' and v.size() == model_dict[k].size():
-                new_state_dict[k] = v
+    def _make_layers(self, cfg):
+        layers = []
+        in_channels = 3
+        for x in cfg:
+            if x == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                           nn.BatchNorm2d(x),
+                           nn.ReLU(inplace=True)]
+                in_channels = x
 
-        model_dict.update(new_state_dict)
-        self.load_state_dict(model_dict)
+        return nn.Sequential(*layers)
 
-
-if "__name__" == "__main__":
-    pass

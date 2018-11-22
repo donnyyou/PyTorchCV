@@ -96,14 +96,13 @@ class FCClassifierTest(object):
         topk = (1, 3, 5)
         maxk = max(topk)
 
-        _, pred = outputs.topk(maxk, 1, True, True)
-        pred = pred.t()
+        _, pred = outputs.topk(maxk, 0, True, True)
         for k in topk:
             if k == 1:
-                json_dict['label'] = pred[0][0]
+                json_dict['label'] = pred[0]
 
             else:
-                json_dict['label_top{}'.format(k)] = pred[0][:k]
+                json_dict['label_top{}'.format(k)] = pred[:k]
 
         return json_dict
 
@@ -169,7 +168,7 @@ class FCClassifierTest(object):
 
                 ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
-                json_dict = self.__get_info_tree(labels_target)
+                json_dict = self.__get_info_tree(labels_target[j])
                 image_canvas = self.cls_parser.draw_label(ori_img_bgr.copy(), json_dict['label'])
 
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
