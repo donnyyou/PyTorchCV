@@ -15,7 +15,6 @@ import torch.nn as nn
 class CrossEntropyLoss(nn.Module):
     def __init__(self, configer=None):
         super(CrossEntropyLoss, self).__init__()
-        super(CrossEntropyLoss, self).__init__()
         self.configer = configer
         weight = None
         if not self.configer.is_empty('cross_entropy_loss', 'weight'):
