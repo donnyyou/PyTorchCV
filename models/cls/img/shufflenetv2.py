@@ -184,7 +184,8 @@ class ShuffleNetV2(nn.Module):
         # First conv down size
         self.blocks = [('init_block',
                         nn.Sequential(
-                            ConvBnRelu(3, cur_channel, 3, stride=2, padding=1),
+                            ConvBnRelu(3, cur_channel, 3, stride=2, padding=1,
+                                       bn_type=self.configer.get('network', 'bn_type')),
                             nn.MaxPool2d(3, stride=2, padding=1)
                         ))]
 

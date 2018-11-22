@@ -17,9 +17,9 @@ class _ConvBatchNormReluBlock(nn.Module):
     def __init__(self, inplanes, outplanes, kernel_size, stride, padding=1, dilation=1, relu=True, bn_type=None):
         super(_ConvBatchNormReluBlock, self).__init__()
         self.relu = relu
-        self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
-                            kernel_size=kernel_size, stride=stride, padding=padding,
-                            dilation = dilation, bias=False)
+        self.conv = nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
+                              kernel_size=kernel_size, stride=stride, padding=padding,
+                              dilation = dilation, bias=False)
         self.bn = ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
@@ -62,11 +62,10 @@ class PPMBilinearDeepsup(nn.Module):
         self.dropout_deepsup = nn.Dropout2d(0.1)
 
     def forward(self, conv_out):
-        assert self.bn_type == 'syncbn' or not self.training
         conv5, conv4 = conv_out
         input_size = conv5.size()
         ppm_out = [conv5]
-
+        assert self.bn_type == 'syncbn' or not self.training or conv5.size(0) > 1
         for pool_scale in self.ppm:
             ppm_out.append(F.interpolate(pool_scale(conv5),
                                          (input_size[2], input_size[3]),
