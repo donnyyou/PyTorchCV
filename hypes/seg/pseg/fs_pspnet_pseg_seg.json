@@ -28,8 +28,7 @@
     },
     "test": {
       "mode": "ss_test",
-      "min_side_length": 520,
-      "fit_stride": 8,
+      "input_size": [480, 480],
       "scale_search": [1.0]
     },
     "train_trans": {
