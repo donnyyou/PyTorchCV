@@ -11,6 +11,7 @@ from __future__ import print_function
 from collections import OrderedDict
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 cfg = {
@@ -42,19 +43,14 @@ class VGG19(nn.Module):
         super(VGG19, self).__init__()
         self.configer = configer
         self.features = make_layers(cfg['vgg19'])
-        width = self.configer.get('data', 'input_size')[0] // self.configer.get('network', 'stride')
-        height = self.configer.get('data', 'input_size')[1] // self.configer.get('network', 'stride')
-        self.avg_pool = nn.AvgPool2d(kernel_size=(height, width))
         self.classifier = nn.Linear(512, self.configer.get('data', 'num_classes'))
 
-        if not self.configer.is_empty('phase') and \
-                        self.configer.get('phase') == 'train' and \
-                        self.configer.get('network', 'pretrained') is not None:
+        if self.configer.get('network', 'pretrained') is not None:
             self._load_pretrained_weight(torch.load(self.configer.get('network', 'pretrained')))
 
     def forward(self, x):
         out = self.features(x)
-        out = self.avg_pool(out)
+        out = F.avg_pool2d(out, out.size()[2:])
         out = out.view(out.size(0), -1)
         out = self.classifier(out)
         return out
