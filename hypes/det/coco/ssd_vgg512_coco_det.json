@@ -178,7 +178,8 @@
     },
     "nms": {
       "mode": "union",
-      "max_threshold": 0.45
+      "max_threshold": 0.45,
+      "pre_nms": 3000
     },
     "res": {
       "val_conf_thre": 0.01,

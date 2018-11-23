@@ -10,7 +10,7 @@ from __future__ import print_function
 
 import torch
 
-from extensions.layers.nms.module import NMS
+from extensions.layers.nms.nms_wrapper import nms
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.logger import Logger as Log
 
@@ -139,9 +139,8 @@ class FRRoiGenerator(object):
 
             # unNOTE: somthing is wrong here!
             # TODO: remove cuda.to_gpu
-            keep = NMS()(rois,
-                         scores=tmp_scores,
-                         max_threshold=self.configer.get('rpn', 'nms_threshold'))
+            keep = nms(torch.cat((rois, tmp_scores.unqueeze(1)), 1),
+                       max_threshold=self.configer.get('rpn', 'nms_threshold'))
             # keep = DetHelper.nms(rois,
             #                      scores=tmp_scores,
             #                      nms_threshold=self.configer.get('rpn', 'nms_threshold'))

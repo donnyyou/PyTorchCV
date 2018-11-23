@@ -112,18 +112,18 @@ class SingleShotDetectorTest(object):
                 continue
 
             valid_preds = image_pred[ids]
+            _, order = valid_preds[:, 4].sort(0, descending=True)
+            order = order[:configer.get('nms', 'pre_nms')]
+            valid_preds = valid_preds[order]
             valid_preds = valid_preds[valid_preds[:, 4] > configer.get('res', 'val_conf_thre')]
             if valid_preds.numel() == 0:
                 continue
 
-            keep = DetHelper.cls_nms(valid_preds[:, :4],
-                                     scores=valid_preds[:, 4],
-                                     labels=valid_preds[:, 5],
-                                     nms_threshold=configer.get('nms', 'max_threshold'),
-                                     iou_mode=configer.get('nms', 'mode'),
-                                     cls_keep_num=configer.get('res', 'cls_keep_num'))
+            valid_preds = DetHelper.cls_nms(valid_preds[:, :6],
+                                            labels=valid_preds[:, 5],
+                                            max_threshold=configer.get('nms', 'max_threshold'),
+                                            cls_keep_num=configer.get('res', 'cls_keep_num'))
 
-            valid_preds = valid_preds[keep]
             _, order = valid_preds[:, 4].sort(0, descending=True)
             order = order[:configer.get('res', 'max_per_image')]
             output[image_i] = valid_preds[order]
