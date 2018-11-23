@@ -76,7 +76,7 @@ class YOLOv3Test(object):
         return json_dict
 
     @staticmethod
-    def decode(batch_pred_bboxes, configer):
+    def decode(batch_pred_bboxes, configer, input_size):
         box_corner = batch_pred_bboxes.new(batch_pred_bboxes.shape)
         box_corner[:, :, 0] = batch_pred_bboxes[:, :, 0] - batch_pred_bboxes[:, :, 2] / 2
         box_corner[:, :, 1] = batch_pred_bboxes[:, :, 1] - batch_pred_bboxes[:, :, 3] / 2
@@ -88,7 +88,8 @@ class YOLOv3Test(object):
         box_corner[:, :, 1::2] = box_corner[:, :, 1::2].clamp(min=0, max=1.0)
 
         batch_pred_bboxes[:, :, :4] = box_corner[:, :, :4]
-
+        batch_pred_bboxes[:, :, 0::2] *= input_size[0]
+        batch_pred_bboxes[:, :, 1::2] *= input_size[1]
         output = [None for _ in range(len(batch_pred_bboxes))]
         for image_i, image_pred in enumerate(batch_pred_bboxes):
             # Filter out confidence scores below threshold
@@ -103,27 +104,23 @@ class YOLOv3Test(object):
                 image_pred[:, 5:5 + configer.get('data', 'num_classes')], 1, keepdim=True)
             # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
             detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
-            keep_index = DetHelper.cls_nms(image_pred[:, :4],
-                                           scores=image_pred[:, 4],
-                                           labels=class_pred.squeeze(1),
-                                           nms_threshold=configer.get('nms', 'max_threshold'),
-                                           iou_mode=configer.get('nms', 'mode'), nms_mode='cython_nms')
-
-            output[image_i] = detections[keep_index]
+            output[image_i] = DetHelper.cls_nms(detections,
+                                                labels=class_pred.squeeze(1),
+                                                max_threshold=configer.get('nms', 'max_threshold'))
 
         return output
 
-    def __get_info_tree(self, detections, image_raw):
+    def __get_info_tree(self, detections, image_raw, input_size):
         height, width, _ = image_raw.shape
         json_dict = dict()
         object_list = list()
         if detections is not None:
             for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                 object_dict = dict()
-                xmin = x1.cpu().item() * width
-                ymin = y1.cpu().item() * height
-                xmax = x2.cpu().item() * width
-                ymax = y2.cpu().item() * height
+                xmin = x1.cpu().item() / input_size[0] * width
+                ymin = y1.cpu().item() / input_size[1] * height
+                xmax = x2.cpu().item() / input_size[0] * width
+                ymax = y2.cpu().item() / input_size[1] * height
                 object_dict['bbox'] = [xmin, ymin, xmax, ymax]
                 object_dict['label'] = int(cls_pred.cpu().item())
                 object_dict['score'] = float('%.2f' % conf.cpu().item())
@@ -210,7 +207,7 @@ class YOLOv3Test(object):
 
                 be_c += num_c
 
-            batch_detections = self.decode(self.yolo_detection_layer(output_list)[2], self.configer)
+            batch_detections = self.decode(self.yolo_detection_layer(output_list)[2], self.configer, input_size)
 
             for j in range(inputs.size(0)):
                 count = count + 1
@@ -219,7 +216,7 @@ class YOLOv3Test(object):
 
                 ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
 
-                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
+                json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr, input_size)
 
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
