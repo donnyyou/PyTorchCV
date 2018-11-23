@@ -58,9 +58,9 @@ class SSDPriorBoxLayer(object):
                     for ar in self.configer.get('gt', 'aspect_ratio_list'):
                         boxes.append((stride_offset_w, stride_offset_h, s_w * ar, s_h / ar))
 
-                else:
-                    Log.error('Anchor Method {} not valid.'.format(self.configer.get('gt', 'anchor_method')))
-                    exit(1)
+            else:
+                Log.error('Anchor Method {} not valid.'.format(self.configer.get('gt', 'anchor_method')))
+                exit(1)
 
             anchor_bases = torch.FloatTensor(np.array(boxes))
             assert anchor_bases.size(0) == self.configer.get('gt', 'num_anchor_list')[i]
