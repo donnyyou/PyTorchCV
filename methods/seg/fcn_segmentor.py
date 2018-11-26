@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
-from extensions.layers.syncbn.parallel import DataParallelCriterion
 from loss.seg_loss_manager import SegLossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler

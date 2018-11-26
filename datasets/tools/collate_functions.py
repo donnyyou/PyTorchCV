@@ -90,7 +90,7 @@ class CollateFunctions(object):
                             out_list[data_keys.index('polygons')][i][object_id][polygon_id][0::2] *= w_scale_ratio
                             out_list[data_keys.index('polygons')][i][object_id][polygon_id][1::2] *= h_scale_ratio
 
-                scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
+                scaled_size = (int(round(height * h_scale_ratio)), int(round(width * w_scale_ratio)))
                 img_list[i] = F.interpolate(img_list[i].unsqueeze(0),
                                             scaled_size, mode='bilinear', align_corners=False).squeeze(0)
                 if 'labelmap' in data_keys:
