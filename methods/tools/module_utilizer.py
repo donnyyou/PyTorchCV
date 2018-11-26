@@ -214,6 +214,9 @@ class ModuleUtilizer(object):
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
+        if self.configer.is_empty('lr', 'is_warm') or not self.configer.get('lr', 'is_warm'):
+            return
+
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
         if iters < warm_iters:
             if self.configer.get('lr', 'warm')['freeze_backbone']:
