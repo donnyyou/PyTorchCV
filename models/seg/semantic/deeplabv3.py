@@ -87,7 +87,7 @@ class _ASPPModule(nn.Module):
 
     def forward(self, x):
         h = self.imagepool(x)
-        h = [F.upsample(h, size=x.shape[2:], mode='bilinear')]
+        h = [F.interpolate(h, size=x.shape[2:], mode='bilinear', align_corners=False)]
         for stage in self.stages.children():
             h += [stage(x)]
         h = torch.cat(h, dim=1)
@@ -123,7 +123,7 @@ class DeepLabV3(nn.Module):
         x = self.aspp(x)
         x = self.fc1(x)
         x = self.fc2(x)
-        x = F.upsample(x, scale_factor=(16, 16), mode="bilinear")
+        x = F.interpolate(x, scale_factor=(16, 16), mode="bilinear", align_corners=False)
         return x
 
 

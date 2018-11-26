@@ -20,7 +20,7 @@
     },
     "val": {
       "batch_size": 32,
-      "use_07_metric": true,
+      "use_07_metric": false,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [300, 300],
@@ -33,7 +33,7 @@
     },
     "train_trans": {
       "shuffle_trans_seq": ["random_contrast", "random_hue", "random_saturation", "random_brightness", "random_perm"],
-      "trans_seq": ["random_hflip"],
+      "trans_seq": ["random_hflip", "random_pad", "random_crop"],
       "random_saturation": {
         "ratio": 0.5,
         "lower": 0.5,
@@ -143,10 +143,10 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_lr": 0.000001,
-        "warm_epoch": 6
+        "warm_epoch": 1,
+        "freeze_backbone": false
       },
-      "base_lr": 0.004,
+      "base_lr": 0.001,
       "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
@@ -154,13 +154,13 @@
       },
       "multistep": {
         "gamma": 0.1,
-        "stepvalue": [40, 50, 60]
+        "stepvalue": [90, 120, 140]
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 62
+      "max_epoch": 142
     },
     "optim": {
       "optim_method": "sgd",
@@ -177,10 +177,12 @@
     },
     "nms": {
       "mode": "union",
-      "max_threshold": 0.45
+      "max_threshold": 0.45,
+      "pre_nms": 3000
     },
-    "vis": {
-      "conf_threshold": 0.01,
+    "res": {
+      "val_conf_thre": 0.01,
+      "vis_conf_thre": 0.5,
       "max_per_image": 200,
       "cls_keep_num": 50
     }

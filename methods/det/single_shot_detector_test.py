@@ -70,7 +70,7 @@ class SingleShotDetectorTest(object):
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
-                                                   conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                   conf_threshold=self.configer.get('res', 'vis_conf_thre'))
         cv2.imwrite(vis_path, image_canvas)
         cv2.imwrite(raw_path, ori_img_bgr)
 
@@ -112,20 +112,20 @@ class SingleShotDetectorTest(object):
                 continue
 
             valid_preds = image_pred[ids]
-            valid_preds = valid_preds[valid_preds[:, 4] > configer.get('vis', 'conf_threshold')]
+            _, order = valid_preds[:, 4].sort(0, descending=True)
+            order = order[:configer.get('nms', 'pre_nms')]
+            valid_preds = valid_preds[order]
+            valid_preds = valid_preds[valid_preds[:, 4] > configer.get('res', 'val_conf_thre')]
             if valid_preds.numel() == 0:
                 continue
 
-            keep = DetHelper.cls_nms(valid_preds[:, :4],
-                                     scores=valid_preds[:, 4],
-                                     labels=valid_preds[:, 5],
-                                     nms_threshold=configer.get('nms', 'max_threshold'),
-                                     iou_mode=configer.get('nms', 'mode'),
-                                     cls_keep_num=configer.get('vis', 'cls_keep_num'))
+            valid_preds = DetHelper.cls_nms(valid_preds[:, :6],
+                                            labels=valid_preds[:, 5],
+                                            max_threshold=configer.get('nms', 'max_threshold'),
+                                            cls_keep_num=configer.get('res', 'cls_keep_num'))
 
-            valid_preds = valid_preds[keep]
             _, order = valid_preds[:, 4].sort(0, descending=True)
-            order = order[:configer.get('vis', 'max_per_image')]
+            order = order[:configer.get('res', 'max_per_image')]
             output[image_i] = valid_preds[order]
 
         return output

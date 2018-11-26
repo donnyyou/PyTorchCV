@@ -14,6 +14,7 @@ import functools
 import torch
 from torch.autograd import Variable, Function
 import torch.cuda.comm as comm
+from torch.nn.parallel.scatter_gather import gather
 from torch.nn.parallel.data_parallel import DataParallel
 from torch.nn.parallel.parallel_apply import get_a_var
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
@@ -96,7 +97,14 @@ class DataParallelModel(DataParallel):
         >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
         >>> y = net(x)
     """
+    def __init__(self, module, device_ids=None, output_device=None, dim=0, gather_=True):
+        super(DataParallelModel, self).__init__(module, device_ids, output_device, dim)
+        self.gather_ = gather_
+
     def gather(self, outputs, output_device):
+        if self.gather_:
+            return gather(outputs, output_device, dim=self.dim)
+
         return outputs
 
     def replicate(self, module, device_ids):
@@ -109,33 +117,40 @@ class DataParallelCriterion(DataParallel):
     """
     Calculate loss in multiple-GPUs, which balance the memory usage for
     Semantic Segmentation.
-
     The targets are splitted across the specified devices by chunking in
     the batch dimension. Please use together with :class:`encoding.parallel.DataParallelModel`.
-
     Reference:
         Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang, Ambrish Tyagi,
-        Amit Agrawal. "Context Encoding for Semantic Segmentation.
+        Amit Agrawal. “Context Encoding for Semantic Segmentation.
         *The IEEE Conference on Computer Vision and Pattern Recognition (CVPR) 2018*
-
     Example::
-
         >>> net = DataParallelModel(model, device_ids=[0, 1, 2])
         >>> criterion = DataParallelCriterion(criterion, device_ids=[0, 1, 2])
         >>> y = net(x)
         >>> loss = criterion(y, target)
     """
-    def forward(self, inputs, *targets, **kwargs):
+    def __init__(self, module, device_ids=None, output_device=None, dim=0):
+        super(DataParallelCriterion, self).__init__(module, device_ids, output_device, dim)
+
+    def forward(self, inputs, *targets, gathered=True, **kwargs):
         # input should be already scatterd
         # scattering the targets instead
+        if gathered:
+            if isinstance(inputs, (list, tuple)):
+                inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
+            else:
+                inputs, kwargs = self.scatter([inputs], kwargs, self.device_ids)
+                # inputs = tuple(inputs_per_gpu[0] for inputs_per_gpu in inputs)
+
         if not self.device_ids:
             return self.module(inputs, *targets, **kwargs)
-        targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
+
+        targets, _ = self.scatter(targets, kwargs, self.device_ids)
         if len(self.device_ids) == 1:
-            return self.module(inputs, *targets[0], **kwargs[0])
+            return self.module(inputs[0], *targets[0], **kwargs[0])
 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
-        targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
+        # targets = tuple(targets_per_gpu[0] for targets_per_gpu in targets)
         outputs = _criterion_parallel_apply(replicas, inputs, targets, kwargs)
         return Reduce.apply(*outputs) / len(outputs)
 
@@ -164,7 +179,7 @@ def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices
             device = get_a_var(input).get_device()
         try:
             with torch.cuda.device(device):
-                output = module(input, target, **kwargs)
+                output = module(input, *target, **kwargs)
             with lock:
                 results[i] = output
         except Exception as e:

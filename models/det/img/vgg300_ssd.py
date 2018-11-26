@@ -56,11 +56,9 @@ class VGGModel(nn.Module):
 
 def vgg_backbone(configer):
     model = VGGModel(DETECTOR_CONFIG['vgg_cfg'])
-    pretrained_dict = dict()
-    if configer.get('network', 'pretrained_model') is not None:
-        if configer.get('network', 'pretrained_model') is not None:
-            Log.info('Loading pretrained model:{}'.format(configer.get('network', 'pretrained_model')))
-            pretrained_dict = torch.load(configer.get('network', 'pretrained_model'))
+    if configer.get('network', 'pretrained') is not None:
+        Log.info('Loading pretrained model:{}'.format(configer.get('network', 'pretrained')))
+        pretrained_dict = torch.load(configer.get('network', 'pretrained'))
 
         Log.info('Pretrained Keys: {}'.format(pretrained_dict.keys()))
         model_dict = model.state_dict()
@@ -84,18 +82,18 @@ def vgg_backbone(configer):
 class Vgg300SSD(nn.Module):
     def __init__(self, configer):
         super(Vgg300SSD, self).__init__()
-        self.vgg_features = vgg_backbone(configer).named_modules()
+        self.backbone = vgg_backbone(configer).named_modules()
         cnt = 0
-        self.sub_vgg1_list = nn.ModuleList()
-        self.sub_vgg2_list = nn.ModuleList()
-        for key, module in self.vgg_features:
+        self.sub_backbone_1 = nn.ModuleList()
+        self.sub_backbone_2 = nn.ModuleList()
+        for key, module in self.backbone:
             if len(key.split('.')) < 2:
                 continue
 
             if cnt < 23:
-                self.sub_vgg1_list.append(module)
+                self.sub_backbone_1.append(module)
             else:
-                self.sub_vgg2_list.append(module)
+                self.sub_backbone_2.append(module)
 
             cnt += 1
 
@@ -105,11 +103,11 @@ class Vgg300SSD(nn.Module):
 
     def forward(self, x):
         out = []
-        for module in self.sub_vgg1_list:
+        for module in self.sub_backbone_1:
             x = module(x)
 
         out.append(self.norm4(x))
-        for module in self.sub_vgg2_list:
+        for module in self.sub_backbone_2:
             x = module(x)
 
         out.append(x)

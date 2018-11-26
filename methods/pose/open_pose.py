@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
-from loss.pose_loss_manager import PoseLossManager
+from loss.loss_manager import LossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
@@ -32,6 +32,7 @@ class OpenPose(object):
         self.configer = configer
         self.batch_time = AverageMeter()
         self.data_time = AverageMeter()
+        self.train_schedule_loss = AverageMeter()
         self.train_losses = AverageMeter()
         self.train_loss_heatmap = AverageMeter()
         self.train_loss_associate = AverageMeter()
@@ -39,7 +40,7 @@ class OpenPose(object):
         self.val_loss_heatmap = AverageMeter()
         self.val_loss_associate = AverageMeter()
         self.pose_visualizer = PoseVisualizer(configer)
-        self.pose_loss_manager = PoseLossManager(configer)
+        self.pose_loss_manager = LossManager(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
@@ -65,29 +66,20 @@ class OpenPose(object):
         self.val_loader = self.pose_data_loader.get_valloader()
 
         self.weights = self.configer.get('network', 'loss_weights')
-        self.mse_loss = self.pose_loss_manager.get_pose_loss('mse_loss')
+        self.mse_loss = self.pose_loss_manager.get_pose_loss('op_pose_loss')
 
     def _get_parameters(self):
         lr_1 = []
         lr_2 = []
-        lr_4 = []
-        lr_8 = []
         params_dict = dict(self.pose_net.named_parameters())
         for key, value in params_dict.items():
-            if ('model1_' not in key) and ('model0.' not in key) and ('backbone.' not in key):
-                if key[-4:] == 'bias':
-                    lr_8.append(value)
-                else:
-                    lr_4.append(value)
-            elif key[-4:] == 'bias':
+            if 'backbone' not in key:
                 lr_2.append(value)
             else:
                 lr_1.append(value)
 
-        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
-                  {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr') * 2., 'weight_decay': 0.0},
-                  {'params': lr_4, 'lr': self.configer.get('lr', 'base_lr') * 4.},
-                  {'params': lr_8, 'lr': self.configer.get('lr', 'base_lr') * 8., 'weight_decay': 0.0}]
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr'), 'weight_decay': 0.0},
+                  {'params': lr_2, 'lr': self.configer.get('lr', 'base_lr'), 'weight_decay': 0.0},]
 
         return params
 
@@ -99,10 +91,13 @@ class OpenPose(object):
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.configer.plus_one('epoch')
-        self.scheduler.step(self.configer.get('epoch'))
-
+        self.scheduler.step(self.train_schedule_loss.avg, epoch=self.configer.get('epoch'))
+        self.train_schedule_loss.reset()
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
+            self.module_utilizer.warm_lr(self.configer.get('iters'), len(self.train_loader),
+                                         self.scheduler, self.optimizer, backbone_list=[0])
+
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
             heatmap = data_dict['heatmap']
@@ -118,9 +113,10 @@ class OpenPose(object):
             # Compute the loss of the train batch & backward.
             loss_heatmap = self.mse_loss(heatmap_out, heatmap, mask=maskmap, weights=self.weights)
             loss_associate = self.mse_loss(paf_out, vecmap, mask=maskmap, weights=self.weights)
-            loss = loss_heatmap + loss_associate
+            loss = 2.0 * loss_heatmap + loss_associate
 
             self.train_losses.update(loss.item(), inputs.size(0))
+            self.train_schedule_loss.update(loss.item(), inputs.size(0))
             self.train_loss_heatmap.update(loss_heatmap.item(), inputs.size(0))
             self.train_loss_associate.update(loss_associate.item(), inputs.size(0))
 
@@ -143,7 +139,7 @@ class OpenPose(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.scheduler.get_lr(), batch_time=self.batch_time,
+                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -177,7 +173,7 @@ class OpenPose(object):
                 # Compute the loss of the val batch.
                 loss_heatmap = self.mse_loss(heatmap_out[-1], heatmap, maskmap)
                 loss_associate = self.mse_loss(paf_out[-1], vecmap, maskmap)
-                loss = loss_heatmap + loss_associate
+                loss = 2.0 * loss_heatmap + loss_associate
 
                 self.val_losses.update(loss.item(), inputs.size(0))
                 self.val_loss_heatmap.update(loss_heatmap.item(), inputs.size(0))
@@ -187,7 +183,8 @@ class OpenPose(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.pose_net, save_mode='iters')
+            self.configer.update_value(['val_loss'], self.val_losses.avg)
+            self.module_utilizer.save_net(self.pose_net, save_mode='val_loss')
             Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.val_loss_heatmap.avg, self.val_loss_associate.avg))
             # Print the log info & reset the states.
             Log.info(

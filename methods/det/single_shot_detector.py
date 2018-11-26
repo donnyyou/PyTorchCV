@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from loss.det_loss_manager import DetLossManager
+from loss.loss_manager import LossManager
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -37,7 +37,7 @@ class SingleShotDetector(object):
         self.train_losses = AverageMeter()
         self.val_losses = AverageMeter()
         self.det_visualizer = DetVisualizer(configer)
-        self.det_loss_manager = DetLossManager(configer)
+        self.det_loss_manager = LossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.ssd_target_generator = SSDTargetGenerator(configer)
@@ -57,34 +57,25 @@ class SingleShotDetector(object):
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = self.module_utilizer.load_net(self.det_net)
-
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
-
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
-
-        self.det_loss = self.det_loss_manager.get_det_loss('ssd_multibox_loss')
+        self.det_loss = self.det_loss_manager.get_det_loss('ssd_det_loss')
 
     def _get_parameters(self):
+        lr_1 = []
+        lr_10 = []
+        params_dict = dict(self.det_net.named_parameters())
+        for key, value in params_dict.items():
+            if 'backbone' not in key:
+                lr_10.append(value)
+            else:
+                lr_1.append(value)
 
-        return self.det_net.parameters()
+        params = [{'params': lr_1, 'lr': self.configer.get('lr', 'base_lr')},
+                  {'params': lr_10, 'lr': self.configer.get('lr', 'base_lr')}]
 
-    def warm_lr(self, batch_len):
-        """Sets the learning rate
-        # Adapted from PyTorch Imagenet example:
-        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
-        """
-        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
-        warm_lr = self.configer.get('lr', 'warm')['warm_lr']
-        if self.configer.get('iters') < warm_iters:
-            lr_delta = (self.configer.get('lr', 'base_lr') - warm_lr) * self.configer.get('iters') / warm_iters
-            lr = warm_lr + lr_delta
-
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] = lr
-
-            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
-                Log.info('LR: {}'.format([param_group['lr'] for param_group in self.optimizer.param_groups]))
+        return params
 
     def __train(self):
         """
@@ -98,8 +89,8 @@ class SingleShotDetector(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            if not self.configer.is_empty('lr', 'is_warm') and self.configer.get('lr', 'is_warm'):
-                self.warm_lr(len(self.train_loader))
+            self.module_utilizer.warm_lr(self.configer.get('iters'),
+                                         len(self.train_loader), self.scheduler, self.optimizer)
 
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
@@ -109,14 +100,18 @@ class SingleShotDetector(object):
 
             self.data_time.update(time.time() - start_time)
             # Forward pass.
-            feat_list, loc, cls = self.det_net(inputs)
+            outputs = self.det_net(inputs)
+            if self.configer.get('network', 'gathered'):
+                feat_list = outputs[0]
+            else:
+                feat_list = outputs[0][0]
 
             bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                        batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
             bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
-            loss = self.det_loss(loc, bboxes, cls, labels)
+            loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
 
             self.train_losses.update(loss.item(), inputs.size(0))
 
@@ -137,7 +132,7 @@ class SingleShotDetector(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.scheduler.get_lr(), batch_time=self.batch_time,
+                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -162,13 +157,15 @@ class SingleShotDetector(object):
                 inputs = self.module_utilizer.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
-                feat_list, loc, cls = self.det_net(inputs)
+                outputs = self.det_net(inputs)
+                feat_list, loc, cls = self.module_utilizer.gather(outputs)
+
                 bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                            batch_gt_labels, input_size)
 
                 bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
-                loss = self.det_loss(loc, bboxes, cls, labels)
+                loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
                 self.val_losses.update(loss.item(), inputs.size(0))
 
                 batch_detections = SingleShotDetectorTest.decode(loc, cls,

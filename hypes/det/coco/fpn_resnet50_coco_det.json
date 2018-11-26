@@ -4,50 +4,58 @@
     "method": "faster_rcnn",
     "data": {
       "num_classes": 81,
-      "data_dir": "~/DataSet/COCO_DET",
-      "image_tool": "cv2",
-      "input_mode": "BGR",
+      "data_dir": "~/DataSet/COCO_INS_2014",
+      "image_tool": "pil",
+      "input_mode": "RGB",
       "keep_difficult": false,
       "workers": 8
     },
     "train": {
-      "batch_size": 1,
+      "batch_size": 16,
       "data_transformer": {
-        "size_mode": "random_size"
+        "size_mode": "max_size",
+        "align_method": "only_pad"
       }
     },
     "val": {
-      "batch_size": 1,
-      "use_07_metric": true,
+      "batch_size": 16,
+      "use_07_metric": false,
       "data_transformer": {
-        "size_mode": "random_size"
+        "size_mode": "max_size",
+        "align_method": "only_pad"
       }
     },
     "test": {
+      "resize_bound": [800, 1333],
+      "scale_search": [1.0]
     },
     "train_trans": {
-      "flip_ratio": 0.5,
-      "resize_ratio": 1.0,
-      "trans_seq": ["random_hflip", "random_resize"]
-    },
-    "val_trans": {
-      "resize_ratio": 1.0,
-      "trans_seq": ["random_resize"]
-    },
-    "trans_params": {
+      "trans_seq": ["random_hflip", "random_resize"],
       "random_hflip": {
+        "ratio": 0.5,
         "swap_pair": []
       },
       "random_resize": {
+        "ratio": 1.0,
         "method": "bound",
-        "resize_bound": [600, 1000]
-      },
-      "normalize": {
-        "div_value": 1.0,
-        "mean_value": [123, 116, 103],
-        "mean": [122.7717, 115.9465, 102.9801],
-        "std": [1.0, 1.0, 1.0]
+        "resize_bound": [800, 1333],
+        "aspect_range": [0.9, 1.1]
       }
+    },
+    "val_trans": {
+      "trans_seq": ["random_resize"],
+      "random_resize": {
+        "ratio": 1.0,
+        "method": "bound",
+        "resize_bound": [800, 1333],
+        "aspect_range": [0.9, 1.1]
+      }
+    },
+    "normalize": {
+      "div_value": 255,
+      "mean_value": [124, 116, 104],
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
     },
     "rpn": {
       "head_index_list": [0, 0, 0, 0, 0],
@@ -73,7 +81,7 @@
 
     },
     "roi": {
-      "method": "roipool",
+      "method": "roialign",
       "class_agnostic": false,
       "pooled_width": 7,
       "pooled_height": 7,
@@ -143,17 +151,25 @@
       "rewrite": true
     },
     "lr": {
-      "base_lr": 0.001,
-      "lr_policy": "step",
+      "is_warm": true,
+      "warm": {
+        "warm_epoch": 0.1
+      },
+      "base_lr": 0.02,
+      "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
         "step_size": 9
+      },
+      "multistep": {
+        "gamma": 0.1,
+        "stepvalue": [9, 12]
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 15
+      "max_epoch": 13
     },
     "optim": {
       "optim_method": "sgd",
@@ -163,7 +179,7 @@
         "weight_decay": 0.0001
       },
       "sgd":{
-        "weight_decay": 0.0005,
+        "weight_decay": 0.0001,
         "momentum": 0.9,
         "nesterov": false
       }
@@ -172,8 +188,9 @@
       "mode": "union",
       "overlap_threshold": 0.3
     },
-    "vis": {
-      "conf_threshold": 0.05
+    "res": {
+      "val_conf_thre": 0.05,
+      "vis_conf_thre": 0.5
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

@@ -11,7 +11,7 @@
       "workers": 8
     },
     "train": {
-      "batch_size": 24,
+      "batch_size": 32,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
@@ -19,7 +19,7 @@
       }
     },
     "val": {
-      "batch_size": 24,
+      "batch_size": 32,
       "use_07_metric": true,
       "data_transformer": {
         "size_mode": "fix_size",
@@ -120,8 +120,8 @@
     "lr": {
       "is_warm": true,
       "warm": {
-        "warm_lr": 0.000001,
-        "warm_epoch": 6
+        "warm_epoch": 6,
+        "freeze_backbone": false
       },
       "base_lr": 0.004,
       "lr_policy": "multistep",
@@ -154,10 +154,12 @@
     },
     "nms": {
       "mode": "union",
-      "max_threshold": 0.45
+      "max_threshold": 0.45,
+      "pre_nms": 1000
     },
-    "vis": {
-      "conf_threshold": 0.01,
+    "res": {
+      "val_conf_thre": 0.01,
+      "vis_conf_thre": 0.5,
       "max_per_image": 200,
       "cls_keep_num": 50
     }

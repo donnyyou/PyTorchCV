@@ -22,7 +22,7 @@ DET_MODEL_DICT = {
     'vgg512_ssd': Vgg512SSD,
     'darknet_yolov2': DarkNetYolov2,
     'darknet_yolov3': DarkNetYolov3,
-    'faster_rcnn': FasterRCNN
+    'faster_rcnn': FasterRCNN,
 }
 
 

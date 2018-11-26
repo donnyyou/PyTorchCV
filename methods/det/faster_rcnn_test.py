@@ -14,7 +14,6 @@ import torch
 import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
-from datasets.tools.transforms import BoundResize
 from methods.tools.blob_helper import BlobHelper
 from methods.tools.module_utilizer import ModuleUtilizer
 from models.det_model_manager import DetModelManager
@@ -56,12 +55,15 @@ class FastRCNNTest(object):
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
         Log.info('Image Path: {}'.format(image_path))
-        img = ImageHelper.read_image(image_path,
+        image = ImageHelper.read_image(image_path,
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
-        ori_img_bgr = ImageHelper.get_cv2_bgr(img, mode=self.configer.get('data', 'input_mode'))
-        img, scale = BoundResize()(img)
-        inputs = self.blob_helper.make_input(img, scale=1.0)
+        ori_img_bgr = ImageHelper.get_cv2_bgr(image, mode=self.configer.get('data', 'input_mode'))
+        width, height = ImageHelper.get_size(image)
+        scale1 = self.configer.get('test', 'resize_bound')[0] / min(width, height)
+        scale2 = self.configer.get('test', 'resize_bound')[1] / max(width, height)
+        scale = min(scale1, scale2)
+        inputs = self.blob_helper.make_input(image, scale=scale)
         with torch.no_grad():
             # Forward pass.
             test_group = self.det_net(inputs, scale)
@@ -73,12 +75,12 @@ class FastRCNNTest(object):
                                        test_indices_and_rois,
                                        test_rois_num,
                                        self.configer,
-                                       ImageHelper.get_size(img))
+                                       ImageHelper.get_size(image))
         json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr, scale=scale)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                    json_dict,
-                                                   conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                   conf_threshold=self.configer.get('res', 'vis_conf_thre'))
         cv2.imwrite(vis_path, image_canvas)
         cv2.imwrite(raw_path, ori_img_bgr)
 
@@ -131,7 +133,7 @@ class FastRCNNTest(object):
             tmp_cls_label = cls_label[start_index:start_index+test_rois_num[i]]
             start_index += test_rois_num[i]
 
-            mask = (tmp_cls_prob > configer.get('vis', 'conf_threshold')) & (tmp_cls_label > 0)
+            mask = (tmp_cls_prob > configer.get('res', 'val_conf_thre')) & (tmp_cls_label > 0)
 
             tmp_dst_bbox = tmp_dst_bbox[mask].contiguous().view(-1, 4)
             if tmp_dst_bbox.numel() == 0:

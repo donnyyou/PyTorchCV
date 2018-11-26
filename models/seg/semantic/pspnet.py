@@ -17,9 +17,9 @@ class _ConvBatchNormReluBlock(nn.Module):
     def __init__(self, inplanes, outplanes, kernel_size, stride, padding=1, dilation=1, relu=True, bn_type=None):
         super(_ConvBatchNormReluBlock, self).__init__()
         self.relu = relu
-        self.conv =  nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
-                            kernel_size=kernel_size, stride=stride, padding=padding,
-                            dilation = dilation, bias=False)
+        self.conv = nn.Conv2d(in_channels=inplanes,out_channels=outplanes,
+                              kernel_size=kernel_size, stride=stride, padding=padding,
+                              dilation = dilation, bias=False)
         self.bn = ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_features=outplanes)
         self.relu_f = nn.ReLU()
 
@@ -35,8 +35,11 @@ class _ConvBatchNormReluBlock(nn.Module):
 class PPMBilinearDeepsup(nn.Module):
     def __init__(self, num_class=150, fc_dim=4096, bn_type=None):
         super(PPMBilinearDeepsup, self).__init__()
+        self.bn_type = bn_type
         pool_scales = (1, 2, 3, 6)
         self.ppm = []
+        # assert bn_type == 'syncbn' or not self.training
+        # Torch BN can't handle feature map size with 1x1.
         for scale in pool_scales:
             self.ppm.append(nn.Sequential(
                 nn.AdaptiveAvgPool2d(scale),
@@ -44,6 +47,7 @@ class PPMBilinearDeepsup(nn.Module):
                 ModuleHelper.BatchNorm2d(bn_type=bn_type)(512),
                 nn.ReLU(inplace=True)
             ))
+
         self.ppm = nn.ModuleList(self.ppm)
         self.cbr_deepsup = _ConvBatchNormReluBlock(fc_dim // 2, fc_dim // 4, 3, 1, bn_type=bn_type)
         self.conv_last = nn.Sequential(
@@ -61,12 +65,11 @@ class PPMBilinearDeepsup(nn.Module):
         conv5, conv4 = conv_out
         input_size = conv5.size()
         ppm_out = [conv5]
-
+        assert self.bn_type == 'syncbn' or not self.training or conv5.size(0) > 1
         for pool_scale in self.ppm:
-            ppm_out.append(nn.functional.upsample(
-                pool_scale(conv5),
-                (input_size[2], input_size[3]),
-                mode='bilinear', align_corners=True))
+            ppm_out.append(F.interpolate(pool_scale(conv5),
+                                         (input_size[2], input_size[3]),
+                                         mode='bilinear', align_corners=False))
 
         ppm_out = torch.cat(ppm_out, 1)
 
@@ -87,32 +90,23 @@ class PSPNet(nn.Sequential):
 
         num_features = self.backbone.get_num_features()
 
-        if 'caffe' in self.configer.get('network', 'backbone'):
-            self.low_features = nn.Sequential(
-                self.backbone.conv1, self.backbone.bn1, self.backbone.relu1,
-                self.backbone.conv2, self.backbone.bn2, self.backbone.relu2,
-                self.backbone.conv3, self.backbone.bn3, self.backbone.relu3,
-                self.backbone.maxpool,
-                self.backbone.layer1,
-            )
-        else:
-            self.low_features = nn.Sequential(
-                self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
-                self.backbone.maxpool,
-                self.backbone.layer1,
-            )
+        self.low_features = nn.Sequential(
+            self.backbone.conv1, self.backbone.bn1, self.backbone.relu,
+            self.backbone.maxpool,
+            self.backbone.layer1,
+        )
 
         self.high_features1 = nn.Sequential(self.backbone.layer2, self.backbone.layer3)
         self.high_features2 = nn.Sequential(self.backbone.layer4)
         self.decoder = PPMBilinearDeepsup(num_class=self.num_classes, fc_dim=num_features,
                                           bn_type=self.configer.get('network', 'bn_type'))
 
-    def forward(self, x):
-        low = self.low_features(x)
+    def forward(self, x_):
+        low = self.low_features(x_)
         aux = self.high_features1(low)
         x = self.high_features2(aux)
         x, aux = self.decoder([x, aux])
-        x = F.upsample(x, scale_factor=8, mode="bilinear", align_corners=True)
+        x = F.interpolate(x, size=(x_.size(2), x_.size(3)), mode="bilinear", align_corners=False)
 
         return x, aux
 

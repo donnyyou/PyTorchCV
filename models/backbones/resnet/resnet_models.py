@@ -12,11 +12,6 @@ import math
 import torch
 import torch.nn as nn
 
-try:
-    from urllib import urlretrieve
-except ImportError:
-    from urllib.request import urlretrieve
-
 from models.tools.module_helper import ModuleHelper
 from utils.tools.logger import Logger as Log
 
@@ -109,12 +104,23 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, bn_type=None):
-        self.inplanes = 64
+    def __init__(self, block, layers, num_classes=1000, deep_base=False, bn_type=None):
         super(ResNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)
+        self.inplanes = 128 if deep_base else 64
+        if deep_base:
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
+                ModuleHelper.BatchNorm2d(bn_type=bn_type)(64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=False),
+            )
+        else:
+            self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -168,79 +174,6 @@ class ResNet(nn.Module):
         return x
 
 
-class CaffeResNet(nn.Module):
-
-    def __init__(self, block, layers, num_classes=1000, bn_type=None):
-        self.inplanes = 128
-        super(CaffeResNet, self).__init__()
-        self.conv1 = conv3x3(3, 64, stride=2)
-        self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=0.1)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(64, 64)
-        self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=0.1)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.conv3 = conv3x3(64, 128)
-        self.bn3 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(128, momentum=0.1)
-        self.relu3 = nn.ReLU(inplace=True)
-
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.layer1 = self._make_layer(block, 64, layers[0], bn_type=bn_type)
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, bn_type=bn_type)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, bn_type=bn_type)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, bn_type=bn_type)
-        self.avgpool = nn.AvgPool2d(7, stride=1)
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, ModuleHelper.BatchNorm2d(bn_type=bn_type)):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-    def _make_layer(self, block, planes, blocks, stride=1, bn_type=None):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
-                ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * block.expansion),
-            )
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
-        x = self.maxpool(x)
-
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-
-        return x
-
-
 class ResNetModels(object):
 
     def __init__(self, configer):
@@ -251,16 +184,19 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(BasicBlock, [2, 2, 2, 2], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['resnet18'])
+        model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=False,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
+        return model
 
-            model.load_state_dict(pretrained_dict)
-
+    def deepbase_resnet18(self, **kwargs):
+        """Constructs a ResNet-18 model.
+        Args:
+            pretrained (bool): If True, returns a model pre-trained on Places
+        """
+        model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=True,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet34(self, **kwargs):
@@ -268,16 +204,19 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(BasicBlock, [3, 4, 6, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['resnet34'])
+        model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=False,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
+        return model
 
-            model.load_state_dict(pretrained_dict)
-
+    def deepbase_resnet34(self, **kwargs):
+        """Constructs a ResNet-34 model.
+        Args:
+            pretrained (bool): If True, returns a model pre-trained on Places
+        """
+        model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=True,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet50(self, **kwargs):
@@ -285,16 +224,19 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 4, 6, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['resnet50'])
+        model = ResNet(Bottleneck, [3, 4, 6, 3], deep_base=False,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
+        return model
 
-            model.load_state_dict(pretrained_dict)
-
+    def deepbase_resnet50(self, **kwargs):
+        """Constructs a ResNet-50 model.
+        Args:
+            pretrained (bool): If True, returns a model pre-trained on Places
+        """
+        model = ResNet(Bottleneck, [3, 4, 6, 3], deep_base=True,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet101(self, **kwargs):
@@ -302,16 +244,19 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 4, 23, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['resnet101'])
+        model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=False,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
+        return model
 
-            model.load_state_dict(pretrained_dict)
-
+    def deepbase_resnet101(self, **kwargs):
+        """Constructs a ResNet-101 model.
+        Args:
+            pretrained (bool): If True, returns a model pre-trained on Places
+        """
+        model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=True,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
     def resnet152(self, **kwargs):
@@ -320,46 +265,18 @@ class ResNetModels(object):
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = ResNet(Bottleneck, [3, 8, 36, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['resnet152'])
-
-            model.load_state_dict(pretrained_dict)
-
+        model = ResNet(Bottleneck, [3, 8, 36, 3], deep_base=False,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 
-    def caffe_resnet101(self, **kwargs):
-        """Constructs a ResNet-101 model.
+    def deepbase_resnet152(self, **kwargs):
+        """Constructs a ResNet-152 model.
+
         Args:
             pretrained (bool): If True, returns a model pre-trained on Places
         """
-        model = CaffeResNet(Bottleneck, [3, 4, 23, 3], bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        if self.configer.get('network', 'pretrained') or self.configer.get('network', 'pretrained_model') is not None:
-            if self.configer.get('network', 'pretrained_model') is not None:
-                Log.info('Loading pretrained model:{}'.format(self.configer.get('network', 'pretrained_model')))
-                pretrained_dict = torch.load(self.configer.get('network', 'pretrained_model'))
-            else:
-                pretrained_dict = self.load_url(model_urls['caffe_resnet101'])
-
-            model.load_state_dict(pretrained_dict)
-
+        model = ResNet(Bottleneck, [3, 8, 36, 3], deep_base=True,
+                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
-
-    def load_url(self, url, map_location=None):
-        model_dir = os.path.join(self.configer.get('project_dir'), 'models/backbones/resnet/pretrained')
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-
-        filename = url.split('/')[-1]
-        cached_file = os.path.join(model_dir, filename)
-        if not os.path.exists(cached_file):
-            Log.info('Downloading: "{}" to {}\n'.format(url, cached_file))
-            urlretrieve(url, cached_file)
-
-        Log.info('Loading pretrained model:{}'.format(cached_file))
-
-        return torch.load(cached_file, map_location=map_location)

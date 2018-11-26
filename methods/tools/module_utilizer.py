@@ -50,17 +50,13 @@ class ModuleUtilizer(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if self.configer.get('network', 'bn_type') == 'syncbn':
-            assert len(self.configer.get('gpu')) > 1
+        if len(self.configer.get('gpu')) > 1:
             from extensions.layers.syncbn.parallel import DataParallelModel
             self.configer.update_value(['network', 'parallel'], True)
-            return DataParallelModel(net)
-
-        elif len(self.configer.get('gpu')) > 1:
-            self.configer.update_value(['network', 'parallel'], True)
-            return nn.DataParallel(net)
+            return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
         else:
+            self.configer.update_value(['network', 'gathered'], True)
             return net
 
     def load_net(self, net):
@@ -68,7 +64,6 @@ class ModuleUtilizer(object):
             net = self._make_parallel(net)
 
         net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
-
         if self.configer.get('network', 'resume') is not None:
             resume_dict = torch.load(self.configer.get('network', 'resume'))
             if 'state_dict' in resume_dict:
@@ -81,7 +76,7 @@ class ModuleUtilizer(object):
                 checkpoint_dict = resume_dict
 
             net_dict = net.state_dict()
-
+            match_list = list()
             not_match_list = list()
             for key, value in checkpoint_dict.items():
                 if key.split('.')[0] == 'module':
@@ -91,21 +86,22 @@ class ModuleUtilizer(object):
                     module_key = 'module.{}'.format(key)
                     norm_key = key
 
-                if self.configer.get('network', 'parallel'):
-                    key = module_key
-                else:
-                    key = norm_key
+                key = module_key if self.configer.get('network', 'parallel') else norm_key
 
-                if net_dict[key].size() == value.size():
+                if key in net_dict and net_dict[key].size() == value.size():
                     net_dict[key] = value
+                    match_list.append(key)
                 else:
                     not_match_list.append(key)
 
+            model_miss_list = [k for k in net_dict.keys() if k not in match_list]
             if self.configer.get('network', 'resume_level') == 'full':
-                assert len(not_match_list) == 0
+                assert len(not_match_list) == 0, 'Checkpoint Miss Keys: {}'.format(not_match_list)
+                assert len(match_list) == len(net_dict.keys()), 'Model Miss Keys: {}'.format(model_miss_list)
 
             elif self.configer.get('network', 'resume_level') == 'part':
-                Log.info('Not Matched Keys: {}'.format(not_match_list))
+                Log.info('Checkpoint Miss Keys: {}'.format(not_match_list))
+                Log.info('Model Miss Keys: {}'.format(model_miss_list))
 
             else:
                 Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
@@ -116,6 +112,8 @@ class ModuleUtilizer(object):
                 self.configer.update_value(['iters'], resume_dict['config_dict']['iters'])
                 self.configer.update_value(['performance'], resume_dict['config_dict']['performance'])
                 self.configer.update_value(['val_loss'], resume_dict['config_dict']['val_loss'])
+                self.configer.update_value(['min_val_loss'], resume_dict['config_dict']['min_val_loss'])
+                self.configer.update_value(['max_performance'], resume_dict['config_dict']['max_performance'])
 
             net.load_state_dict(net_dict)
 
@@ -198,15 +196,47 @@ class ModuleUtilizer(object):
         Gathers tensors from different GPUs on a specified device
           (-1 means the CPU).
         """
-        if self.configer.get('network', 'bn_type') == 'syncbn':
+        if not self.configer.get('network', 'gathered'):
             if target_device is None:
                 target_device = list(range(torch.cuda.device_count()))[0]
 
             return torch_gather(outputs, target_device, dim=dim)
 
         else:
-            assert isinstance(outputs, torch.Tensor)
             return outputs
 
+    def get_lr(self, optimizer):
 
+        return [param_group['lr'] for param_group in optimizer.param_groups]
+
+    def warm_lr(self, iters, batch_len, scheduler, optimizer, backbone_list=(0, ), backbone_scale=1.0):
+        """Sets the learning rate
+        # Adapted from PyTorch Imagenet example:
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+        """
+        if self.configer.is_empty('lr', 'is_warm') or not self.configer.get('lr', 'is_warm'):
+            return
+
+        warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len
+        if iters < warm_iters:
+            if self.configer.get('lr', 'warm')['freeze_backbone']:
+                for backbone_index in backbone_list:
+                    optimizer.param_groups[backbone_index]['lr'] = 0.0
+
+            else:
+                lr_ratio = (self.configer.get('iters') + 1) / warm_iters
+
+                base_lr_list = scheduler.get_lr()
+                for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
+                    param_group['lr'] = base_lr * (lr_ratio ** 4)
+
+        elif iters == warm_iters:
+            try:
+                base_lr_list = scheduler.get_lr()
+                for param_group, base_lr in zip(optimizer.param_groups, base_lr_list):
+                    param_group['lr'] = base_lr
+
+            except AttributeError:
+                for backbone_index in backbone_list:
+                    optimizer.param_groups[backbone_index]['lr'] = self.configer.get('lr', 'base_lr') * backbone_scale
 

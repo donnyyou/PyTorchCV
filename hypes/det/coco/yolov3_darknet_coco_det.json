@@ -4,7 +4,7 @@
     "method": "yolov3",
     "data": {
       "num_classes": 80,
-      "data_dir": "~/DataSet/COCO_INS",
+      "data_dir": "~/DataSet/COCO_INS_2014",
       "image_tool": "pil",
       "input_mode": "RGB",
       "keep_difficult": false,
@@ -14,13 +14,13 @@
       "batch_size": 64,
       "data_transformer": {
         "size_mode": "multi_size",
-        "ms_input_size": [[320, 320], [416, 416], [608, 608]],
+        "ms_input_size": [[416, 416]],
         "align_method": "only_scale"
       }
     },
     "val": {
       "batch_size": 64,
-      "use_07_metric": true,
+      "use_07_metric": false,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [416, 416],
@@ -28,7 +28,7 @@
       }
     },
     "test": {
-      "test_input_size": [416, 416],
+      "input_size": [416, 416],
       "scale_search": [1.0]
     },
     "train_trans": {
@@ -148,21 +148,21 @@
       "warm": {
         "warm_epoch": 0.2
       },
-      "base_lr": 0.001,
-      "lr_policy": "step",
+      "base_lr": 0.0004,
+      "lr_policy": "multistep",
       "step": {
         "gamma": 0.1,
         "step_size": 30
       },
       "multistep": {
         "gamma": 0.1,
-        "stepvalue": [216, 243, 270]
+        "stepvalue": [50, 60, 70]
       }
     },
     "solver": {
       "display_iter": 100,
       "test_interval": 5000,
-      "max_epoch": 100
+      "max_epoch": 72
     },
     "optim": {
       "optim_method": "sgd",
@@ -181,7 +181,8 @@
       "mode": "union",
       "max_threshold": 0.45
     },
-    "vis": {
-      "obj_threshold": 0.5
+    "res": {
+      "val_conf_thre": 0.5,
+      "vis_conf_thre": 0.5
     }
 }

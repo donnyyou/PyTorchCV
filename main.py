@@ -42,6 +42,8 @@ if __name__ == "__main__":
     # ***********  Params for data.  **********
     parser.add_argument('--data_dir', default=None, type=str,
                         dest='data:data_dir', help='The Directory of the data.')
+    parser.add_argument('--workers', default=None, type=int,
+                        dest='data:workers', help='The number of workers to load data.')
     parser.add_argument('--train_batch_size', default=None, type=int,
                         dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
@@ -62,10 +64,8 @@ if __name__ == "__main__":
                         dest='network:model_name', help='The name of model.')
     parser.add_argument('--backbone', default=None, type=str,
                         dest='network:backbone', help='The base network of model.')
-    parser.add_argument('--pretrained', type=str2bool, nargs='?', default=False,
-                        dest='network:pretrained', help='Whether to use pretrained models.')
-    parser.add_argument('--pretrained_model', type=str, default=None,
-                        dest='network:pretrained_model', help='The path to pretrained model.')
+    parser.add_argument('--pretrained', type=str, default=None,
+                        dest='network:pretrained', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
                         dest='network:resume', help='The path of checkpoints.')
     parser.add_argument('--resume_level', default='full', type=str,
@@ -74,6 +74,10 @@ if __name__ == "__main__":
                         dest='network:resume_continue', help='Whether to continue training.')
     parser.add_argument('--resume_val', type=str2bool, nargs='?', default=True,
                         dest='network:resume_val', help='Whether to validate during resume.')
+    parser.add_argument('--gathered', type=str2bool, nargs='?', default=True,
+                        dest='network:gathered', help='Whether to gather the output of model.')
+    parser.add_argument('--loss_balance', type=str2bool, nargs='?', default=False,
+                        dest='network:loss_balance', help='Whether to balance GPU usage.')
 
     # ***********  Params for solver.  **********
     parser.add_argument('--optim_method', default=None, type=str,

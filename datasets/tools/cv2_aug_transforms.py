@@ -98,7 +98,7 @@ class RandomPad(object):
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
-class RandomShift(object):
+class Padding(object):
     """ Padding the Image to proper size.
             Args:
                 stride: the stride of the network.
@@ -108,11 +108,11 @@ class RandomShift(object):
                 img: Image object.
     """
 
-    def __init__(self, shift_pixel=None, shift_ratio=0.5, mean=(104, 117, 123)):
-        assert isinstance(shift_pixel, int)
-        self.shift_pixel = int(shift_pixel)
-        self.ratio = shift_ratio
+    def __init__(self, pad=None, pad_ratio=0.5, mean=(104, 117, 123), allow_outside_center=True):
+        self.pad = pad
+        self.ratio = pad_ratio
         self.mean = mean
+        self.allow_outside_center = allow_outside_center
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, np.ndarray)
@@ -123,44 +123,78 @@ class RandomShift(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         height, width, channels = img.shape
-        left_pad = random.randint(0, self.shift_pixel * 2)  # pad_left
-        up_pad = random.randint(0, self.shift_pixel * 2)  # pad_up
+        left_pad, up_pad, right_pad, down_pad = self.pad
 
-        expand_image = np.zeros((height + self.shift_pixel * 2,
-                                 width + self.shift_pixel * 2, channels), dtype=img.dtype)
-        expand_image[:, :, :] = self.mean
-        expand_image[self.shift_pixel:self.shift_pixel + height, self.shift_pixel:self.shift_pixel + width] = img
-        img = expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)]
-
-        if labelmap is not None:
-            expand_labelmap = np.zeros((height + self.shift_pixel * 2,
-                                        width + self.shift_pixel * 2), dtype=labelmap.dtype)
-            expand_labelmap[:, :] = 255
-            expand_labelmap[self.shift_pixel:self.shift_pixel + height,
-                            self.shift_pixel:self.shift_pixel + width] = labelmap
-            labelmap = expand_labelmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)]
-
-        if maskmap is not None:
-            expand_maskmap = np.zeros((height + self.shift_pixel * 2,
-                                       width + self.shift_pixel * 2), dtype=maskmap.dtype)
-            expand_maskmap[:, :] = 1
-            expand_maskmap[self.shift_pixel:self.shift_pixel + height,
-                           self.shift_pixel:self.shift_pixel + width] = maskmap
-            maskmap = expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)]
-
-        if polygons is not None:
-            for object_id in range(len(polygons)):
-                for polygon_id in range(len(polygons[object_id])):
-                    polygons[object_id][polygon_id][0::2] += (self.shift_pixel - left_pad)
-                    polygons[object_id][polygon_id][1::2] += (self.shift_pixel - up_pad)
+        target_size = [width + left_pad + right_pad, height + up_pad + down_pad]
+        offset_left = -left_pad
+        offset_up = -up_pad
 
         if kpts is not None and kpts.size > 0:
-            kpts[:, :, 0] += (self.shift_pixel - left_pad)
-            kpts[:, :, 1] += (self.shift_pixel - up_pad)
+            kpts[:, :, 0] -= offset_left
+            kpts[:, :, 1] -= offset_up
+            mask = np.logical_or.reduce((kpts[:, :, 0] >= target_size[0], kpts[:, :, 0] < 0,
+                                         kpts[:, :, 1] >= target_size[1], kpts[:, :, 1] < 0))
+            kpts[mask == 1, 2] = -1
 
         if bboxes is not None and bboxes.size > 0:
-            bboxes[:, 0::2] += (self.shift_pixel - left_pad)
-            bboxes[:, 1::2] += (self.shift_pixel - up_pad)
+            if self.allow_outside_center:
+                mask = np.ones(bboxes.shape[0], dtype=bool)
+            else:
+                crop_bb = np.array([offset_left, offset_up, offset_left + target_size[0], offset_up + target_size[1]])
+                center = (bboxes[:, :2] + bboxes[:, 2:]) / 2
+                mask = np.logical_and(crop_bb[:2] <= center, center < crop_bb[2:]).all(axis=1)
+
+            bboxes[:, 0::2] -= offset_left
+            bboxes[:, 1::2] -= offset_up
+            bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, target_size[0] - 1)
+            bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, target_size[1] - 1)
+
+            mask = np.logical_and(mask, (bboxes[:, :2] < bboxes[:, 2:]).all(axis=1))
+            bboxes = bboxes[mask]
+            if labels is not None:
+                labels = labels[mask]
+
+            if polygons is not None:
+                new_polygons = list()
+                for object_id in range(len(polygons)):
+                    if mask[object_id] == 1:
+                        for polygon_id in range(len(polygons[object_id])):
+                            polygons[object_id][polygon_id][0::2] -= offset_left
+                            polygons[object_id][polygon_id][1::2] -= offset_up
+                            polygons[object_id][polygon_id][0::2] = np.clip(polygons[object_id][polygon_id][0::2],
+                                                                            0, target_size[0] - 1)
+                            polygons[object_id][polygon_id][1::2] = np.clip(polygons[object_id][polygon_id][1::2],
+                                                                            0, target_size[1] - 1)
+
+                        new_polygons.append(polygons[object_id])
+
+                polygons = new_polygons
+
+        expand_image = np.zeros((max(height, target_size[1]) + abs(offset_up),
+                                 max(width, target_size[0]) + abs(offset_left), channels), dtype=img.dtype)
+        expand_image[:, :, :] = self.mean
+        expand_image[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+        abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = img
+        img = expand_image[max(offset_up, 0):max(offset_up, 0) + target_size[1],
+              max(offset_left, 0):max(offset_left, 0) + target_size[0]]
+
+        if maskmap is not None:
+            expand_maskmap = np.zeros((max(height, target_size[1]) + abs(offset_up),
+                                       max(width, target_size[0]) + abs(offset_left)), dtype=maskmap.dtype)
+            expand_maskmap[:, :] = 1
+            expand_maskmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+            abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = maskmap
+            maskmap = expand_maskmap[max(offset_up, 0):max(offset_up, 0) + target_size[1],
+                      max(offset_left, 0):max(offset_left, 0) + target_size[0]]
+
+        if labelmap is not None:
+            expand_labelmap = np.zeros((max(height, target_size[1]) + abs(offset_up),
+                                        max(width, target_size[0]) + abs(offset_left)), dtype=labelmap.dtype)
+            expand_labelmap[:, :] = 255
+            expand_labelmap[abs(min(offset_up, 0)):abs(min(offset_up, 0)) + height,
+            abs(min(offset_left, 0)):abs(min(offset_left, 0)) + width] = labelmap
+            labelmap = expand_labelmap[max(offset_up, 0):max(offset_up, 0) + target_size[1],
+                       max(offset_left, 0):max(offset_left, 0) + target_size[0]]
 
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
@@ -336,11 +370,11 @@ class RandomResizedCrop(object):
         interpolation: Default: PIL.Image.BILINEAR
     """
 
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=cv2.INTER_CUBIC):
+    def __init__(self, size, scale_range=(0.08, 1.0), aspect_range=(3. / 4., 4. / 3.), interpolation=cv2.INTER_CUBIC):
         self.size = tuple(size)
         self.interpolation = interpolation
-        self.scale = scale
-        self.ratio = ratio
+        self.scale = scale_range
+        self.ratio = aspect_range
 
     @staticmethod
     def get_params(img, scale, ratio):
@@ -401,9 +435,10 @@ class RandomResize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_range=(0.75, 1.25), target_size=None,
+    def __init__(self, scale_range=(0.75, 1.25), aspect_range=(0.9, 1.1), target_size=None,
                  resize_bound=None, method='random', resize_ratio=0.5):
         self.scale_range = scale_range
+        self.aspect_range = aspect_range
         self.resize_bound = resize_bound
         self.method = method
         self.ratio = resize_ratio
@@ -466,21 +501,27 @@ class RandomResize(object):
         height, width, _ = img.shape
         if random.random() < self.ratio:
             scale_ratio = self.get_scale([width, height], bboxes)
+            aspect_ratio = random.uniform(*self.aspect_range)
+            w_scale_ratio = math.sqrt(aspect_ratio) * scale_ratio
+            h_scale_ratio = math.sqrt(1.0 / aspect_ratio) * scale_ratio
         else:
-            scale_ratio = 1.0
+            w_scale_ratio, h_scale_ratio = 1.0, 1.0
 
         if kpts is not None and kpts.size > 0:
-            kpts[:, :, :2] *= scale_ratio
+            kpts[:, :, 0] *= w_scale_ratio
+            kpts[:, :, 1] *= h_scale_ratio
 
         if bboxes is not None and bboxes.size > 0:
-            bboxes *= scale_ratio
+            bboxes[:, 0::2] *= w_scale_ratio
+            bboxes[:, 1::2] *= h_scale_ratio
 
         if polygons is not None:
             for object_id in range(len(polygons)):
                 for polygon_id in range(len(polygons[object_id])):
-                    polygons[object_id][polygon_id] *= scale_ratio
+                    polygons[object_id][polygon_id][0::2] *= w_scale_ratio
+                    polygons[object_id][polygon_id][1::2] *= h_scale_ratio
 
-        converted_size = (int(width * scale_ratio), int(height * scale_ratio))
+        converted_size = (int(width * w_scale_ratio), int(height * h_scale_ratio))
 
         img = cv2.resize(img, converted_size, interpolation=cv2.INTER_CUBIC).astype(np.uint8)
         if labelmap is not None:
@@ -524,7 +565,7 @@ class RandomRotate(object):
         if random.random() < self.ratio:
             rotate_degree = random.uniform(-self.max_degree, self.max_degree)
         else:
-            return img, labelmap, maskmap, kpts, bboxes, labels
+            return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         height, width, _ = img.shape
 
@@ -749,8 +790,6 @@ class RandomFocusCrop(object):
             raise TypeError('Got inappropriate size arg: {}'.format(crop_size))
 
     def get_center(self, img_size, bboxes):
-        max_center = [img_size[0] // 2, img_size[1] // 2]
-
         if bboxes is None or bboxes.size == 0:
             if img_size[0] > self.size[0]:
                 x = random.randint(self.size[0] // 2, img_size[0] - self.size[0] // 2)
@@ -765,13 +804,11 @@ class RandomFocusCrop(object):
             return [x, y], -1
 
         else:
-            max_index = 0
-            bboxes = np.array(bboxes)
             border = bboxes[:, 2:] - bboxes[:, 0:2]
-            for i in range(len(border)):
-                if border[i][0] * border[i][1] >= border[max_index][0] * border[max_index][1]:
-                    max_index = i
-                    max_center = [(bboxes[i][0] + bboxes[i][2]) / 2, (bboxes[i][1] + bboxes[i][3]) / 2]
+            area = border[:, 0] * border[:, 1]
+            max_index = np.argmax(area)
+            max_center = [(bboxes[max_index][0] + bboxes[max_index][2]) / 2,
+                          (bboxes[max_index][1] + bboxes[max_index][3]) / 2]
 
             if self.center_jitter is not None:
                 jitter = random.randint(-self.center_jitter, self.center_jitter)
@@ -811,6 +848,9 @@ class RandomFocusCrop(object):
         if kpts is not None and kpts.size > 0:
             kpts[:, :, 0] -= offset_left
             kpts[:, :, 1] -= offset_up
+            mask = np.logical_or.reduce((kpts[:, :, 0] >= self.size[0], kpts[:, :, 0] < 0,
+                                         kpts[:, :, 1] >= self.size[1], kpts[:, :, 1] < 0))
+            kpts[mask == 1, 2] = -1
 
         if bboxes is not None and bboxes.size > 0:
             if self.allow_outside_center:
@@ -1130,11 +1170,12 @@ class CV2AugCompose(object):
                     mean=self.configer.get('normalize', 'mean_value')
                 )
 
-            if 'random_shift' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_shift'] = RandomShift(
-                    shift_pixel=self.configer.get('train_trans', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('train_trans', 'random_shift')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value')
+            if 'padding' in self.configer.get('train_trans', 'trans_seq'):
+                self.transforms['padding'] = Padding(
+                    pad=self.configer.get('train_trans', 'padding')['pad'],
+                    pad_ratio=self.configer.get('train_trans', 'padding')['ratio'],
+                    mean=self.configer.get('normalize', 'mean_value'),
+                    allow_outside_center=self.configer.get('train_trans', 'padding')['allow_outside_center']
                 )
 
             if 'random_brightness' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
@@ -1154,6 +1195,7 @@ class CV2AugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
 
@@ -1161,6 +1203,7 @@ class CV2AugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         target_size=self.configer.get('train_trans', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
@@ -1168,6 +1211,7 @@ class CV2AugCompose(object):
                 elif self.configer.get('train_trans', 'random_resize')['method'] == 'bound':
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('train_trans', 'random_resize')['method'],
+                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
                         resize_bound=self.configer.get('train_trans', 'random_resize')['resize_bound'],
                         resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
                     )
@@ -1222,7 +1266,9 @@ class CV2AugCompose(object):
 
             if 'random_resized_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
                 self.transforms['random_resized_crop'] = RandomResizedCrop(
-                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size']
+                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size'],
+                    scale_range=self.configer.get('train_trans', 'random_resized_crop')['scale_range'],
+                    aspect_range=self.configer.get('train_trans', 'random_resized_crop')['aspect_range']
                 )
 
             if 'random_rotate' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
@@ -1279,11 +1325,12 @@ class CV2AugCompose(object):
                     mean=self.configer.get('normalize', 'mean_value')
                 )
 
-            if 'random_shift' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_shift'] = RandomShift(
-                    shift_pixel=self.configer.get('val_trans', 'random_shift')['shift_pixel'],
-                    shift_ratio=self.configer.get('val_trans', 'shift_ratio'),
-                    mean=self.configer.get('normalize', 'mean_value')
+            if 'padding' in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms['padding'] = Padding(
+                    pad=self.configer.get('val_trans', 'padding')['pad'],
+                    pad_ratio=self.configer.get('val_trans', 'padding')['ratio'],
+                    mean=self.configer.get('normalize', 'mean_value'),
+                    allow_outside_center=self.configer.get('val_trans', 'padding')['allow_outside_center']
                 )
 
             if 'random_brightness' in self.configer.get('val_trans', 'trans_seq'):
@@ -1303,6 +1350,7 @@ class CV2AugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('val_trans', 'random_resize')['aspect_range'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )
 
@@ -1310,6 +1358,7 @@ class CV2AugCompose(object):
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
                         scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
+                        aspect_range=self.configer.get('val_trans', 'random_resize')['aspect_range'],
                         target_size=self.configer.get('val_trans', 'random_resize')['target_size'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )
@@ -1317,6 +1366,7 @@ class CV2AugCompose(object):
                 elif self.configer.get('val_trans', 'random_resize')['method'] == 'bound':
                     self.transforms['random_resize'] = RandomResize(
                         method=self.configer.get('val_trans', 'random_resize')['method'],
+                        aspect_range=self.configer.get('val_trans', 'random_resize')['aspect_range'],
                         resize_bound=self.configer.get('val_trans', 'random_resize')['resize_bound'],
                         resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
                     )

@@ -6,6 +6,7 @@
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from models.backbones.backbone_selector import BackboneSelector
 from models.tools.module_helper import ModuleHelper
@@ -59,8 +60,6 @@ class DenseASPP(nn.Module):
                       out_channels=self.configer.get('network', 'out_channels'), kernel_size=1, padding=0)
         )
 
-        self.upsample = nn.Sequential(nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True))
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.xavier_uniform_(m.weight.data)
@@ -89,7 +88,7 @@ class DenseASPP(nn.Module):
 
         cls = self.classification(feature)
 
-        out = self.upsample(cls)
+        out = F.interpolate(cls, scale_factor=8, mode='bilinear', align_corners=False)
 
         return out
 

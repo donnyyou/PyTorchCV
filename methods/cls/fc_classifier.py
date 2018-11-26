@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.cls_data_loader import ClsDataLoader
-from loss.cls_loss_manager import ClsLossManager
+from loss.loss_manager import LossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.cls_model_manager import ClsModelManager
@@ -32,7 +32,7 @@ class FCClassifier(object):
         self.data_time = AverageMeter()
         self.train_losses = AverageMeter()
         self.val_losses = AverageMeter()
-        self.cls_loss_manager = ClsLossManager(configer)
+        self.cls_loss_manager = LossManager(configer)
         self.cls_model_manager = ClsModelManager(configer)
         self.cls_data_loader = ClsDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
@@ -55,7 +55,7 @@ class FCClassifier(object):
         self.train_loader = self.cls_data_loader.get_trainloader()
         self.val_loader = self.cls_data_loader.get_valloader()
 
-        self.ce_loss = self.cls_loss_manager.get_cls_loss('cross_entropy_loss')
+        self.ce_loss = self.cls_loss_manager.get_cls_loss('fc_cls_loss')
 
     def _get_parameters(self):
 
@@ -102,7 +102,7 @@ class FCClassifier(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.scheduler.get_lr(), batch_time=self.batch_time,
+                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
 
                 self.batch_time.reset()

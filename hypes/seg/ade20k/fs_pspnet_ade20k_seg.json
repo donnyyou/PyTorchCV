@@ -27,6 +27,9 @@
       }
     },
     "test": {
+      "mode": "ss_test",
+      "min_side_length": 520,
+      "fit_stride": 8,
       "scale_search": [1.0]
     },
     "train_trans": {
@@ -45,7 +48,8 @@
       "random_resize": {
         "ratio": 1.0,
         "method": "random",
-        "scale_range": [0.5, 2.0]
+        "scale_range": [0.5, 2.0],
+        "aspect_range": [0.9, 1.1]
       },
       "random_rotate": {
         "ratio": 0.5,
@@ -126,7 +130,8 @@
       },
       "sgd":{
         "weight_decay": 0.0001,
-        "momentum": 0.9
+        "momentum": 0.9,
+        "nesterov": false
       }
     },
     "cross_entropy_loss": {
