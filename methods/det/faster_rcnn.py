@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
-from loss.det_loss_manager import DetLossManager
+from loss.loss_manager import LossManager
 from methods.det.faster_rcnn_test import FastRCNNTest
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
@@ -37,7 +37,7 @@ class FasterRCNN(object):
         self.train_losses = AverageMeter()
         self.val_losses = AverageMeter()
         self.det_visualizer = DetVisualizer(configer)
-        self.det_loss_manager = DetLossManager(configer)
+        self.det_loss_manager = LossManager(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
@@ -63,7 +63,7 @@ class FasterRCNN(object):
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
 
-        self.fr_loss = self.det_loss_manager.get_det_loss('fr_loss')
+        self.fr_loss = self.det_loss_manager.get_det_loss('fr_det_loss')
 
     def _get_parameters(self):
         lr_1 = []

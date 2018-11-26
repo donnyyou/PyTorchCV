@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
-from loss.pose_loss_manager import PoseLossManager
+from loss.loss_manager import LossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
@@ -34,7 +34,7 @@ class ConvPoseMachine(object):
         self.train_losses = AverageMeter()
         self.val_losses = AverageMeter()
         self.pose_visualizer = PoseVisualizer(configer)
-        self.pose_loss_manager = PoseLossManager(configer)
+        self.pose_loss_manager = LossManager(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
         self.module_utilizer = ModuleUtilizer(configer)
@@ -58,7 +58,7 @@ class ConvPoseMachine(object):
         self.train_loader = self.pose_data_loader.get_trainloader()
         self.val_loader = self.pose_data_loader.get_valloader()
 
-        self.mse_loss = self.pose_loss_manager.get_pose_loss('mse_loss')
+        self.mse_loss = self.pose_loss_manager.get_pose_loss('cpm_pose_loss')
 
     def _get_parameters(self):
 

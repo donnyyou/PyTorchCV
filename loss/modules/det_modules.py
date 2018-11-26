@@ -7,14 +7,22 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import math
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 from utils.tools.logger import Logger as Log
+
+
+class SSDDetLoss(nn.Module):
+    def __init__(self, configer):
+        super(SSDDetLoss, self).__init__()
+        self.ssd_loss = SSDMultiBoxLoss(configer)
+
+    def forward(self, outputs, *targets, **kwargs):
+
+        return self.ssd_loss(outputs, *targets, **kwargs)
 
 
 class SSDFocalLoss(nn.Module):
@@ -61,7 +69,7 @@ class SSDFocalLoss(nn.Module):
 
         return conf_loss
 
-    def forward(self, outputs, *targets):
+    def forward(self, outputs, *targets, **kwargs):
         """Compute loss between (loc_preds, loc_targets) and (cls_preds, cls_targets).
 
         Args:
@@ -208,9 +216,9 @@ class SSDMultiBoxLoss(nn.Module):
         return loc_loss + conf_loss
 
 
-class YOLOv3Loss(nn.Module):
+class YOLOv3DetLoss(nn.Module):
     def __init__(self, configer):
-        super(YOLOv3Loss, self).__init__()
+        super(YOLOv3DetLoss, self).__init__()
         self.configer = configer
         self.mse_loss = nn.MSELoss(reduction='sum')  # 'sum'
         self.bce_loss = nn.BCELoss(reduction='sum')
@@ -280,10 +288,10 @@ class FRLocLoss(nn.Module):
         return y.sum()
 
 
-class FRLoss(nn.Module):
+class FRDetLoss(nn.Module):
 
     def __init__(self, configer):
-        super(FRLoss, self).__init__()
+        super(FRDetLoss, self).__init__()
         self.configer = configer
         self.fr_loc_loss = FRLocLoss(configer)
 

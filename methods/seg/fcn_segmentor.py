@@ -13,7 +13,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
-from loss.seg_loss_manager import SegLossManager
+from loss.loss_manager import LossManager
 from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.seg_model_manager import SegModelManager
@@ -35,7 +35,7 @@ class FCNSegmentor(object):
         self.val_losses = AverageMeter()
         self.seg_running_score = SegRunningScore(configer)
         self.seg_visualizer = SegVisualizer(configer)
-        self.seg_loss_manager = SegLossManager(configer)
+        self.seg_loss_manager = LossManager(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)

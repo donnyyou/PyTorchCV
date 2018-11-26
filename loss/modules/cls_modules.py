@@ -12,6 +12,17 @@ import torch
 import torch.nn as nn
 
 
+class FCClsLoss(nn.Module):
+    def __init__(self, configer):
+        super(FCClsLoss, self).__init__()
+        self.configer = configer
+        self.ce_loss = CrossEntropyLoss(self.configer)
+
+    def forward(self, inputs, *targets, **kwargs):
+
+        return self.ce_loss(inputs, targets[0])
+
+
 class CrossEntropyLoss(nn.Module):
     def __init__(self, configer=None):
         super(CrossEntropyLoss, self).__init__()

@@ -160,6 +160,9 @@
       "theta": 1.0,
       "method": "gaussian"
     },
+    "mse_loss":{
+      "reduction": "sum"
+    },
     "res": {
       "num_threshold":3,
       "avg_threshold": 0.2,
