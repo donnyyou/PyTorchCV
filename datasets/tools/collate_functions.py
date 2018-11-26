@@ -8,15 +8,13 @@ from __future__ import division
 from __future__ import print_function
 
 import random
-import numpy as np
-import torch
 import torch.nn.functional as F
-from PIL import Image
+from torch.utils.data.dataloader import default_collate
 
 from utils.tools.logger import Logger as Log
 
 
-NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons']
+NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons', 'meta_dict']
 
 
 class CollateFunctions(object):
@@ -30,36 +28,13 @@ class CollateFunctions(object):
     @staticmethod
     def default_collate(batch, data_keys=None):
         transposed = [list(sample) for sample in zip(*batch)]
-        data_dict = {key: CollateFunctions.stack(value) for key, value in zip(data_keys, transposed)}
+        data_dict = {key: default_collate(value) for key, value in zip(data_keys, transposed)}
         return data_dict
-
-    @staticmethod
-    def stack(batch):
-        if isinstance(batch, torch.Tensor) or isinstance(batch[0], (list, tuple)):
-            return batch
-
-        elif isinstance(batch[0], torch.Tensor):
-            return torch.stack(batch, 0)
-
-        elif isinstance(batch[0], np.ndarray):
-            return torch.stack([torch.from_numpy(b) for b in batch], 0)
-
-        elif isinstance(batch[0], Image.Image):
-            return torch.stack([torch.from_numpy(np.array(b)) for b in batch], 0)
-
-        elif isinstance(batch[0], int):
-            return torch.LongTensor(batch)
-
-        elif isinstance(batch[0], float):
-            return torch.DoubleTensor(batch)
-
-        error_msg = "batch must contain tensors, numbers, dicts or lists; found {}"
-        raise TypeError((error_msg.format(type(batch[0]))))
 
     @staticmethod
     def trans(data_keys, out_list, trans_dict):
         if trans_dict['size_mode'] == 'random_size':
-            return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+            return {key: default_collate(value) if key not in NOT_STACK_KEYS else value
                     for key, value in zip(data_keys, out_list)}
 
         img_list = out_list[data_keys.index('img')]
@@ -183,5 +158,5 @@ class CollateFunctions(object):
                     out_list[data_keys.index('bboxes')][i][:, 0::2] += left_pad
                     out_list[data_keys.index('bboxes')][i][:, 1::2] += up_pad
 
-        return {key: CollateFunctions.stack(value) if key not in NOT_STACK_KEYS else value
+        return {key: default_collate(value) if key not in NOT_STACK_KEYS else value
                 for key, value in zip(data_keys, out_list)}
