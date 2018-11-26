@@ -14,7 +14,7 @@ from torch.utils.data.dataloader import default_collate
 from utils.tools.logger import Logger as Log
 
 
-NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons', 'meta_dict']
+NOT_STACK_KEYS = ['kpts', 'bboxes', 'labels', 'polygons', 'meta']
 
 
 class CollateFunctions(object):
