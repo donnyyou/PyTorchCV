@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import torch
 import torch.nn as nn
 
@@ -27,7 +28,7 @@ class ModuleHelper(object):
             return nn.BatchNorm2d
 
         elif bn_type == 'syncbn':
-            from extensions.layers.syncbn.module import BatchNorm2d
+            from extensions.syncbn.module import BatchNorm2d
             return BatchNorm2d
 
         else:

@@ -8,13 +8,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 import math
+import os
+
 import torch
 import torch.nn as nn
+from extensions.parallel.data_container import DataContainer
 from torch.nn.parallel.scatter_gather import gather as torch_gather
-
-from extensions.layers.parallel.data_container import DataContainer
 from utils.tools.logger import Logger as Log
 
 
@@ -58,7 +58,7 @@ class ModuleRunner(object):
 
     def _make_parallel(self, net):
         if len(self.configer.get('gpu')) > 1:
-            from extensions.layers.parallel.data_parallel import DataParallelModel
+            from extensions.parallel.data_parallel import DataParallelModel
             self.configer.update_value(['network', 'parallel'], True)
             return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
@@ -179,7 +179,7 @@ class ModuleRunner(object):
                 m.eval()
 
             if syncbn:
-                from extensions.layers.syncbn.module import BatchNorm2d, BatchNorm1d
+                from extensions.syncbn import BatchNorm2d, BatchNorm1d
                 if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
                     m.eval()
 

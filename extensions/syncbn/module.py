@@ -10,17 +10,16 @@
 
 """Synchronized Cross-GPU Batch Normalization Module"""
 import collections
-import threading
 import os
+import threading
+
 import torch
+from extensions.syncbn import SyncMaster
+from extensions.syncbn import allreduce
+from torch.autograd import Function
 from torch.nn.functional import batch_norm
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
-from torch.autograd import Function
-
-from extensions.layers.syncbn.parallel import allreduce
-from extensions.layers.syncbn.comm import SyncMaster
-
 from torch.utils.cpp_extension import load
 
 torch_ver = torch.__version__[:3]

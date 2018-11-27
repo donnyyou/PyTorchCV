@@ -9,18 +9,18 @@
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 """Encoding Data Parallel"""
-import threading
 import functools
+import threading
+
 import torch
-from torch.autograd import Variable, Function
 import torch.cuda.comm as comm
-from torch.nn.parallel.scatter_gather import gather
+from torch.autograd import Variable, Function
+from torch.nn.parallel._functions import Broadcast
 from torch.nn.parallel.data_parallel import DataParallel
 from torch.nn.parallel.parallel_apply import get_a_var
-from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
+from torch.nn.parallel.scatter_gather import gather
 
-from extensions.layers.parallel.scatter_gather import scatter_kwargs
-
+from extensions.parallel.scatter_gather import scatter_kwargs
 
 torch_ver = torch.__version__[:3]
 

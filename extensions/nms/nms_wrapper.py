@@ -1,9 +1,9 @@
 import numpy as np
 import torch
 
-from extensions.layers.nms.src.gpu_nms import gpu_nms
-from extensions.layers.nms.src.cpu_nms import cpu_nms
-from extensions.layers.nms.src.cpu_soft_nms import cpu_soft_nms
+from extensions.nms.src.cpu_nms import cpu_nms
+from extensions.nms.src.cpu_soft_nms import cpu_soft_nms
+from extensions.nms.src.gpu_nms import gpu_nms
 
 
 def nms(dets, thresh, device_id=None):

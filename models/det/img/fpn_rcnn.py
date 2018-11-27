@@ -9,13 +9,12 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-from torch.nn import functional as F
-from torch import nn
-
 from models.backbones.backbone_selector import BackboneSelector
+from torch import nn
+from torch.nn import functional as F
 from utils.layers.det.fr_roi_generator import FRROIGenerator
-from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
 from utils.layers.det.fr_roi_sampler import FRROISampler
+from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
 from utils.tools.logger import Logger as Log
 
 
@@ -241,7 +240,7 @@ class RoIHead(nn.Module):
         else:
             self.cls_loc = nn.Linear(1024, 4 * self.configer.get('data', 'num_classes'))
 
-        from extensions.layers.roialign.module import RoIAlign2D
+        from extensions.roialign.module import RoIAlign2D
         self.roi_align = RoIAlign2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
                                     pooled_width=int(self.configer.get('roi', 'pooled_width')),
                                     spatial_scale=1.0 / float(self.configer.get('roi', 'spatial_stride')),
