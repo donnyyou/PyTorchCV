@@ -28,16 +28,16 @@ class CrossEntropyLoss(nn.Module):
         super(CrossEntropyLoss, self).__init__()
         self.configer = configer
         weight = None
-        if not self.configer.is_empty('cross_entropy_loss', 'weight'):
+        if self.configer.exists('cross_entropy_loss', 'weight'):
             weight = self.configer.get('cross_entropy_loss', 'weight')
             weight = torch.FloatTensor(weight).cuda()
 
         reduction = 'elementwise_mean'
-        if not self.configer.is_empty('cross_entropy_loss', 'reduction'):
+        if self.configer.exists('cross_entropy_loss', 'reduction'):
             reduction = self.configer.get("cross_entropy_loss", "reduction")
 
         ignore_index = -100
-        if not self.configer.is_empty('cross_entropy_loss', 'ignore_index'):
+        if self.configer.exists('cross_entropy_loss', 'ignore_index'):
             ignore_index = self.configer.get('cross_entropy_loss', 'ignore_index')
 
         self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction=reduction)

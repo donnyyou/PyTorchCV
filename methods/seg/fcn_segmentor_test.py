@@ -47,17 +47,17 @@ class FCNSegmentorTest(object):
     def _get_blob(self, ori_image, scale=None):
         assert scale is not None
         image = None
-        if not self.configer.is_empty('test', 'input_size'):
+        if self.configer.exists('test', 'input_size'):
             image = self.blob_helper.make_input(image=ori_image,
                                                 input_size=self.configer.get('test', 'input_size'),
                                                 scale=scale)
 
-        elif not self.configer.is_empty('test', 'min_side_length'):
+        elif self.configer.exists('test', 'min_side_length'):
             image = self.blob_helper.make_input(image=ori_image,
                                                 min_side_length=self.configer.get('test', 'min_side_length'),
                                                 scale=scale)
 
-        elif not self.configer.is_empty('test', 'max_side_length'):
+        elif self.configer.exists('test', 'max_side_length'):
             image = self.blob_helper.make_input(image=ori_image,
                                                 min_side_length=self.configer.get('test', 'max_side_length'),
                                                 scale=scale)
@@ -68,7 +68,7 @@ class FCNSegmentorTest(object):
 
         b, c, h, w = image.size()
         border_hw = [h, w]
-        if not self.configer.is_empty('test', 'fit_stride'):
+        if self.configer.exists('test', 'fit_stride'):
             stride = self.configer.get('test', 'fit_stride')
 
             pad_w = 0 if (w % stride == 0) else stride - (w % stride)  # right
@@ -109,10 +109,10 @@ class FCNSegmentorTest(object):
         ImageHelper.save(image_canvas, save_path=vis_path)
         ImageHelper.save(ori_image, save_path=raw_path)
 
-        if not self.configer.is_empty('data', 'label_list'):
+        if self.configer.exists('data', 'label_list'):
             label_img = self.__relabel(label_img)
 
-        if not self.configer.is_empty('data', 'reduce_zero_label') and self.configer.get('data', 'reduce_zero_label'):
+        if self.configer.exists('data', 'reduce_zero_label') and self.configer.get('data', 'reduce_zero_label'):
             label_img = label_img + 1
             label_img = label_img.astype(np.uint8)
 

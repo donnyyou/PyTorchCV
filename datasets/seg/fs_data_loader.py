@@ -33,10 +33,10 @@ class FSDataLoader(data.Dataset):
                                      mode=self.configer.get('data', 'input_mode'))
         labelmap = ImageHelper.read_image(self.label_list[index],
                                           tool=self.configer.get('data', 'image_tool'), mode='P')
-        if not self.configer.is_empty('data', 'label_list'):
+        if self.configer.exists('data', 'label_list'):
             labelmap = self._encode_label(labelmap)
 
-        if not self.configer.is_empty('data', 'reduce_zero_label'):
+        if self.configer.exists('data', 'reduce_zero_label'):
             labelmap = self._reduce_zero_label(labelmap)
 
         if self.aug_transform is not None:

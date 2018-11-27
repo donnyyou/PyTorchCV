@@ -44,7 +44,7 @@ class Configer(object):
             json_stream.close()
 
             for key, value in self.args_dict.items():
-                if self.is_empty(*key.split(':')):
+                if not self.exists(*key.split(':')):
                     self.add_key_value(key.split(':'), value)
                 elif value is not None:
                     self.update_value(key.split(':'), value)
@@ -77,20 +77,17 @@ class Configer(object):
             Log.error('{} KeyError: {}.'.format(self._get_caller(), key))
             exit(1)
 
-    def is_empty(self, *key):
-        if len(key) == 0:
+    def exists(self, *key):
+        if len(key) == 1 and key[0] in self.params_root:
             return True
 
-        if len(key) == 1 and key[0] not in self.params_root:
-            return True
-
-        if len(key) == 2 and (key[0] not in self.params_root or key[1] not in self.params_root[key[0]]):
+        if len(key) == 2 and (key[0] in self.params_root and key[1] in self.params_root[key[0]]):
             return True
 
         return False
 
     def add_key_value(self, key_tuple, value):
-        if not self.is_empty(*key_tuple):
+        if self.exists(*key_tuple):
             Log.error('{} Key: {} existed!!!'.format(self._get_caller(), key_tuple))
             exit(1)
 
@@ -108,7 +105,7 @@ class Configer(object):
             exit(1)
 
     def update_value(self, key_tuple, value):
-        if self.is_empty(*key_tuple):
+        if not self.exists(*key_tuple):
             Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
             exit(1)
 
@@ -123,7 +120,7 @@ class Configer(object):
             exit(1)
 
     def plus_one(self, *key):
-        if self.is_empty(*key):
+        if not self.exists(*key):
             Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key))
             exit(1)
 

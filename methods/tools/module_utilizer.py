@@ -33,7 +33,7 @@ class ModuleUtilizer(object):
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
         self.configer.add_key_value(['network', 'parallel'], False)
-        if self.configer.is_empty('network', 'bn_type'):
+        if not self.configer.exists('network', 'bn_type'):
             self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
 
         if len(self.configer.get('gpu')) == 1:
@@ -214,7 +214,7 @@ class ModuleUtilizer(object):
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
-        if self.configer.is_empty('lr', 'is_warm') or not self.configer.get('lr', 'is_warm'):
+        if not self.configer.exists('lr', 'is_warm') or not self.configer.get('lr', 'is_warm'):
             return
 
         warm_iters = self.configer.get('lr', 'warm')['warm_epoch'] * batch_len

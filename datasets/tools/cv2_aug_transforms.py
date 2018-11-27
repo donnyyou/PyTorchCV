@@ -1129,7 +1129,7 @@ class CV2AugCompose(object):
         self.transforms = dict()
         if self.split == 'train':
             shuffle_train_trans = []
-            if not self.configer.is_empty('train_trans', 'shuffle_trans_seq'):
+            if self.configer.exists('train_trans', 'shuffle_trans_seq'):
                 if isinstance(self.configer.get('train_trans', 'shuffle_trans_seq')[0], list):
                     train_trans_seq_list = self.configer.get('train_trans', 'shuffle_trans_seq')
                     for train_trans_seq in train_trans_seq_list:
@@ -1457,7 +1457,7 @@ class CV2AugCompose(object):
 
         if self.split == 'train':
             shuffle_trans_seq = []
-            if not self.configer.is_empty('train_trans', 'shuffle_trans_seq'):
+            if self.configer.exists('train_trans', 'shuffle_trans_seq'):
                 if isinstance(self.configer.get('train_trans', 'shuffle_trans_seq')[0], list):
                     shuffle_trans_seq_list = self.configer.get('train_trans', 'shuffle_trans_seq')
                     shuffle_trans_seq = shuffle_trans_seq_list[random.randint(0, len(shuffle_trans_seq_list))]

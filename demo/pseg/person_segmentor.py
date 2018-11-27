@@ -14,7 +14,7 @@ class PersonSegmentor(object):
 
     def __init__(self, configer):
         self.configer = configer
-        self.device = torch.device('cpu' if self.configer.is_empty('gpu_id') is None else 'cuda')
+        self.device = torch.device('cuda' if self.configer.exists('gpu_id') else 'cpu')
         self._load_model()
 
     def _load_model(self):

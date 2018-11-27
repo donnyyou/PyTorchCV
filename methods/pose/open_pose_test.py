@@ -56,7 +56,7 @@ class OpenPoseTest(object):
 
         b, c, h, w = image.size()
         border_hw = [h, w]
-        if not self.configer.is_empty('test', 'fit_stride'):
+        if self.configer.exists('test', 'fit_stride'):
             stride = self.configer.get('test', 'fit_stride')
 
             pad_w = 0 if (w % stride == 0) else stride - (w % stride)  # right
