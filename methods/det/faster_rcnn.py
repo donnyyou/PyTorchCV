@@ -90,8 +90,8 @@ class FasterRCNN(object):
         for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             img_scale = data_dict['imgscale']
-            batch_gt_bboxes = DataContainer(data_dict['bboxes'])
-            batch_gt_labels = DataContainer(data_dict['labels'])
+            batch_gt_bboxes = data_dict['bboxes']
+            batch_gt_labels = data_dict['labels']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
             inputs = self.module_utilizer.to_device(inputs)
@@ -139,8 +139,8 @@ class FasterRCNN(object):
             for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 img_scale = data_dict['imgscale']
-                batch_gt_bboxes = DataContainer(data_dict['bboxes'])
-                batch_gt_labels = DataContainer(data_dict['labels'])
+                batch_gt_bboxes = data_dict['bboxes']
+                batch_gt_labels = data_dict['labels']
                 # Forward pass.
                 loss, test_group = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
                 # Compute the loss of the train batch & backward.
