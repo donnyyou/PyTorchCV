@@ -113,15 +113,15 @@ class DataParallelCriterion(DataParallel):
         # scattering the targets instead
         if gathered:
             if isinstance(inputs, (list, tuple)):
-                inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
+                inputs, _ = self.scatter(inputs, kwargs, self.device_ids)
             else:
-                inputs, kwargs = self.scatter([inputs], kwargs, self.device_ids)
+                inputs, _ = self.scatter([inputs], kwargs, self.device_ids)
                 # inputs = tuple(inputs_per_gpu[0] for inputs_per_gpu in inputs)
 
         if not self.device_ids:
             return self.module(inputs, *targets, **kwargs)
 
-        targets, _ = self.scatter(targets, kwargs, self.device_ids)
+        targets, kwargs = self.scatter(targets, kwargs, self.device_ids)
         if len(self.device_ids) == 1:
             return self.module(inputs[0], *targets[0], **kwargs[0])
 
