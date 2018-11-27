@@ -66,7 +66,7 @@ class FSDataLoader(data.Dataset):
 
         shape = labelmap.shape
         encoded_labelmap = np.ones(shape=(shape[0], shape[1]), dtype=np.float32) * 255
-        for i in range(self.configer.get('data', 'num_classes')):
+        for i in range(len(self.configer.get('data', 'label_list'))):
             class_id = self.configer.get('data', 'label_list')[i]
             encoded_labelmap[labelmap == class_id] = i
 

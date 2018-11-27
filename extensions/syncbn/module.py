@@ -31,8 +31,8 @@ build_path = '/tmp/bulid/syncbn'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-syncbn = load(name='syncbn', sources=['extensions/layers/syncbn/src/operator.cpp',
-                                      'extensions/layers/syncbn/src/syncbn_kernel.cu'],
+syncbn = load(name='syncbn', sources=['extensions/syncbn/src/operator.cpp',
+                                      'extensions/syncbn/src/syncbn_kernel.cu'],
               build_directory=build_path, verbose=True)
 
 
