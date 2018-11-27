@@ -61,7 +61,7 @@ class FasterRCNN(nn.Module):
     def __init__(self, configer):
         super(FasterRCNN, self).__init__()
         self.configer = configer
-        self.extractor, self.classifier = VGGModel(configer)()
+        self.backbone, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
         self.rpn_target_assigner = RPNTargetAssigner(configer)
         self.roi_generator = FRROIGenerator(configer)
@@ -101,7 +101,7 @@ class FasterRCNN(nn.Module):
         input_size = [inputs[0].size(3), inputs[0].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
             x, img_scale = inputs
-            x = self.extractor(inputs[0])
+            x = self.backbone(inputs[0])
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
             indices_and_rois, test_rois_num = self.roi_generator(feat_list, rpn_locs, rpn_scores,
@@ -113,7 +113,7 @@ class FasterRCNN(nn.Module):
 
         elif self.configer.get('phase') == 'train' and not self.training:
             x, gt_bboxes, gt_labels, img_scale = inputs
-            x = self.extractor(x)
+            x = self.backbone(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
             gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
@@ -146,7 +146,7 @@ class FasterRCNN(nn.Module):
 
         elif self.configer.get('phase') == 'train' and self.training:
             x, gt_bboxes, gt_labels, img_scale = inputs
-            x = self.extractor(x)
+            x = self.backbone(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
             gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
