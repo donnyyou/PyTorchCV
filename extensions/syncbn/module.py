@@ -14,13 +14,15 @@ import os
 import threading
 
 import torch
-from extensions.syncbn import SyncMaster
-from extensions.syncbn import allreduce
 from torch.autograd import Function
 from torch.nn.functional import batch_norm
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
 from torch.utils.cpp_extension import load
+
+from extensions.syncbn.parallel import allreduce
+from extensions.syncbn.comm import SyncMaster
+
 
 torch_ver = torch.__version__[:3]
 

@@ -22,6 +22,7 @@ from torch.nn.parallel.scatter_gather import gather
 
 from extensions.parallel.scatter_gather import scatter_kwargs
 
+
 torch_ver = torch.__version__[:3]
 
 __all__ = ['allreduce', 'DataParallelModel', 'DataParallelCriterion',

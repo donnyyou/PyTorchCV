@@ -3,14 +3,12 @@
 # Author: Donny You(youansheng@gmail.com)
 PYTHON=${PYTHON:-"python"}
 
-pip install -r requirements.txt
-
-cd extensions/apis/cocoapi/PythonAPI
+cd apis/cocoapi/PythonAPI
 python setup.py install
 
 cd -
 echo "Building roi align op..."
-cd extensions/layers/roi_align
+cd ./roi_align
 if [ -d "build" ]; then
     rm -r build
 fi

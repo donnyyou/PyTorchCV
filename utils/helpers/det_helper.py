@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import numpy as np
 import torch
+
 from extensions.nms.nms_wrapper import nms
 from extensions.nms.nms_wrapper import soft_nms
 

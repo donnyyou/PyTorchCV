@@ -9,9 +9,10 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-from models.backbones.backbone_selector import BackboneSelector
 from torch import nn
 from torch.nn import functional as F
+
+from models.backbones.backbone_selector import BackboneSelector
 from utils.layers.det.fr_roi_generator import FRROIGenerator
 from utils.layers.det.fr_roi_sampler import FRROISampler
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer

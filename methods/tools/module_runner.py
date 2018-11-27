@@ -13,8 +13,9 @@ import os
 
 import torch
 import torch.nn as nn
-from extensions.parallel.data_container import DataContainer
 from torch.nn.parallel.scatter_gather import gather as torch_gather
+
+from extensions.parallel.data_container import DataContainer
 from utils.tools.logger import Logger as Log
 
 
@@ -179,7 +180,7 @@ class ModuleRunner(object):
                 m.eval()
 
             if syncbn:
-                from extensions.syncbn import BatchNorm2d, BatchNorm1d
+                from extensions.syncbn.module import BatchNorm2d, BatchNorm1d
                 if isinstance(m, BatchNorm2d) or isinstance(m, BatchNorm1d):
                     m.eval()
 

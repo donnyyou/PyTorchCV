@@ -9,15 +9,17 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-from loss.modules.det_modules import FRDetLoss
 from torch import nn
 from torch.nn import functional as F
 from torchvision.models import vgg16
+
+from loss.modules.det_modules import FRDetLoss
 from utils.layers.det.fr_roi_generator import FRROIGenerator
 from utils.layers.det.fr_roi_sampler import FRROISampler
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
 from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.logger import Logger as Log
+
 
 DETECTOR_CONFIG = {
     'vgg_cfg': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512]

@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
+
 from extensions.nms.nms_wrapper import nms
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 

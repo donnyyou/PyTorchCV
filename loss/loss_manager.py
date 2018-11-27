@@ -16,6 +16,7 @@ from loss.modules.pose_modules import OPPoseLoss
 from loss.modules.seg_modules import FCNSegLoss
 from utils.tools.logger import Logger as Log
 
+
 CLS_LOSS_DICT = {
     'fc_cls_loss': FCClsLoss,
 }
