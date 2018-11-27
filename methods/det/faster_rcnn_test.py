@@ -144,13 +144,9 @@ class FastRCNNTest(object):
 
             valid_preds = torch.cat((tmp_dst_bbox, tmp_cls_prob.float(), tmp_cls_label.float()), 1)
 
-            keep = DetHelper.cls_nms(valid_preds[:, :4],
-                                     scores=valid_preds[:, 4],
-                                     labels=valid_preds[:, 5],
-                                     nms_threshold=configer.get('nms', 'overlap_threshold'),
-                                     iou_mode=configer.get('nms', 'mode'))
-
-            output[i] = valid_preds[keep]
+            output[i] = DetHelper.cls_nms(valid_preds,
+                                          labels=valid_preds[:, 5],
+                                          max_threshold=configer.get('nms', 'max_threshold'))
 
         return output
 
