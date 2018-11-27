@@ -20,7 +20,7 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
 from torch.utils.cpp_extension import load
 
-from extensions.syncbn.parallel import allreduce
+from extensions.syncbn.allreduce import allreduce
 from extensions.syncbn.comm import SyncMaster
 
 

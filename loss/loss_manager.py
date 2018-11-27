@@ -42,7 +42,7 @@ class LossManager(object):
 
     def _parallel(self, loss):
         if self.configer.get('network', 'loss_balance') and len(self.configer.get('gpu')) > 1:
-            from extensions.syncbn.parallel import DataParallelCriterion
+            from extensions.parallel.data_parallel import DataParallelCriterion
             loss = DataParallelCriterion(loss)
 
         return loss
