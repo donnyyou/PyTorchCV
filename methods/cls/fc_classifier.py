@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.cls_data_loader import ClsDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.cls_model_manager import ClsModelManager
 from utils.tools.average_meter import AverageMeter
@@ -35,7 +35,7 @@ class FCClassifier(object):
         self.cls_loss_manager = LossManager(configer)
         self.cls_model_manager = ClsModelManager(configer)
         self.cls_data_loader = ClsDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
 
@@ -49,7 +49,7 @@ class FCClassifier(object):
 
     def _init_model(self):
         self.cls_net = self.cls_model_manager.image_classifier()
-        self.cls_net = self.module_utilizer.load_net(self.cls_net)
+        self.cls_net = self.module_runner.load_net(self.cls_net)
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
         self.train_loader = self.cls_data_loader.get_trainloader()
@@ -76,10 +76,10 @@ class FCClassifier(object):
             labels = data_dict['label']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, labels = self.module_utilizer.to_device(inputs, labels)
+            inputs, labels = self.module_runner.to_device(inputs, labels)
             # Forward pass.
             outputs = self.cls_net(inputs)
-            outputs = self.module_utilizer.gather(outputs)
+            outputs = self.module_runner.gather(outputs)
             # Compute the loss of the train batch & backward.
 
             loss = self.ce_loss(outputs, labels)
@@ -102,7 +102,7 @@ class FCClassifier(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
+                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
 
                 self.batch_time.reset()
@@ -126,10 +126,10 @@ class FCClassifier(object):
                 inputs = data_dict['img']
                 labels = data_dict['label']
                 # Change the data type.
-                inputs, labels = self.module_utilizer.to_device(inputs, labels)
+                inputs, labels = self.module_runner.to_device(inputs, labels)
                 # Forward pass.
                 outputs = self.cls_net(inputs)
-                outputs = self.module_utilizer.gather(outputs)
+                outputs = self.module_runner.gather(outputs)
                 # Compute the loss of the val batch.
                 loss = self.ce_loss(outputs, labels)
                 self.cls_running_score.update(outputs, labels)
@@ -139,7 +139,7 @@ class FCClassifier(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.cls_net, save_mode='iters')
+            self.module_runner.save_net(self.cls_net, save_mode='iters')
 
             # Print the log info & reset the states.
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))

@@ -16,7 +16,7 @@ from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from models.pose_model_manager import PoseModelManager
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
@@ -32,7 +32,7 @@ class ConvPoseMachineTest(object):
         self.pose_vis = PoseVisualizer(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.pose_net = None
@@ -41,7 +41,7 @@ class ConvPoseMachineTest(object):
 
     def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
-        self.pose_net = self.module_utilizer.load_net(self.pose_net)
+        self.pose_net = self.module_runner.load_net(self.pose_net)
         self.pose_net.eval()
 
     def __test_img(self, image_path, save_path):

@@ -15,7 +15,7 @@ import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
 from utils.helpers.file_helper import FileHelper
@@ -39,7 +39,7 @@ class FastRCNNTest(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.roi_sampler = FRROISampler(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.rpn_target_generator = RPNTargetAssigner(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRROIGenerator(configer)
@@ -50,7 +50,7 @@ class FastRCNNTest(object):
 
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
-        self.det_net = self.module_utilizer.load_net(self.det_net)
+        self.det_net = self.module_runner.load_net(self.det_net)
         self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):

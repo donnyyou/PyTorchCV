@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
 from utils.layers.pose.heatmap_generator import HeatmapGenerator
@@ -43,7 +43,7 @@ class OpenPose(object):
         self.pose_loss_manager = LossManager(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.paf_generator = PafGenerator(configer)
@@ -58,7 +58,7 @@ class OpenPose(object):
 
     def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
-        self.pose_net = self.module_utilizer.load_net(self.pose_net)
+        self.pose_net = self.module_runner.load_net(self.pose_net)
 
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
@@ -95,8 +95,8 @@ class OpenPose(object):
         self.train_schedule_loss.reset()
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            self.module_utilizer.warm_lr(self.configer.get('iters'), len(self.train_loader),
-                                         self.scheduler, self.optimizer, backbone_list=[0])
+            self.module_runner.warm_lr(self.configer.get('iters'), len(self.train_loader),
+                                       self.scheduler, self.optimizer, backbone_list=[0])
 
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
@@ -105,7 +105,7 @@ class OpenPose(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, heatmap, maskmap, vecmap = self.module_utilizer.to_device(inputs, heatmap, maskmap, vecmap)
+            inputs, heatmap, maskmap, vecmap = self.module_runner.to_device(inputs, heatmap, maskmap, vecmap)
 
             # Forward pass.
             paf_out, heatmap_out = self.pose_net(inputs)
@@ -139,7 +139,7 @@ class OpenPose(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
+                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -166,7 +166,7 @@ class OpenPose(object):
                 heatmap = data_dict['heatmap']
                 vecmap = data_dict['vecmap']
                 # Change the data type.
-                inputs, heatmap, maskmap, vecmap = self.module_utilizer.to_device(inputs, heatmap, maskmap, vecmap)
+                inputs, heatmap, maskmap, vecmap = self.module_runner.to_device(inputs, heatmap, maskmap, vecmap)
 
                 # Forward pass.
                 paf_out, heatmap_out = self.pose_net(inputs)
@@ -184,7 +184,7 @@ class OpenPose(object):
                 start_time = time.time()
 
             self.configer.update_value(['val_loss'], self.val_losses.avg)
-            self.module_utilizer.save_net(self.pose_net, save_mode='val_loss')
+            self.module_runner.save_net(self.pose_net, save_mode='val_loss')
             Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.val_loss_heatmap.avg, self.val_loss_associate.avg))
             # Print the log info & reset the states.
             Log.info(

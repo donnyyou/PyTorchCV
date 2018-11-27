@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
 from utils.helpers.file_helper import FileHelper
@@ -37,7 +37,7 @@ class SingleShotDetectorTest(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.ssd_target_generator = SSDTargetGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -47,7 +47,7 @@ class SingleShotDetectorTest(object):
 
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
-        self.det_net = self.module_utilizer.load_net(self.det_net)
+        self.det_net = self.module_runner.load_net(self.det_net)
         self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):

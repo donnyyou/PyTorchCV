@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
 from utils.layers.pose.heatmap_generator import HeatmapGenerator
@@ -37,7 +37,7 @@ class ConvPoseMachine(object):
         self.pose_loss_manager = LossManager(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
 
@@ -51,7 +51,7 @@ class ConvPoseMachine(object):
 
     def _init_model(self):
         self.pose_net = self.pose_model_manager.single_pose_detector()
-        self.pose_net = self.module_utilizer.load_net(self.pose_net)
+        self.pose_net = self.module_runner.load_net(self.pose_net)
 
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
@@ -81,7 +81,7 @@ class ConvPoseMachine(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, heatmap = self.module_utilizer.to_device(inputs, heatmap)
+            inputs, heatmap = self.module_runner.to_device(inputs, heatmap)
             # self.pose_visualizer.vis_peaks(heatmap[0], inputs[0], name='cpm')
 
             # Forward pass.
@@ -131,7 +131,7 @@ class ConvPoseMachine(object):
                 inputs = data_dict['img']
                 heatmap = data_dict['heatmap']
                 # Change the data type.
-                inputs, heatmap = self.module_utilizer.to_device(inputs, heatmap)
+                inputs, heatmap = self.module_runner.to_device(inputs, heatmap)
 
                 # Forward pass.
                 outputs = self.pose_net(inputs)
@@ -145,7 +145,7 @@ class ConvPoseMachine(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.pose_net, save_mode='iters')
+            self.module_runner.save_net(self.pose_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'

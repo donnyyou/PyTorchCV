@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 from datasets.det_data_loader import DetDataLoader
 from loss.loss_manager import LossManager
 from methods.det.faster_rcnn_test import FastRCNNTest
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
@@ -41,7 +41,7 @@ class FasterRCNN(object):
         self.det_data_loader = DetDataLoader(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
 
         self.det_net = None
@@ -54,7 +54,7 @@ class FasterRCNN(object):
 
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
-        self.det_net = self.module_utilizer.load_net(self.det_net)
+        self.det_net = self.module_runner.load_net(self.det_net)
 
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
@@ -89,11 +89,11 @@ class FasterRCNN(object):
         for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             img_scale = data_dict['imgscale']
-            batch_gt_bboxes = data_dict['bboxes']
-            batch_gt_labels = data_dict['labels']
+            batch_gt_bboxes = self.module_runner.to_container(data_dict['bboxes'])
+            batch_gt_labels = self.module_runner.to_container(data_dict['labels'])
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs = self.module_utilizer.to_device(inputs)
+            inputs = self.module_runner.to_device(inputs)
             # Forward pass.
             loss = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
             loss = loss.mean()
@@ -101,7 +101,7 @@ class FasterRCNN(object):
 
             self.optimizer.zero_grad()
             loss.backward()
-            self.module_utilizer.clip_grad(self.det_net, 10.)
+            self.module_runner.clip_grad(self.det_net, 10.)
             self.optimizer.step()
 
             # Update the vars of the train phase.
@@ -117,7 +117,7 @@ class FasterRCNN(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
+                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -138,10 +138,10 @@ class FasterRCNN(object):
             for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
                 img_scale = data_dict['imgscale']
-                batch_gt_bboxes = data_dict['bboxes']
-                batch_gt_labels = data_dict['labels']
+                batch_gt_bboxes = self.module_runner.to_container(data_dict['bboxes'])
+                batch_gt_labels = self.module_runner.to_container(data_dict['labels'])
                 # Forward pass.
-                inputs = self.module_utilizer.to_device(inputs)
+                inputs = self.module_runner.to_device(inputs)
                 loss, test_group = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
                 # Compute the loss of the train batch & backward.
                 loss = loss.mean()
@@ -160,7 +160,7 @@ class FasterRCNN(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.det_net, save_mode='iters')
+            self.module_runner.save_net(self.det_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'

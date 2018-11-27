@@ -16,7 +16,7 @@ from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from models.seg_model_manager import SegModelManager
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
@@ -33,7 +33,7 @@ class FCNSegmentorTest(object):
         self.seg_parser = SegParser(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.seg_net = None
 
@@ -41,7 +41,7 @@ class FCNSegmentorTest(object):
 
     def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
-        self.seg_net = self.module_utilizer.load_net(self.seg_net)
+        self.seg_net = self.module_runner.load_net(self.seg_net)
         self.seg_net.eval()
 
     def _get_blob(self, ori_image, scale=None):

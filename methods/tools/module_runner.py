@@ -14,10 +14,11 @@ import torch
 import torch.nn as nn
 from torch.nn.parallel.scatter_gather import gather as torch_gather
 
+from extensions.layers.parallel.data_container import DataContainer
 from utils.tools.logger import Logger as Log
 
 
-class ModuleUtilizer(object):
+class ModuleRunner(object):
 
     def __init__(self, configer):
         self.configer = configer
@@ -40,6 +41,12 @@ class ModuleUtilizer(object):
             self.configer.update_value(['network', 'bn_type'], 'torchbn')
 
         Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
+
+    def to_container(self, data, cpu_only=False):
+        if len(self.configer.get('gpu')) > 1:
+            return DataContainer(data, cpu_only=cpu_only)
+
+        return data
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
