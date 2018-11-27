@@ -36,8 +36,8 @@ class FRROISampler(object):
         gt_roi_mask_list = list()
 
         for i in range(len(gt_bboxes)):
-            temp_gt_bboxes = gt_bboxes[i]
-            temp_gt_labels = gt_labels[i]
+            temp_gt_bboxes = gt_bboxes[i].to(indices_and_rois.device)
+            temp_gt_labels = gt_labels[i].to(indices_and_rois.device)
 
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
