@@ -22,9 +22,9 @@ from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.layers.det.fr_roi_generator import FRRoiGenerator
-from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
-from utils.layers.det.rpn_target_generator import RPNTargetGenerator
+from utils.layers.det.fr_roi_generator import FRROIGenerator
+from utils.layers.det.fr_roi_sampler import FRROISampler
+from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
@@ -38,11 +38,11 @@ class FastRCNNTest(object):
         self.det_parser = DetParser(configer)
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
-        self.roi_sampler = FRRoiSampleLayer(configer)
+        self.roi_sampler = FRROISampler(configer)
         self.module_utilizer = ModuleUtilizer(configer)
-        self.rpn_target_generator = RPNTargetGenerator(configer)
+        self.rpn_target_generator = RPNTargetAssigner(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
-        self.fr_roi_generator = FRRoiGenerator(configer)
+        self.fr_roi_generator = FRROIGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.det_net = None
 
@@ -153,18 +153,6 @@ class FastRCNNTest(object):
             output[i] = valid_preds[keep]
 
         return output
-
-    def __make_tensor(self, gt_bboxes, gt_labels):
-        len_arr = [gt_labels[i].numel() for i in range(len(gt_bboxes))]
-        batch_maxlen = max(max(len_arr), 1)
-        target_bboxes = torch.zeros((len(gt_bboxes), batch_maxlen, 4)).float()
-        target_labels = torch.zeros((len(gt_bboxes), batch_maxlen)).long()
-        for i in range(len(gt_bboxes)):
-            target_bboxes[i, :len_arr[i], :] = gt_bboxes[i]
-            target_labels[i, :len_arr[i]] = gt_labels[i]
-
-        target_bboxes_num = torch.Tensor(len_arr).long()
-        return target_bboxes, target_bboxes_num, target_labels
 
     def __get_info_tree(self, detections, image_raw, scale=1.0):
         height, width, _ = image_raw.shape

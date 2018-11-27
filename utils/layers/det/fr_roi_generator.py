@@ -15,7 +15,7 @@ from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.logger import Logger as Log
 
 
-class FRRoiGenerator(object):
+class FRROIGenerator(object):
     # unNOTE: I'll make it undifferential
     # unTODO: make sure it's ok
     # It's ok
@@ -140,7 +140,7 @@ class FRRoiGenerator(object):
             # unNOTE: somthing is wrong here!
             # TODO: remove cuda.to_gpu
             keep = nms(torch.cat((rois, tmp_scores.unqueeze(1)), 1),
-                       max_threshold=self.configer.get('rpn', 'nms_threshold'))
+                       thresh=self.configer.get('rpn', 'nms_threshold'))
             # keep = DetHelper.nms(rois,
             #                      scores=tmp_scores,
             #                      nms_threshold=self.configer.get('rpn', 'nms_threshold'))

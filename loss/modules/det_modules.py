@@ -295,10 +295,10 @@ class FRDetLoss(nn.Module):
         self.configer = configer
         self.fr_loc_loss = FRLocLoss(configer)
 
-    def forward(self, output_list, target_list):
+    def forward(self, pred_group, target_group):
         # output_list: rpn_locs, rpn_scores, roi_cls_locs, roi_scores
-        pred_rpn_locs, pred_rpn_scores, pred_roi_cls_locs, pred_roi_scores = output_list
-        gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_list
+        pred_rpn_locs, pred_rpn_scores, pred_roi_cls_locs, pred_roi_scores = pred_group
+        gt_rpn_locs, gt_rpn_labels, gt_roi_cls_locs, gt_roi_labels = target_group
         gt_rpn_labels = gt_rpn_labels.contiguous().view(-1)
         pred_rpn_scores = pred_rpn_scores.contiguous().view(-1, 2)
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,

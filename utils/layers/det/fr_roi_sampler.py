@@ -17,11 +17,11 @@ from utils.helpers.det_helper import DetHelper
 from utils.tools.logger import Logger as Log
 
 
-class FRRoiSampleLayer(object):
+class FRROISampler(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, indices_and_rois, gt_bboxes, gt_bboxes_num, gt_labels, input_size, gt_polygons=None):
+    def __call__(self, indices_and_rois, gt_bboxes, gt_labels, input_size, gt_polygons=None):
         n_sample = self.configer.get('roi', 'loss')['n_sample']
         pos_iou_thresh = self.configer.get('roi', 'loss')['pos_iou_thresh']
         neg_iou_thresh_hi = self.configer.get('roi', 'loss')['neg_iou_thresh_hi']
@@ -36,14 +36,8 @@ class FRRoiSampleLayer(object):
         gt_roi_mask_list = list()
 
         for i in range(len(gt_bboxes)):
-            temp_gt_bboxes = gt_bboxes[i, :gt_bboxes_num[i]].clone()
-            temp_gt_labels = gt_labels[i, :gt_bboxes_num[i]].clone()
-
-            for j in range(gt_bboxes_num[i]):
-                temp_gt_bboxes[j, 0] = (temp_gt_bboxes[j, 0]).clamp_(min=0, max=input_size[0]-1)
-                temp_gt_bboxes[j, 1] = (temp_gt_bboxes[j, 1]).clamp_(min=0, max=input_size[1]-1)
-                temp_gt_bboxes[j, 2] = (temp_gt_bboxes[j, 2]).clamp_(min=0, max=input_size[0]-1)
-                temp_gt_bboxes[j, 3] = (temp_gt_bboxes[j, 3]).clamp_(min=0, max=input_size[1]-1)
+            temp_gt_bboxes = gt_bboxes[i]
+            temp_gt_labels = gt_labels[i]
 
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
