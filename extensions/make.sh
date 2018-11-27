@@ -25,3 +25,6 @@ echo "Building nms op..."
 cd ../nms/src
 make clean
 make PYTHON=${PYTHON}
+if [ -d "build" ]; then
+    rm -r build
+fi
