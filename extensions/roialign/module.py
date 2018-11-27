@@ -14,9 +14,9 @@ build_path = '/tmp/bulid'
 if not os.path.exists(build_path):
     os.makedirs(build_path)
 
-roialign = load(name='roialign', sources=['extensions/layers/roialign/src/roi_align_binding.cpp',
-                                          'extensions/layers/roialign/src/roi_align_forward_cuda.cu',
-                                          'extensions/layers/roialign/src/roi_align_backward_cuda.cu'],
+roialign = load(name='roialign', sources=['extensions/roialign/src/roi_align_binding.cpp',
+                                          'extensions/roialign/src/roi_align_forward_cuda.cu',
+                                          'extensions/roialign/src/roi_align_backward_cuda.cu'],
                 build_directory=build_path, verbose=True)
 
 
