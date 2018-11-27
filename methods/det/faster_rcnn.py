@@ -21,7 +21,6 @@ from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
-from extensions.layers.parallel.data_container import DataContainer
 from val.scripts.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
 
@@ -142,6 +141,7 @@ class FasterRCNN(object):
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
                 # Forward pass.
+                inputs = self.module_utilizer.to_device(inputs)
                 loss, test_group = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
                 # Compute the loss of the train batch & backward.
                 loss = loss.mean()
