@@ -19,7 +19,6 @@ from methods.tools.module_utilizer import ModuleUtilizer
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from extensions.layers.parallel.data_container import DataContainer
@@ -42,7 +41,6 @@ class FasterRCNN(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
-        self.rpn_target_generator = RPNTargetAssigner(configer)
         self.det_running_score = DetRunningScore(configer)
         self.module_utilizer = ModuleUtilizer(configer)
         self.optim_scheduler = OptimScheduler(configer)

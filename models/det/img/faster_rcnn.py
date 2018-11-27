@@ -17,6 +17,7 @@ from loss.modules.det_modules import FRDetLoss
 from utils.layers.det.fr_roi_generator import FRROIGenerator
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
 from utils.layers.det.fr_roi_sampler import FRROISampler
+from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.logger import Logger as Log
 
 
@@ -62,6 +63,7 @@ class FasterRCNN(nn.Module):
         self.configer = configer
         self.extractor, self.classifier = VGGModel(configer)()
         self.rpn = NaiveRPN(configer)
+        self.rpn_target_assigner = RPNTargetAssigner(configer)
         self.roi_generator = FRROIGenerator(configer)
         self.roi_sampler = FRROISampler(configer)
         self.bbox_head = BBoxHead(configer, self.classifier)
@@ -113,7 +115,7 @@ class FasterRCNN(nn.Module):
             x, gt_bboxes, gt_labels, img_scale = inputs
             x = self.extractor(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
-            gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list, gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
             gt_rpn_labels = gt_rpn_labels.to(rpn_scores.device)
 
@@ -146,7 +148,7 @@ class FasterRCNN(nn.Module):
             x, gt_bboxes, gt_labels, img_scale = inputs
             x = self.extractor(x)
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
-            gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list, gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
             gt_rpn_labels = gt_rpn_labels.to(rpn_scores.device)
 
