@@ -229,7 +229,7 @@ class SingleShotDetectorTest(object):
                 json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr, input_size)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
-                                                           conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                           conf_threshold=self.configer.get('res', 'vis_conf_thre'))
 
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)
