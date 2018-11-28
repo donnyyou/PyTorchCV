@@ -37,7 +37,7 @@ class PoseParser(object):
         with open(json_file, 'r') as json_stream:
             info_tree = json.load(json_stream)
             image_canvas = self.draw_points(image_canvas, info_tree)
-            if not self.configer.is_empty('details', 'limb_seq'):
+            if self.configer.exists('details', 'limb_seq'):
                 image_canvas = self.link_points(image_canvas, info_tree)
 
         if mask_file is not None:
@@ -63,7 +63,7 @@ class PoseParser(object):
             with open(os.path.join(json_dir, '{}.json'.format(shotname)), 'r') as json_stream:
                 info_tree = json.load(json_stream)
                 image_canvas = self.draw_points(image_canvas, info_tree)
-                if not self.configer.is_empty('details', 'limb_seq'):
+                if self.configer.exists('details', 'limb_seq'):
                     image_canvas = self.link_points(image_canvas, info_tree)
 
             if mask_dir is not None:

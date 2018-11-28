@@ -9,14 +9,13 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-from torch.nn import functional as F
 from torch import nn
+from torch.nn import functional as F
 
 from models.backbones.backbone_selector import BackboneSelector
-from utils.layers.det.fr_roi_generator import FRRoiGenerator
+from utils.layers.det.fr_roi_generator import FRROIGenerator
+from utils.layers.det.fr_roi_sampler import FRROISampler
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
-from utils.layers.det.fr_roi_process_layer import FRRoiProcessLayer
-from utils.layers.det.fr_roi_sample_layer import FRRoiSampleLayer
 from utils.tools.logger import Logger as Log
 
 
@@ -58,8 +57,8 @@ class FpnRCNN(nn.Module):
         )
 
         self.rpn = NaiveRPN(configer)
-        self.roi = FRRoiGenerator(configer)
-        self.roi_sampler = FRRoiSampleLayer(configer)
+        self.roi = FRROIGenerator(configer)
+        self.roi_sampler = FRROISampler(configer)
         self.head = RoIHead(configer)
 
     @staticmethod
@@ -242,8 +241,11 @@ class RoIHead(nn.Module):
         else:
             self.cls_loc = nn.Linear(1024, 4 * self.configer.get('data', 'num_classes'))
 
-        # self.roi_layer = ROIPoolingLayer(self.configer)
-        self.roi_layer = FRRoiProcessLayer(self.configer)
+        from extensions.roialign.module import RoIAlign2D
+        self.roi_align = RoIAlign2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
+                                    pooled_width=int(self.configer.get('roi', 'pooled_width')),
+                                    spatial_scale=1.0 / float(self.configer.get('roi', 'spatial_stride')),
+                                    sampling_ratio=2)
 
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
@@ -279,7 +281,7 @@ class RoIHead(nn.Module):
             idx_l = (roi_level == l).nonzero().squeeze()
             box_to_levels.append(idx_l)
             scale = feat_maps[i].size(2) / input_size[1]
-            feat = self.roi_layer(feat_maps[i], indices_and_rois[idx_l], scale)
+            feat = self.roi_align(feat_maps[i], indices_and_rois[idx_l], scale)
             roi_pool_feats.append(feat)
 
         roi_pool_feat = torch.cat(roi_pool_feats, 0)

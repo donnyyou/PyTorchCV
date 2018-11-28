@@ -24,6 +24,7 @@
       }
     },
     "test": {
+      "resize_bound": [600, 1000]
     },
     "train_trans": {
       "trans_seq": ["random_hflip", "random_resize"],
@@ -151,10 +152,11 @@
     },
     "nms": {
       "mode": "union",
-      "overlap_threshold": 0.45
+      "max_threshold": 0.45
     },
-    "vis": {
-      "conf_threshold": 0.01
+    "res": {
+      "val_conf_thre": 0.05,
+      "vis_conf_thre": 0.5
     },
     "fr_loss": {
       "rpn_sigma": 3.0,

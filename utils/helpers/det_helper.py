@@ -10,9 +10,8 @@ from __future__ import print_function
 import numpy as np
 import torch
 
-from extensions.layers.nms.nms_wrapper import nms
-from extensions.layers.nms.nms_wrapper import soft_nms
-from utils.tools.logger import Logger as Log
+from extensions.nms.nms_wrapper import nms
+from extensions.nms.nms_wrapper import soft_nms
 
 
 class DetHelper(object):

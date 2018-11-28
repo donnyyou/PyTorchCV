@@ -10,12 +10,11 @@ from __future__ import print_function
 
 import torch
 
-from extensions.layers.nms.nms_wrapper import nms
+from extensions.nms.nms_wrapper import nms
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
-from utils.tools.logger import Logger as Log
 
 
-class FRRoiGenerator(object):
+class FRROIGenerator(object):
     # unNOTE: I'll make it undifferential
     # unTODO: make sure it's ok
     # It's ok
@@ -100,8 +99,8 @@ class FRRoiGenerator(object):
         dst_bbox[:, :, 1] = (dst_bbox[:, :, 1]).clamp_(min=0, max=input_size[1]-1)
         dst_bbox[:, :, 3] = (dst_bbox[:, :, 3]).clamp_(min=0, max=input_size[1]-1)
 
-        dst_bbox = dst_bbox.cpu().detach()
-        score = score.cpu().detach()
+        dst_bbox = dst_bbox.detach()
+        score = score.detach()
         # cls_prob = F.softmax(score, dim=-1)
         rpn_fg_scores = score[:, :, 1]
 
@@ -116,7 +115,7 @@ class FRRoiGenerator(object):
             ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0] + 1
             hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1] + 1
             min_size = self.configer.get('rpn', 'min_size')
-            keep = (hs >= img_scale[i] * min_size) & (ws >= img_scale[i] * min_size)
+            keep = (hs >= img_scale[i].item() * min_size) & (ws >= img_scale[i].item() * min_size)
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.
@@ -139,8 +138,8 @@ class FRRoiGenerator(object):
 
             # unNOTE: somthing is wrong here!
             # TODO: remove cuda.to_gpu
-            keep = nms(torch.cat((rois, tmp_scores.unqueeze(1)), 1),
-                       max_threshold=self.configer.get('rpn', 'nms_threshold'))
+            keep = nms(torch.cat((rois, tmp_scores.unsqueeze(1)), 1),
+                       thresh=self.configer.get('rpn', 'nms_threshold'))
             # keep = DetHelper.nms(rois,
             #                      scores=tmp_scores,
             #                      nms_threshold=self.configer.get('rpn', 'nms_threshold'))
@@ -160,6 +159,6 @@ class FRRoiGenerator(object):
         if rois.numel() == 0:
             indices_and_rois = rois
         else:
-            indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], dim=1).contiguous()
+            indices_and_rois = torch.cat([roi_indices.unsqueeze(1).to(device), rois.to(device)], dim=1).contiguous()
 
         return indices_and_rois.to(device), batch_rois_num.long().to(device)

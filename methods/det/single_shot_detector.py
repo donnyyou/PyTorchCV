@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 from datasets.det_data_loader import DetDataLoader
 from loss.loss_manager import LossManager
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.det_model_manager import DetModelManager
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
@@ -43,7 +43,7 @@ class SingleShotDetector(object):
         self.ssd_target_generator = SSDTargetGenerator(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
 
         self.det_net = None
@@ -56,7 +56,7 @@ class SingleShotDetector(object):
 
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
-        self.det_net = self.module_utilizer.load_net(self.det_net)
+        self.det_net = self.module_runner.load_net(self.det_net)
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
@@ -89,14 +89,14 @@ class SingleShotDetector(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            self.module_utilizer.warm_lr(self.configer.get('iters'),
-                                         len(self.train_loader), self.scheduler, self.optimizer)
+            self.module_runner.warm_lr(self.configer.get('iters'),
+                                       len(self.train_loader), self.scheduler, self.optimizer)
 
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
             # Change the data type.
-            inputs = self.module_utilizer.to_device(inputs)
+            inputs = self.module_runner.to_device(inputs)
 
             self.data_time.update(time.time() - start_time)
             # Forward pass.
@@ -109,7 +109,7 @@ class SingleShotDetector(object):
             bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                        batch_gt_labels, [inputs.size(3), inputs.size(2)])
 
-            bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
+            bboxes, labels = self.module_runner.to_device(bboxes, labels)
             # Compute the loss of the train batch & backward.
             loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
 
@@ -132,7 +132,7 @@ class SingleShotDetector(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     self.configer.get('epoch'), self.configer.get('iters'),
                     self.configer.get('solver', 'display_iter'),
-                    self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
+                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -154,16 +154,16 @@ class SingleShotDetector(object):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
-                inputs = self.module_utilizer.to_device(inputs)
+                inputs = self.module_runner.to_device(inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
                 outputs = self.det_net(inputs)
-                feat_list, loc, cls = self.module_utilizer.gather(outputs)
+                feat_list, loc, cls = self.module_runner.gather(outputs)
 
                 bboxes, labels = self.ssd_target_generator(feat_list, batch_gt_bboxes,
                                                            batch_gt_labels, input_size)
 
-                bboxes, labels = self.module_utilizer.to_device(bboxes, labels)
+                bboxes, labels = self.module_runner.to_device(bboxes, labels)
                 # Compute the loss of the val batch.
                 loss = self.det_loss(outputs, bboxes, labels, gathered=self.configer.get('network', 'gathered'))
                 self.val_losses.update(loss.item(), inputs.size(0))
@@ -179,7 +179,7 @@ class SingleShotDetector(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_utilizer.save_net(self.det_net, save_mode='iters')
+            self.module_runner.save_net(self.det_net, save_mode='iters')
             # Print the log info & reset the states.
             Log.info(
                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'

@@ -17,7 +17,7 @@ from PIL import Image
 
 from datasets.cls_data_loader import ClsDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from models.cls_model_manager import ClsModelManager
 from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
@@ -33,7 +33,7 @@ class FCClassifierTest(object):
         self.blob_helper = BlobHelper(configer)
         self.cls_model_manager = ClsModelManager(configer)
         self.cls_data_loader = ClsDataLoader(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.cls_parser = ClsParser(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.cls_net = None
@@ -48,7 +48,7 @@ class FCClassifierTest(object):
 
     def _init_model(self):
         self.cls_net = self.cls_model_manager.image_classifier()
-        self.cls_net = self.module_utilizer.load_net(self.cls_net)
+        self.cls_net = self.module_runner.load_net(self.cls_net)
         self.cls_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):

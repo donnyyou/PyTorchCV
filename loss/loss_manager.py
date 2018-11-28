@@ -9,9 +9,9 @@ from __future__ import division
 from __future__ import print_function
 
 from loss.modules.cls_modules import FCClsLoss
+from loss.modules.det_modules import FRDetLoss
 from loss.modules.det_modules import SSDMultiBoxLoss
 from loss.modules.det_modules import YOLOv3DetLoss
-from loss.modules.det_modules import FRDetLoss
 from loss.modules.pose_modules import OPPoseLoss
 from loss.modules.seg_modules import FCNSegLoss
 from utils.tools.logger import Logger as Log
@@ -42,7 +42,7 @@ class LossManager(object):
 
     def _parallel(self, loss):
         if self.configer.get('network', 'loss_balance') and len(self.configer.get('gpu')) > 1:
-            from extensions.layers.syncbn.parallel import DataParallelCriterion
+            from extensions.parallel.data_parallel import DataParallelCriterion
             loss = DataParallelCriterion(loss)
 
         return loss

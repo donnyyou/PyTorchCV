@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_utilizer import ModuleUtilizer
+from methods.tools.module_runner import ModuleRunner
 from methods.tools.optim_scheduler import OptimScheduler
 from models.seg_model_manager import SegModelManager
 from utils.tools.average_meter import AverageMeter
@@ -36,7 +36,7 @@ class FCNSegmentor(object):
         self.seg_running_score = SegRunningScore(configer)
         self.seg_visualizer = SegVisualizer(configer)
         self.seg_loss_manager = LossManager(configer)
-        self.module_utilizer = ModuleUtilizer(configer)
+        self.module_runner = ModuleRunner(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
         self.optim_scheduler = OptimScheduler(configer)
@@ -51,7 +51,7 @@ class FCNSegmentor(object):
 
     def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
-        self.seg_net = self.module_utilizer.load_net(self.seg_net)
+        self.seg_net = self.module_runner.load_net(self.seg_net)
 
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
@@ -90,7 +90,7 @@ class FCNSegmentor(object):
             self.data_time.update(time.time() - start_time)
             # Change the data type.
 
-            inputs, targets = self.module_utilizer.to_device(inputs, targets)
+            inputs, targets = self.module_runner.to_device(inputs, targets)
 
             # Forward pass.
             outputs = self.seg_net(inputs)
@@ -115,7 +115,7 @@ class FCNSegmentor(object):
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                          self.configer.get('epoch'), self.configer.get('iters'),
                          self.configer.get('solver', 'display_iter'),
-                         self.module_utilizer.get_lr(self.optimizer), batch_time=self.batch_time,
+                         self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
                          data_time=self.data_time, loss=self.train_losses))
                 self.batch_time.reset()
                 self.data_time.reset()
@@ -141,12 +141,12 @@ class FCNSegmentor(object):
 
             with torch.no_grad():
                 # Change the data type.
-                inputs, targets = self.module_utilizer.to_device(inputs, targets)
+                inputs, targets = self.module_runner.to_device(inputs, targets)
                 # Forward pass.
                 outputs = self.seg_net(inputs)
                 # Compute the loss of the val batch.
                 loss = self.pixel_loss(outputs, targets, gathered=self.configer.get('network', 'gathered'))
-                outputs = self.module_utilizer.gather(outputs)
+                outputs = self.module_runner.gather(outputs)
                 pred = outputs[0]
 
             self.val_losses.update(loss.item(), inputs.size(0))
@@ -158,8 +158,8 @@ class FCNSegmentor(object):
 
         self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
         self.configer.update_value(['val_loss'], self.val_losses.avg)
-        self.module_utilizer.save_net(self.seg_net, save_mode='performance')
-        self.module_utilizer.save_net(self.seg_net, save_mode='val_loss')
+        self.module_runner.save_net(self.seg_net, save_mode='performance')
+        self.module_runner.save_net(self.seg_net, save_mode='val_loss')
 
         # Print the log info & reset the states.
         Log.info(
