@@ -24,6 +24,7 @@
       }
     },
     "test": {
+      "resize_bound": [600, 1000]
     },
     "train_trans": {
       "trans_seq": ["random_hflip", "random_resize"],
