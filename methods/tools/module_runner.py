@@ -16,6 +16,7 @@ import torch.nn as nn
 from torch.nn.parallel.scatter_gather import gather as torch_gather
 
 from extensions.parallel.data_container import DataContainer
+from extensions.parallel.data_parallel import DataParallelModel
 from utils.tools.logger import Logger as Log
 
 
@@ -34,7 +35,6 @@ class ModuleRunner(object):
         self.configer.add_key_value(['performance'], 0.0)
         self.configer.add_key_value(['min_val_loss'], 9999.0)
         self.configer.add_key_value(['val_loss'], 9999.0)
-        self.configer.add_key_value(['network', 'parallel'], False)
         if not self.configer.exists('network', 'bn_type'):
             self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
 
@@ -42,12 +42,6 @@ class ModuleRunner(object):
             self.configer.update_value(['network', 'bn_type'], 'torchbn')
 
         Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
-
-    def to_container(self, data, cpu_only=False):
-        if len(self.configer.get('gpu')) > 1:
-            return DataContainer(data, cpu_only=cpu_only)
-
-        return data
 
     def to_device(self, *params):
         device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -58,14 +52,10 @@ class ModuleRunner(object):
         return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if len(self.configer.get('gpu')) > 1:
-            from extensions.parallel.data_parallel import DataParallelModel
-            self.configer.update_value(['network', 'parallel'], True)
-            return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
-
-        else:
+        if len(self.configer.get('gpu')) == 1:
             self.configer.update_value(['network', 'gathered'], True)
-            return net
+
+        return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
     def load_net(self, net):
         if self.configer.get('gpu') is not None:

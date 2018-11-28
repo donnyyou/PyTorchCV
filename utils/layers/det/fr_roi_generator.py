@@ -52,7 +52,7 @@ class FRROIGenerator(object):
         self.configer = configer
         self.fr_priorbox_layer = FRPriorBoxLayer(self.configer)
 
-    def __call__(self, feat_list, loc, score, n_pre_nms, n_post_nms, input_size, img_scale):
+    def __call__(self, feat_list, loc, score, n_pre_nms, n_post_nms, meta):
         """input should  be ndarray
         Propose RoIs.
         Inputs :obj:`loc, score, anchor` refer to the same anchor when indexed
@@ -86,19 +86,14 @@ class FRROIGenerator(object):
         # to set self.traing = False
         device = loc.device
 
-        default_boxes = self.fr_priorbox_layer(feat_list, input_size).unsqueeze(0).repeat(loc.size(0), 1, 1).to(device)
+        anchors = self.fr_priorbox_layer(feat_list, meta[0]['input_size'])
+        default_boxes = anchors.unsqueeze(0).repeat(loc.size(0), 1, 1).to(device)
 
         # loc = loc[:, :, [1, 0, 3, 2]]
         # Convert anchors into proposal via bbox transformations.
         wh = torch.exp(loc[:, :, 2:]) * default_boxes[:, :, 2:]
         cxcy = loc[:, :, :2] * default_boxes[:, :, 2:] + default_boxes[:, :, :2]
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
-
-        dst_bbox[:, :, 0] = (dst_bbox[:, :, 0]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 2] = (dst_bbox[:, :, 2]).clamp_(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 1] = (dst_bbox[:, :, 1]).clamp_(min=0, max=input_size[1]-1)
-        dst_bbox[:, :, 3] = (dst_bbox[:, :, 3]).clamp_(min=0, max=input_size[1]-1)
-
         dst_bbox = dst_bbox.detach()
         score = score.detach()
         # cls_prob = F.softmax(score, dim=-1)
@@ -110,12 +105,14 @@ class FRROIGenerator(object):
 
         for i in range(loc.size(0)):
             tmp_dst_bbox = dst_bbox[i]
+            tmp_dst_bbox[:, 0::2] = tmp_dst_bbox[:, 0::2].clamp_(min=0, max=meta[i]['aug_img_size'][0] - 1)
+            tmp_dst_bbox[:, 1::2] = tmp_dst_bbox[:, 1::2].clamp_(min=0, max=meta[i]['aug_img_size'][1] - 1)
             tmp_scores = rpn_fg_scores[i]
             # Remove predicted boxes with either height or width < threshold.
             ws = tmp_dst_bbox[:, 2] - tmp_dst_bbox[:, 0] + 1
             hs = tmp_dst_bbox[:, 3] - tmp_dst_bbox[:, 1] + 1
             min_size = self.configer.get('rpn', 'min_size')
-            keep = (hs >= img_scale[i].item() * min_size) & (ws >= img_scale[i].item() * min_size)
+            keep = (hs >= meta[i]['img_scale'] * min_size) & (ws >= meta[i]['img_scale'] * min_size)
             rois = tmp_dst_bbox[keep]
             tmp_scores = tmp_scores[keep]
             # Sort all (proposal, score) pairs by score from highest to lowest.

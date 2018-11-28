@@ -28,6 +28,7 @@ from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
+from utils.helpers.dc_helper import DCHelper
 
 
 class FastRCNNTest(object):
@@ -89,10 +90,8 @@ class FastRCNNTest(object):
         return json_dict
 
     @staticmethod
-    def decode(roi_locs, roi_scores, indices_and_rois, test_rois_num, configer, input_size):
-        roi_locs = roi_locs.cpu()
-        roi_scores = roi_scores.cpu()
-        indices_and_rois = indices_and_rois.cpu()
+    def decode(roi_locs, roi_scores, indices_and_rois, test_rois_num, configer, metas):
+        indices_and_rois = indices_and_rois
         num_classes = configer.get('data', 'num_classes')
         mean = torch.Tensor(configer.get('roi', 'loc_normalize_mean')).repeat(num_classes)[None]
         std = torch.Tensor(configer.get('roi', 'loc_normalize_std')).repeat(num_classes)[None]
@@ -108,10 +107,6 @@ class FastRCNNTest(object):
         wh = torch.exp(roi_locs[:, :, 2:]) * (rois[:, :, 2:] - rois[:, :, :2])
         cxcy = roi_locs[:, :, :2] * (rois[:, :, 2:] - rois[:, :, :2]) + (rois[:, :, :2] + rois[:, :, 2:]) / 2
         dst_bbox = torch.cat([cxcy - wh / 2, cxcy + wh / 2], 2)  # [b, 8732,4]
-
-        # clip bounding box
-        dst_bbox[:, :, 0::2] = (dst_bbox[:, :, 0::2]).clamp(min=0, max=input_size[0]-1)
-        dst_bbox[:, :, 1::2] = (dst_bbox[:, :, 1::2]).clamp(min=0, max=input_size[1]-1)
 
         if configer.get('phase') != 'debug':
             cls_prob = F.softmax(roi_scores, dim=1)
@@ -129,6 +124,10 @@ class FastRCNNTest(object):
             # tmp_cls_prob = cls_prob[batch_index]
             # tmp_cls_label = cls_label[batch_index]
             tmp_dst_bbox = dst_bbox[start_index:start_index+test_rois_num[i]]
+            # clip bounding box
+            tmp_dst_bbox[:, :, 0::2] = tmp_dst_bbox[:, :, 0::2].clamp(min=0, max=metas[i]['aug_img_size'][0] - 1)
+            tmp_dst_bbox[:, :, 1::2] = tmp_dst_bbox[:, :, 1::2].clamp(min=0, max=metas[i]['aug_img_size'][1] - 1)
+
             tmp_cls_prob = cls_prob[start_index:start_index+test_rois_num[i]]
             tmp_cls_label = cls_label[start_index:start_index+test_rois_num[i]]
             start_index += test_rois_num[i]
@@ -220,31 +219,27 @@ class FastRCNNTest(object):
 
         count = 0
         for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
-            img_scale = data_dict['imgscale']
-            inputs = data_dict['img']
-            batch_gt_bboxes = data_dict['bboxes']
-            # batch_gt_bboxes = ResizeBoxes()(inputs, data_dict['bboxes'])
-            batch_gt_labels = data_dict['labels']
-
-            input_size = [inputs.size(3), inputs.size(2)]
             feat_list = list()
+            input_size = data_dict['meta'][0]['input_size']
             for stride in self.configer.get('rpn', 'stride_list'):
-                feat_list.append(torch.zeros((inputs.size(0), 1, input_size[1] // stride, input_size[0] // stride)))
+                feat_list.append(torch.zeros((data_dict['img'].size(0), 1,
+                                              input_size[1] // stride, input_size[0] // stride)))
 
-            gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list, batch_gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(feat_list, data_dict['bboxes'], data_dict['meta'])
             eye_matrix = torch.eye(2)
             gt_rpn_labels[gt_rpn_labels == -1] = 0
-            gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(inputs.size(0), -1, 2)
+            gt_rpn_scores = eye_matrix[gt_rpn_labels.view(-1)].view(data_dict['img'].size(0), -1, 2)
             test_indices_and_rois, _ = self.fr_roi_generator(feat_list, gt_rpn_locs, gt_rpn_scores,
                                                              self.configer.get('rpn', 'n_test_pre_nms'),
                                                              self.configer.get('rpn', 'n_test_post_nms'),
-                                                             input_size, img_scale)
+                                                             data_dict['meta'])
 
-            gt_bboxes, gt_nums, gt_labels = self.__make_tensor(batch_gt_bboxes, batch_gt_labels)
             sample_rois, gt_roi_locs, gt_roi_labels = self.roi_sampler(test_indices_and_rois,
-                                                                       gt_bboxes, gt_nums, gt_labels, input_size)
+                                                                       data_dict['bboxes'],
+                                                                       data_dict['labels'],
+                                                                       data_dict['meta'])
 
-            self.det_visualizer.vis_rois(inputs, sample_rois[gt_roi_labels > 0])
+            self.det_visualizer.vis_rois(data_dict['img'], sample_rois[gt_roi_labels > 0])
             gt_cls_roi_locs = torch.zeros((gt_roi_locs.size(0), self.configer.get('data', 'num_classes'), 4))
             gt_cls_roi_locs[torch.arange(0, sample_rois.size(0)).long(), gt_roi_labels.long()] = gt_roi_locs
             gt_cls_roi_locs = gt_cls_roi_locs.contiguous().view(-1, 4*self.configer.get('data', 'num_classes'))
@@ -252,20 +247,20 @@ class FastRCNNTest(object):
 
             gt_roi_scores = eye_matrix[gt_roi_labels.view(-1)].view(gt_roi_labels.size(0),
                                                                     self.configer.get('data', 'num_classes'))
-            test_rois_num = torch.zeros((len(gt_bboxes), )).long()
-            for batch_id in range(len(gt_bboxes)):
+            test_rois_num = torch.zeros((len(data_dict['bboxes']), )).long()
+            for batch_id in range(len(data_dict['bboxes'])):
                 batch_index = (sample_rois[:, 0] == batch_id).nonzero().contiguous().view(-1,)
                 test_rois_num[batch_id] = batch_index.numel()
 
             batch_detections = FastRCNNTest.decode(gt_cls_roi_locs, gt_roi_scores,
-                                                   sample_rois, test_rois_num, self.configer, input_size)
+                                                   sample_rois, test_rois_num, self.configer, data_dict['meta'])
 
-            for j in range(inputs.size(0)):
+            for j in range(data_dict['img'].size(0)):
                 count = count + 1
                 if count > 20:
                     exit(1)
 
-                ori_img_bgr = self.blob_helper.tensor2bgr(inputs[j])
+                ori_img_bgr = self.blob_helper.tensor2bgr(data_dict['img'][j])
 
                 self.det_visualizer.vis_default_bboxes(ori_img_bgr,
                                                        self.fr_priorbox_layer(feat_list, input_size),
@@ -273,7 +268,7 @@ class FastRCNNTest(object):
                 json_dict = self.__get_info_tree(batch_detections[j], ori_img_bgr)
                 image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
                                                            json_dict,
-                                                           conf_threshold=self.configer.get('vis', 'conf_threshold'))
+                                                           conf_threshold=self.configer.get('res', 'vis_conf_thre'))
 
                 cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)

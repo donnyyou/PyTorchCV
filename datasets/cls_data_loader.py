@@ -15,7 +15,7 @@ import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.transforms as trans
 from datasets.cls.fc_data_loader import FCDataLoader
-from datasets.tools.collate_functions import CollateFunctions
+from datasets.tools.collate import collate
 from utils.tools.logger import Logger as Log
 
 
@@ -54,9 +54,8 @@ class ClsDataLoader(object):
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'label'],
-                    trans_dict=self.configer.get('train', 'data_transformer')
+                collate_fn=lambda *args: collate(
+                    *args, trans_dict=self.configer.get('train', 'data_transformer')
                 )
             )
 
@@ -74,9 +73,8 @@ class ClsDataLoader(object):
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                collate_fn=lambda *args: CollateFunctions.our_collate(
-                    *args, data_keys=['img', 'label'],
-                    trans_dict=self.configer.get('val', 'data_transformer')
+                collate_fn=lambda *args: collate(
+                    *args, trans_dict=self.configer.get('val', 'data_transformer')
                 )
             )
 

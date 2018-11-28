@@ -23,6 +23,7 @@ from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
+from utils.helpers.dc_helper import DCHelper
 
 
 class FasterRCNN(object):
@@ -87,17 +88,17 @@ class FasterRCNN(object):
         self.scheduler.step(self.configer.get('epoch'))
 
         for i, data_dict in enumerate(self.train_loader):
-            inputs = data_dict['img']
-            img_scale = data_dict['imgscale']
-            batch_gt_bboxes = self.module_runner.to_container(data_dict['bboxes'])
-            batch_gt_labels = self.module_runner.to_container(data_dict['labels'])
+            batch_gt_bboxes = data_dict['bboxes']
+            batch_gt_labels = data_dict['labels']
+            metas = data_dict['meta']
+            data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'))
+            data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'))
+            data_dict['meta'] = DCHelper.todc(metas, gpu_list=self.configer.get('gpu'), cpu_only=True)
             self.data_time.update(time.time() - start_time)
-            # Change the data type.
-            inputs = self.module_runner.to_device(inputs)
             # Forward pass.
-            loss = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
+            loss = self.det_net(data_dict)
             loss = loss.mean()
-            self.train_losses.update(loss.item(), inputs.size(0))
+            self.train_losses.update(loss.item(), data_dict['img'].size(0))
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -137,12 +138,15 @@ class FasterRCNN(object):
         with torch.no_grad():
             for j, data_dict in enumerate(self.val_loader):
                 inputs = data_dict['img']
-                img_scale = data_dict['imgscale']
-                batch_gt_bboxes = self.module_runner.to_container(data_dict['bboxes'])
-                batch_gt_labels = self.module_runner.to_container(data_dict['labels'])
+                batch_gt_bboxes = data_dict['bboxes']
+                batch_gt_labels = data_dict['labels']
+                metas = data_dict['meta']
+                data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'))
+                data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'))
+                data_dict['meta'] = DCHelper.todc(metas, gpu_list=self.configer.get('gpu'), cpu_only=True)
                 # Forward pass.
                 inputs = self.module_runner.to_device(inputs)
-                loss, test_group = self.det_net(inputs, batch_gt_bboxes, batch_gt_labels, img_scale)
+                loss, test_group = self.det_net(data_dict)
                 # Compute the loss of the train batch & backward.
                 loss = loss.mean()
                 self.val_losses.update(loss.item(), inputs.size(0))
@@ -152,7 +156,7 @@ class FasterRCNN(object):
                                                        test_indices_and_rois,
                                                        test_rois_num,
                                                        self.configer,
-                                                       [inputs.size(3), inputs.size(2)])
+                                                       metas)
                 batch_pred_bboxes = self.__get_object_list(batch_detections)
                 self.det_running_score.update(batch_pred_bboxes, batch_gt_bboxes, batch_gt_labels)
 
