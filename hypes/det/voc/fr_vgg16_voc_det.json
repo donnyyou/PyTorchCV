@@ -30,7 +30,8 @@
       }
     },
     "test": {
-      "resize_bound": [600, 1000]
+      "resize_bound": [600, 1000],
+      "fit_stride": 16
     },
     "train_trans": {
       "trans_seq": ["random_hflip", "random_resize"],

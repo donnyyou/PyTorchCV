@@ -28,7 +28,7 @@ from utils.layers.det.rpn_target_assigner import RPNTargetAssigner
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
-from utils.helpers.dc_helper import DCHelper
+from extensions.parallel.data_container import DataContainer
 
 
 class FastRCNNTest(object):
@@ -65,9 +65,28 @@ class FastRCNNTest(object):
         scale2 = self.configer.get('test', 'resize_bound')[1] / max(width, height)
         scale = min(scale1, scale2)
         inputs = self.blob_helper.make_input(image, scale=scale)
+        b, c, h, w = inputs.size()
+        border_wh = [w, h]
+        if self.configer.exists('test', 'fit_stride'):
+            stride = self.configer.get('test', 'fit_stride')
+
+            pad_w = 0 if (w % stride == 0) else stride - (w % stride)  # right
+            pad_h = 0 if (h % stride == 0) else stride - (h % stride)  # down
+
+            expand_image = torch.zeros((b, c, h + pad_h, w + pad_w)).to(inputs.device)
+            expand_image[:, :, 0:h, 0:w] = inputs
+            inputs= expand_image
+
+        data_dict = dict(
+            img=inputs,
+            meta=DataContainer([dict(ori_img_size=ImageHelper.get_size(ori_img_bgr),
+                                    aug_img_size=border_wh,
+                                    input_size=[inputs.size(3), inputs.size(2)])], cpu_only=True)
+        )
+
         with torch.no_grad():
             # Forward pass.
-            test_group = self.det_net(inputs, scale)
+            test_group = self.det_net(data_dict)
 
             test_indices_and_rois, test_roi_locs, test_roi_scores, test_rois_num = test_group
 
