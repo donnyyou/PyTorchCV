@@ -223,7 +223,7 @@ class BBoxHead(nn.Module):
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
 
-    def forward(self, x, indices_and_rois, input_size):
+    def forward(self, x, indices_and_rois, meta):
         """Forward the chain.
         We assume that there are :math:`N` batches.
         Args:
@@ -238,7 +238,7 @@ class BBoxHead(nn.Module):
                 which bounding boxes correspond to. Its shape is :math:`(R',)`.
         """
         # in case roi_indices is  ndarray
-        scale = x.size(2) / input_size[1]
+        scale = x.size(2) / meta[0]['input_size'][1]
         pool = self.roi_pool(x, indices_and_rois, scale)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)

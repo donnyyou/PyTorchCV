@@ -91,8 +91,8 @@ class FasterRCNN(object):
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
             metas = data_dict['meta']
-            data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'))
-            data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'))
+            data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'), cpu_only=True)
+            data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'), cpu_only=True)
             data_dict['meta'] = DCHelper.todc(metas, gpu_list=self.configer.get('gpu'), cpu_only=True)
             self.data_time.update(time.time() - start_time)
             # Forward pass.
@@ -141,8 +141,8 @@ class FasterRCNN(object):
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
                 metas = data_dict['meta']
-                data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'))
-                data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'))
+                data_dict['bboxes'] = DCHelper.todc(batch_gt_bboxes, gpu_list=self.configer.get('gpu'), cpu_only=True)
+                data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'), cpu_only=True)
                 data_dict['meta'] = DCHelper.todc(metas, gpu_list=self.configer.get('gpu'), cpu_only=True)
                 # Forward pass.
                 inputs = self.module_runner.to_device(inputs)
