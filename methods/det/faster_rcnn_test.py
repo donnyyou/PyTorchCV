@@ -135,7 +135,7 @@ class FastRCNNTest(object):
             cls_prob = roi_scores
 
         cls_label = torch.LongTensor([i for i in range(num_classes)])\
-            .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1)
+            .contiguous().view(1, num_classes).repeat(indices_and_rois.size(0), 1).to(roi_locs.device)
 
         output = [None for _ in range(test_rois_num.size(0))]
         start_index = 0
