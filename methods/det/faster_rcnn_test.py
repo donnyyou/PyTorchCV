@@ -29,6 +29,7 @@ from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer
 from extensions.parallel.data_container import DataContainer
+from utils.helpers.dc_helper import DCHelper
 
 
 class FastRCNNTest(object):
@@ -96,7 +97,7 @@ class FastRCNNTest(object):
                                        test_indices_and_rois,
                                        test_rois_num,
                                        self.configer,
-                                       ImageHelper.get_size(image))
+                                       DCHelper.tolist(data_dict['meta']))
         json_dict = self.__get_info_tree(batch_detections[0], ori_img_bgr, scale=scale)
 
         image_canvas = self.det_parser.draw_bboxes(ori_img_bgr.copy(),
