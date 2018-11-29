@@ -156,8 +156,8 @@ class FCNSegmentor(object):
             self.batch_time.update(time.time() - start_time)
             start_time = time.time()
 
-        self.configer.update_value(['performance'], self.seg_running_score.get_mean_iou())
-        self.configer.update_value(['val_loss'], self.val_losses.avg)
+        self.configer.update(['performance'], self.seg_running_score.get_mean_iou())
+        self.configer.update(['val_loss'], self.val_losses.avg)
         self.module_runner.save_net(self.seg_net, save_mode='performance')
         self.module_runner.save_net(self.seg_net, save_mode='val_loss')
 

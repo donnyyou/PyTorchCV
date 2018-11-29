@@ -113,17 +113,17 @@ if __name__ == "__main__":
 
     configer = Configer(args_parser=args_parser)
     abs_data_dir = os.path.expanduser(configer.get('data', 'data_dir'))
-    configer.update_value(['data', 'data_dir'], abs_data_dir)
+    configer.update(['data', 'data_dir'], abs_data_dir)
 
     if configer.get('gpu') is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(gpu_id) for gpu_id in configer.get('gpu'))
 
     project_dir = os.path.dirname(os.path.realpath(__file__))
-    configer.add_key_value(['project_dir'], project_dir)
+    configer.add(['project_dir'], project_dir)
 
     log_file = configer.get('logging', 'log_file')
     new_log_file = '{}_{}'.format(log_file, time.strftime("%Y-%m-%d_%X", time.localtime()))
-    configer.update_value(['logging', 'log_file'], new_log_file)
+    configer.update(['logging', 'log_file'], new_log_file)
 
     Log.init(logfile_level=configer.get('logging', 'logfile_level'),
              stdout_level=configer.get('logging', 'stdout_level'),

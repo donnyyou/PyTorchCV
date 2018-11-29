@@ -42,7 +42,7 @@ class FCClassifierTest(object):
                                    'datasets/cls/imagenet/imagenet_class_index.json')) as json_stream:
                 name_dict = json.load(json_stream)
                 name_seq = [name_dict[str(i)][1] for i in range(self.configer.get('data', 'num_classes'))]
-                self.configer.add_key_value(['details', 'name_seq'], name_seq)
+                self.configer.add(['details', 'name_seq'], name_seq)
 
         self._init_model()
 

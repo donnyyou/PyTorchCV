@@ -26,19 +26,19 @@ class ModuleRunner(object):
         self._init()
 
     def _init(self):
-        self.configer.add_key_value(['iters'], 0)
-        self.configer.add_key_value(['last_iters'], 0)
-        self.configer.add_key_value(['epoch'], 0)
-        self.configer.add_key_value(['last_epoch'], 0)
-        self.configer.add_key_value(['max_performance'], 0.0)
-        self.configer.add_key_value(['performance'], 0.0)
-        self.configer.add_key_value(['min_val_loss'], 9999.0)
-        self.configer.add_key_value(['val_loss'], 9999.0)
+        self.configer.add(['iters'], 0)
+        self.configer.add(['last_iters'], 0)
+        self.configer.add(['epoch'], 0)
+        self.configer.add(['last_epoch'], 0)
+        self.configer.add(['max_performance'], 0.0)
+        self.configer.add(['performance'], 0.0)
+        self.configer.add(['min_val_loss'], 9999.0)
+        self.configer.add(['val_loss'], 9999.0)
         if not self.configer.exists('network', 'bn_type'):
-            self.configer.add_key_value(['network', 'bn_type'], 'torchbn')
+            self.configer.add(['network', 'bn_type'], 'torchbn')
 
         if len(self.configer.get('gpu')) == 1:
-            self.configer.update_value(['network', 'bn_type'], 'torchbn')
+            self.configer.update(['network', 'bn_type'], 'torchbn')
 
         Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
 
@@ -52,7 +52,7 @@ class ModuleRunner(object):
 
     def _make_parallel(self, net):
         if len(self.configer.get('gpu')) == 1:
-            self.configer.update_value(['network', 'gathered'], True)
+            self.configer.update(['network', 'gathered'], True)
 
         return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
@@ -86,12 +86,12 @@ class ModuleRunner(object):
                 self.load_state_dict(net, checkpoint_dict, self.configer.get('network', 'resume_strict'))
 
             if self.configer.get('network', 'resume_continue'):
-                self.configer.update_value(['epoch'], resume_dict['config_dict']['epoch'])
-                self.configer.update_value(['iters'], resume_dict['config_dict']['iters'])
-                self.configer.update_value(['performance'], resume_dict['config_dict']['performance'])
-                self.configer.update_value(['val_loss'], resume_dict['config_dict']['val_loss'])
-                self.configer.update_value(['min_val_loss'], resume_dict['config_dict']['min_val_loss'])
-                self.configer.update_value(['max_performance'], resume_dict['config_dict']['max_performance'])
+                self.configer.update(['epoch'], resume_dict['config_dict']['epoch'])
+                self.configer.update(['iters'], resume_dict['config_dict']['iters'])
+                self.configer.update(['performance'], resume_dict['config_dict']['performance'])
+                self.configer.update(['val_loss'], resume_dict['config_dict']['val_loss'])
+                self.configer.update(['min_val_loss'], resume_dict['config_dict']['min_val_loss'])
+                self.configer.update(['max_performance'], resume_dict['config_dict']['max_performance'])
 
         return net
 
@@ -159,13 +159,13 @@ class ModuleRunner(object):
             if self.configer.get('performance') > self.configer.get('max_performance'):
                 latest_name = '{}_max_performance.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
-                self.configer.update_value(['max_performance'], self.configer.get('performance'))
+                self.configer.update(['max_performance'], self.configer.get('performance'))
 
         elif save_mode == 'val_loss':
             if self.configer.get('val_loss') < self.configer.get('min_val_loss'):
                 latest_name = '{}_min_loss.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
-                self.configer.update_value(['min_val_loss'], self.configer.get('val_loss'))
+                self.configer.update(['min_val_loss'], self.configer.get('val_loss'))
 
         elif save_mode == 'iters':
             if self.configer.get('iters') - self.configer.get('last_iters') >= \
@@ -173,7 +173,7 @@ class ModuleRunner(object):
                 latest_name = '{}_iters{}.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'),
                                                  self.configer.get('iters'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
-                self.configer.update_value(['last_iters'], self.configer.get('iters'))
+                self.configer.update(['last_iters'], self.configer.get('iters'))
 
         elif save_mode == 'epoch':
             if self.configer.get('epoch') - self.configer.get('last_epoch') >= \
@@ -181,7 +181,7 @@ class ModuleRunner(object):
                 latest_name = '{}_epoch{}.pth'.format(self.configer.get('checkpoints', 'checkpoints_name'),
                                                  self.configer.get('epoch'))
                 torch.save(state, os.path.join(checkpoints_dir, latest_name))
-                self.configer.update_value(['last_epoch'], self.configer.get('epoch'))
+                self.configer.update(['last_epoch'], self.configer.get('epoch'))
 
         else:
             Log.error('Metric: {} is invalid.'.format(save_mode))

@@ -76,8 +76,8 @@ class OptimScheduler(object):
         return optimizer, scheduler
 
     def update_optimizer(self, net, optim_method, lr_policy):
-        self.configer.update_value(('optim', 'optim_method'), optim_method)
-        self.configer.update_value(('lr', 'lr_policy'), lr_policy)
+        self.configer.update(('optim', 'optim_method'), optim_method)
+        self.configer.update(('lr', 'lr_policy'), lr_policy)
         optimizer, scheduler = self.init_optimizer(net)
         return optimizer, scheduler
 
