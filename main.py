@@ -68,8 +68,8 @@ if __name__ == "__main__":
                         dest='network:pretrained', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
                         dest='network:resume', help='The path of checkpoints.')
-    parser.add_argument('--resume_level', default='full', type=str,
-                        dest='network:resume_level', help='The resume level of networks.')
+    parser.add_argument('--resume_strict', type=str2bool, nargs='?', default=True,
+                        dest='network:resume_strict', help='Fully match keys or not.')
     parser.add_argument('--resume_continue', type=str2bool, nargs='?', default=False,
                         dest='network:resume_continue', help='Whether to continue training.')
     parser.add_argument('--resume_val', type=str2bool, nargs='?', default=True,

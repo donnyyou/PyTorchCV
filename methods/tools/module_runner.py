@@ -10,12 +10,11 @@ from __future__ import print_function
 
 import math
 import os
-
+from collections import OrderedDict
 import torch
 import torch.nn as nn
 from torch.nn.parallel.scatter_gather import gather as torch_gather
 
-from extensions.parallel.data_container import DataContainer
 from extensions.parallel.data_parallel import DataParallelModel
 from utils.tools.logger import Logger as Log
 
@@ -70,40 +69,21 @@ class ModuleRunner(object):
             elif 'model' in resume_dict:
                 checkpoint_dict = resume_dict['model']
 
-            else:
+            elif isinstance(resume_dict, OrderedDict):
                 checkpoint_dict = resume_dict
 
-            net_dict = net.state_dict()
-            match_list = list()
-            not_match_list = list()
-            for key, value in checkpoint_dict.items():
-                if key.split('.')[0] == 'module':
-                    module_key = key
-                    norm_key = '.'.join(key.split('.')[1:])
-                else:
-                    module_key = 'module.{}'.format(key)
-                    norm_key = key
-
-                key = module_key if self.configer.get('network', 'parallel') else norm_key
-
-                if key in net_dict and net_dict[key].size() == value.size():
-                    net_dict[key] = value
-                    match_list.append(key)
-                else:
-                    not_match_list.append(key)
-
-            model_miss_list = [k for k in net_dict.keys() if k not in match_list]
-            if self.configer.get('network', 'resume_level') == 'full':
-                assert len(not_match_list) == 0, 'Checkpoint Miss Keys: {}'.format(not_match_list)
-                assert len(match_list) == len(net_dict.keys()), 'Model Miss Keys: {}'.format(model_miss_list)
-
-            elif self.configer.get('network', 'resume_level') == 'part':
-                Log.info('Checkpoint Miss Keys: {}'.format(not_match_list))
-                Log.info('Model Miss Keys: {}'.format(model_miss_list))
-
             else:
-                Log.error('Resume Level: {} is invalid.'.format(self.configer.get('network', 'resume_level')))
-                exit(1)
+                raise RuntimeError(
+                    'No state_dict found in checkpoint file {}'.format(self.configer.get('network', 'resume')))
+
+            if list(checkpoint_dict.keys())[0].startswith('module.'):
+                checkpoint_dict = {k[7:]: v for k, v in checkpoint_dict.items()}
+
+            # load state_dict
+            if hasattr(net, 'module'):
+                self.load_state_dict(net.module, checkpoint_dict, self.configer.get('network', 'resume_strict'))
+            else:
+                self.load_state_dict(net, checkpoint_dict, self.configer.get('network', 'resume_strict'))
 
             if self.configer.get('network', 'resume_continue'):
                 self.configer.update_value(['epoch'], resume_dict['config_dict']['epoch'])
@@ -113,9 +93,52 @@ class ModuleRunner(object):
                 self.configer.update_value(['min_val_loss'], resume_dict['config_dict']['min_val_loss'])
                 self.configer.update_value(['max_performance'], resume_dict['config_dict']['max_performance'])
 
-            net.load_state_dict(net_dict)
-
         return net
+
+    @staticmethod
+    def load_state_dict(module, state_dict, strict=False):
+        """Load state_dict to a module.
+        This method is modified from :meth:`torch.nn.Module.load_state_dict`.
+        Default value for ``strict`` is set to ``False`` and the message for
+        param mismatch will be shown even if strict is False.
+        Args:
+            module (Module): Module that receives the state_dict.
+            state_dict (OrderedDict): Weights.
+            strict (bool): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``False``.
+        """
+        unexpected_keys = []
+        own_state = module.state_dict()
+        for name, param in state_dict.items():
+            if name not in own_state:
+                unexpected_keys.append(name)
+                continue
+            if isinstance(param, torch.nn.Parameter):
+                # backwards compatibility for serialized parameters
+                param = param.data
+
+            try:
+                own_state[name].copy_(param)
+            except Exception:
+                raise RuntimeError('While copying the parameter named {}, '
+                                   'whose dimensions in the model are {} and '
+                                   'whose dimensions in the checkpoint are {}.'
+                                   .format(name, own_state[name].size(),
+                                           param.size()))
+        missing_keys = set(own_state.keys()) - set(state_dict.keys())
+
+        err_msg = []
+        if unexpected_keys:
+            err_msg.append('unexpected key in source state_dict: {}\n'.format(', '.join(unexpected_keys)))
+        if missing_keys:
+            err_msg.append('missing keys in source state_dict: {}\n'.format(', '.join(missing_keys)))
+        err_msg = '\n'.join(err_msg)
+        if err_msg:
+            if strict:
+                raise RuntimeError(err_msg)
+            else:
+                Log.warn(err_msg)
 
     def save_net(self, net, save_mode='iters'):
         state = {
