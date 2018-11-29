@@ -80,8 +80,9 @@ class FastRCNNTest(object):
         data_dict = dict(
             img=inputs,
             meta=DataContainer([[dict(ori_img_size=ImageHelper.get_size(ori_img_bgr),
-                                    aug_img_size=border_wh,
-                                    input_size=[inputs.size(3), inputs.size(2)])]], cpu_only=True)
+                                      aug_img_size=border_wh,
+                                      img_scale=scale,
+                                      input_size=[inputs.size(3), inputs.size(2)])]], cpu_only=True)
         )
 
         with torch.no_grad():
