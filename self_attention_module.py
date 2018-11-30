@@ -106,9 +106,10 @@ if __name__ == "__main__":
     self_attention.cuda()
     params = self_attention.state_dict()
     import time
-    for i in range(10):
+    for i in range(100):
         start_time = time.time()
         out_x = self_attention(in_x)
+        torch.cuda.synchronize()
         print(time.time() - start_time)
 
     print(out_x.size())
