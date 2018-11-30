@@ -79,6 +79,9 @@ class SelfAttentionModule(nn.Module):
         assert unfold_value_h == unfold_key_h and unfold_value_w == unfold_key_w
 
         query = self.f_query(x)
+        start_index = [self.dilation[i] * (self.kernel_size[i] // 2) - self.padding[i] for i in range(2)]
+        query = query[:, :, start_index[0]::self.stride[0], start_index[1]::self.stride[1]].contiguous()
+        query = query[:, :, :unfold_key_h, :unfold_key_w].contiguous()
         query = query.unsqueeze(2)
         print('query: {}'.format(query.size()))
 
@@ -102,7 +105,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     in_x = torch.randn((2, 100, 256, 512)).cuda()
     self_attention = SelfAttentionModule(in_channels=100, key_channels=20, value_channels=50,
-                                         kernel_size=3, dilation=2, padding=2)
+                                         kernel_size=3, dilation=16, padding=16)
     self_attention.cuda()
     params = self_attention.state_dict()
     import time
