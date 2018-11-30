@@ -32,12 +32,18 @@ class SelfAttentionModule(nn.Module):
                       kernel_size=1, stride=1, padding=0),
             nn.BatchNorm2d(self.key_channels),
         )
+        self.f_query = nn.Sequential(
+            nn.Conv2d(in_channels=self.in_channels, out_channels=self.key_channels,
+                      kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(self.key_channels),
+        )
+        # self.f_query = self.f_key
         self.f_value = nn.Conv2d(in_channels=self.in_channels, out_channels=self.value_channels,
                                  kernel_size=1, stride=1, padding=0)
         self.W = nn.Conv2d(in_channels=self.value_channels, out_channels=self.out_channels,
                            kernel_size=1, stride=1, padding=0)
-        nn.init.constant(self.W.weight, 0)
-        nn.init.constant(self.W.bias, 0)
+        nn.init.constant_(self.W.weight, 0)
+        nn.init.constant_(self.W.bias, 0)
 
     @staticmethod
     def _pair(x):
@@ -72,8 +78,8 @@ class SelfAttentionModule(nn.Module):
 
         assert unfold_value_h == unfold_key_h and unfold_value_w == unfold_key_w
 
-        query_index = unfold_key.size(2) // 2
-        query = unfold_key[:, :, query_index:query_index+1].contiguous()
+        query = self.f_query(x)
+        query = query.unsqueeze(2)
         print('query: {}'.format(query.size()))
 
         sim_map = (unfold_key * query).sum(1, keepdim=True)
@@ -98,6 +104,9 @@ if __name__ == "__main__":
     self_attention = SelfAttentionModule(in_channels=100, key_channels=20, value_channels=50,
                                          kernel_size=3, dilation=2, padding=2)
     self_attention.cuda()
+    params = self_attention.state_dict()
+    print(params['f_key.0.weight'][0][0])
+    print(params['f_query.0.weight'][0][0])
     import time
     for i in range(10):
         start_time = time.time()
