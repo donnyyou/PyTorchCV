@@ -105,8 +105,6 @@ if __name__ == "__main__":
                                          kernel_size=3, dilation=2, padding=2)
     self_attention.cuda()
     params = self_attention.state_dict()
-    print(params['f_key.0.weight'][0][0])
-    print(params['f_query.0.weight'][0][0])
     import time
     for i in range(10):
         start_time = time.time()
