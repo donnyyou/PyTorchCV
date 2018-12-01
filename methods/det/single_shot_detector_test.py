@@ -81,11 +81,11 @@ class SingleShotDetectorTest(object):
 
     @staticmethod
     def decode(bbox, conf, default_boxes, configer, input_size):
-        loc = bbox.cpu()
+        loc = bbox
         if configer.get('phase') != 'debug':
-            conf = F.softmax(conf.cpu(), dim=-1)
+            conf = F.softmax(conf, dim=-1)
 
-        default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1)
+        default_boxes = default_boxes.unsqueeze(0).repeat(loc.size(0), 1, 1).to(bbox.device)
 
         variances = [0.1, 0.2]
         wh = torch.exp(loc[:, :, 2:] * variances[1]) * default_boxes[:, :, 2:]
