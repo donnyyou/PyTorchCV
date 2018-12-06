@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-cd ../../
+cd ../../../
 
 
 if [ "$1"x == "train"x ]; then
@@ -14,7 +14,7 @@ elif [ "$1"x == "debug"x ]; then
 
 elif [ "$1"x == "test"x ]; then
   python main.py --hypes hypes/cityscape/fs_pspnet_cityscape_seg.json --phase test --gpu 0 --resume $2
-  cd val/scripts
+  cd val/scripts/seg
   python cityscape_evaluator.py --hypes_file ../../../hypes/cityscape/fs_pspnet_cityscape_seg.json
                              --gt_dir path-to-gt
                              --pred_dir path-to-pred
