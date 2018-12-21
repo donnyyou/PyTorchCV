@@ -22,35 +22,6 @@ from utils.tools.logger import Logger as Log
 class RunnerHelper(object):
 
     @staticmethod
-    def init_runner(runner):
-        runner.runner_state['iters'] = 0
-        runner.runner_state['last_iters'] = 0
-        runner.runner_state['epoch'] = 0
-        runner.runner_state['last_epoch'] = 0
-        runner.runner_state['performance'] = 0
-        runner.runner_state['val_loss'] = 0
-        runner.runner_state['max_performance'] = 0
-        runner.runner_state['min_val_loss'] = 0
-
-        if not runner.configer.exists('network', 'bn_type'):
-            runner.configer.add(['network', 'bn_type'], 'torchbn')
-
-        if len(runner.configer.get('gpu')) == 1:
-            runner.configer.update(['network', 'bn_type'], 'torchbn')
-
-        Log.info('BN Type is {}.'.format(runner.configer.get('network', 'bn_type')))
-
-    @staticmethod
-    def run(runner):
-        if runner.configer.get('network', 'resume') is not None and runner.configer.get('network', 'resume_val'):
-            runner.val()
-
-        while runner.configer.get('epoch') < runner.configer.get('solver', 'max_epoch'):
-            runner.train()
-            if runner.configer.get('epoch') == runner.configer.get('solver', 'max_epoch'):
-                break
-
-    @staticmethod
     def to_device(runner, *params):
         device = torch.device('cpu' if runner.configer.get('gpu') is None else 'cuda')
         return_list = list()

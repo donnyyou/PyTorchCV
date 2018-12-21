@@ -15,10 +15,9 @@ import torch.nn.functional as F
 
 from datasets.det_data_loader import DetDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_runner import ModuleRunner
+from methods.tools.runner_helper import RunnerHelper
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
-from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
@@ -41,7 +40,6 @@ class FastRCNNTest(object):
         self.det_model_manager = DetModelManager(configer)
         self.det_data_loader = DetDataLoader(configer)
         self.roi_sampler = FRROISampler(configer)
-        self.module_runner = ModuleRunner(configer)
         self.rpn_target_generator = RPNTargetAssigner(configer)
         self.fr_priorbox_layer = FRPriorBoxLayer(configer)
         self.fr_roi_generator = FRROIGenerator(configer)
@@ -52,7 +50,7 @@ class FastRCNNTest(object):
 
     def _init_model(self):
         self.det_net = self.det_model_manager.object_detector()
-        self.det_net = self.module_runner.load_net(self.det_net)
+        self.det_net = RunnerHelper.load_net(self, self.det_net)
         self.det_net.eval()
 
     def __test_img(self, image_path, json_path, raw_path, vis_path):
@@ -191,53 +189,7 @@ class FastRCNNTest(object):
 
         return json_dict
 
-    def test(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'val/results/det', self.configer.get('dataset'))
-
-        test_img = self.configer.get('test_img')
-        test_dir = self.configer.get('test_dir')
-        if test_img is None and test_dir is None:
-            Log.error('test_img & test_dir not exists.')
-            exit(1)
-
-        if test_img is not None and test_dir is not None:
-            Log.error('Either test_img or test_dir.')
-            exit(1)
-
-        if test_img is not None:
-            base_dir = os.path.join(base_dir, 'test_img')
-            filename = test_img.rstrip().split('/')[-1]
-            json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
-            raw_path = os.path.join(base_dir, 'raw', filename)
-            vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            FileHelper.make_dirs(json_path, is_file=True)
-            FileHelper.make_dirs(raw_path, is_file=True)
-            FileHelper.make_dirs(vis_path, is_file=True)
-            self.__test_img(test_img, json_path, raw_path, vis_path)
-
-        else:
-            base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            FileHelper.make_dirs(base_dir)
-
-            for filename in FileHelper.list_dir(test_dir):
-                image_path = os.path.join(test_dir, filename)
-                json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
-                raw_path = os.path.join(base_dir, 'raw', filename)
-                vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                FileHelper.make_dirs(json_path, is_file=True)
-                FileHelper.make_dirs(raw_path, is_file=True)
-                FileHelper.make_dirs(vis_path, is_file=True)
-
-                self.__test_img(image_path, json_path, raw_path, vis_path)
-
-    def debug(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'vis/results/det', self.configer.get('dataset'), 'debug')
-
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
+    def debug(self, vis_dir):
         count = 0
         for i, data_dict in enumerate(self.det_data_loader.get_trainloader()):
             feat_list = list()
@@ -291,6 +243,6 @@ class FastRCNNTest(object):
                                                            json_dict,
                                                            conf_threshold=self.configer.get('res', 'vis_conf_thre'))
 
-                cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
+                cv2.imwrite(os.path.join(vis_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)
                 cv2.waitKey()

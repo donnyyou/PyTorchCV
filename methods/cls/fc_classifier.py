@@ -14,12 +14,15 @@ import torch.backends.cudnn as cudnn
 
 from datasets.cls_data_loader import ClsDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_runner import ModuleRunner
+from methods.tools.runner_helper import RunnerHelper
 from methods.tools.optim_scheduler import OptimScheduler
 from models.cls_model_manager import ClsModelManager
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
 from val.scripts.cls.cls_running_score import ClsRunningScore
+
+
+cudnn.benchmark = True
 
 
 class FCClassifier(object):
@@ -35,7 +38,6 @@ class FCClassifier(object):
         self.cls_loss_manager = LossManager(configer)
         self.cls_model_manager = ClsModelManager(configer)
         self.cls_data_loader = ClsDataLoader(configer)
-        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.cls_running_score = ClsRunningScore(configer)
 
@@ -44,12 +46,13 @@ class FCClassifier(object):
         self.val_loader = None
         self.optimizer = None
         self.scheduler = None
+        self.runner_state = dict()
 
         self._init_model()
 
     def _init_model(self):
         self.cls_net = self.cls_model_manager.image_classifier()
-        self.cls_net = self.module_runner.load_net(self.cls_net)
+        self.cls_net = RunnerHelper.load_net(self, self.cls_net)
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
         self.train_loader = self.cls_data_loader.get_trainloader()
@@ -61,25 +64,25 @@ class FCClassifier(object):
 
         return self.cls_net.parameters()
 
-    def __train(self):
+    def train(self):
         """
           Train function of every epoch during train phase.
         """
         self.cls_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
-        self.configer.plus_one('epoch')
-        self.scheduler.step(self.configer.get('epoch'))
+        self.runner_state['epoch'] += 1
+        self.scheduler.step(self.runner_state['epoch'])
 
         for i, data_dict in enumerate(self.train_loader):
             inputs = data_dict['img']
             labels = data_dict['label']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, labels = self.module_runner.to_device(inputs, labels)
+            inputs, labels = RunnerHelper.to_device(inputs, labels)
             # Forward pass.
             outputs = self.cls_net(inputs)
-            outputs = self.module_runner.gather(outputs)
+            outputs = RunnerHelper.gather(self, outputs)
             # Compute the loss of the train batch & backward.
 
             loss = self.ce_loss(outputs, labels)
@@ -92,17 +95,17 @@ class FCClassifier(object):
             # Update the vars of the train phase.
             self.batch_time.update(time.time() - start_time)
             start_time = time.time()
-            self.configer.plus_one('iters')
+            self.runner_state['iters'] += 1
 
             # Print the log info & reset the states.
-            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
+            if self.runner_state['iters'] % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('Train Epoch: {0}\tTrain Iteration: {1}\t'
                          'Time {batch_time.sum:.3f}s / {2}iters, ({batch_time.avg:.3f})\t'
                          'Data load {data_time.sum:.3f}s / {2}iters, ({data_time.avg:3f})\n'
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
-                    self.configer.get('epoch'), self.configer.get('iters'),
+                    self.runner_state['epoch'], self.runner_state['iters'],
                     self.configer.get('solver', 'display_iter'),
-                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
+                    RunnerHelper.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
 
                 self.batch_time.reset()
@@ -111,10 +114,10 @@ class FCClassifier(object):
 
             # Check to val the current model.
             if self.val_loader is not None and \
-               self.configer.get('iters') % self.configer.get('solver', 'test_interval') == 0:
-                self.__val()
+               self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
+                self.val()
 
-    def __val(self):
+    def val(self):
         """
           Validation function during the train phase.
         """
@@ -126,10 +129,10 @@ class FCClassifier(object):
                 inputs = data_dict['img']
                 labels = data_dict['label']
                 # Change the data type.
-                inputs, labels = self.module_runner.to_device(inputs, labels)
+                inputs, labels = RunnerHelper.to_device(inputs, labels)
                 # Forward pass.
                 outputs = self.cls_net(inputs)
-                outputs = self.module_runner.gather(outputs)
+                outputs = RunnerHelper.gather(self, outputs)
                 # Compute the loss of the val batch.
                 loss = self.ce_loss(outputs, labels)
                 self.cls_running_score.update(outputs, labels)
@@ -139,8 +142,8 @@ class FCClassifier(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.module_runner.save_net(self.cls_net, save_mode='iters')
-
+            RunnerHelper.save_net(self, self.cls_net, performance=self.cls_running_score.get_top1_acc())
+            self.runner_state['performance'] = self.cls_running_score.get_top1_acc()
             # Print the log info & reset the states.
             Log.info('Test Time {batch_time.sum:.3f}s'.format(batch_time=self.batch_time))
             Log.info('TestLoss = {loss.avg:.8f}'.format(loss=self.val_losses))
@@ -150,16 +153,6 @@ class FCClassifier(object):
             self.val_losses.reset()
             self.cls_running_score.reset()
             self.cls_net.train()
-
-    def train(self):
-        cudnn.benchmark = True
-        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
-            self.__val()
-
-        while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
-            self.__train()
-            if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
-                break
 
 
 if __name__ == "__main__":
