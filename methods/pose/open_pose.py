@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 
 from datasets.pose_data_loader import PoseDataLoader
 from loss.loss_manager import LossManager
-from methods.tools.module_runner import ModuleRunner
+from methods.tools.runner_helper import RunnerHelper
 from methods.tools.optim_scheduler import OptimScheduler
 from models.pose_model_manager import PoseModelManager
 from utils.layers.pose.heatmap_generator import HeatmapGenerator
@@ -43,7 +43,6 @@ class OpenPose(object):
         self.pose_loss_manager = LossManager(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
-        self.module_runner = ModuleRunner(configer)
         self.optim_scheduler = OptimScheduler(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.paf_generator = PafGenerator(configer)
@@ -53,12 +52,13 @@ class OpenPose(object):
         self.val_loader = None
         self.optimizer = None
         self.scheduler = None
+        self.runner_state = dict()
 
         self._init_model()
 
     def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
-        self.pose_net = self.module_runner.load_net(self.pose_net)
+        self.pose_net = RunnerHelper.load_net(self, self.pose_net)
 
         self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
 
@@ -83,20 +83,19 @@ class OpenPose(object):
 
         return params
 
-    def __train(self):
+    def train(self):
         """
           Train function of every epoch during train phase.
         """
         self.pose_net.train()
         start_time = time.time()
         # Adjust the learning rate after every epoch.
-        self.configer.plus_one('epoch')
+        self.runner_state['epoch'] += 1
         self.scheduler.step(self.train_schedule_loss.avg, epoch=self.configer.get('epoch'))
         self.train_schedule_loss.reset()
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            self.module_runner.warm_lr(self.configer.get('iters'), len(self.train_loader),
-                                       self.scheduler, self.optimizer, backbone_list=[0])
+            RunnerHelper.warm_lr(self, backbone_list=[0])
 
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
@@ -105,7 +104,7 @@ class OpenPose(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, heatmap, maskmap, vecmap = self.module_runner.to_device(inputs, heatmap, maskmap, vecmap)
+            inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(inputs, heatmap, maskmap, vecmap)
 
             # Forward pass.
             paf_out, heatmap_out = self.pose_net(inputs)
@@ -127,20 +126,21 @@ class OpenPose(object):
             # Update the vars of the train phase.
             self.batch_time.update(time.time() - start_time)
             start_time = time.time()
-            self.configer.plus_one('iters')
+            self.runner_state['iters'] += 1
 
             # Print the log info & reset the states.
-            if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
+            if self.runner_state['iters'] % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.train_loss_heatmap.avg,
                                                                  self.train_loss_associate.avg))
                 Log.info('Train Epoch: {0}\tTrain Iteration: {1}\t'
                          'Time {batch_time.sum:.3f}s / {2}iters, ({batch_time.avg:.3f})\t'
                          'Data load {data_time.sum:.3f}s / {2}iters, ({data_time.avg:3f})\n'
                          'Learning rate = {3}\tLoss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
-                    self.configer.get('epoch'), self.configer.get('iters'),
+                    self.runner_state['epoch'], self.runner_state['iters'],
                     self.configer.get('solver', 'display_iter'),
-                    self.module_runner.get_lr(self.optimizer), batch_time=self.batch_time,
+                    RunnerHelper.get_lr(self.optimizer), batch_time=self.batch_time,
                     data_time=self.data_time, loss=self.train_losses))
+
                 self.batch_time.reset()
                 self.data_time.reset()
                 self.train_losses.reset()
@@ -149,10 +149,10 @@ class OpenPose(object):
 
             # Check to val the current model.
             if self.val_loader is not None and \
-               self.configer.get('iters') % self.configer.get('solver', 'test_interval') == 0:
-                self.__val()
+               self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
+                self.val()
 
-    def __val(self):
+    def val(self):
         """
           Validation function during the train phase.
         """
@@ -166,7 +166,7 @@ class OpenPose(object):
                 heatmap = data_dict['heatmap']
                 vecmap = data_dict['vecmap']
                 # Change the data type.
-                inputs, heatmap, maskmap, vecmap = self.module_runner.to_device(inputs, heatmap, maskmap, vecmap)
+                inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(inputs, heatmap, maskmap, vecmap)
 
                 # Forward pass.
                 paf_out, heatmap_out = self.pose_net(inputs)
@@ -183,8 +183,8 @@ class OpenPose(object):
                 self.batch_time.update(time.time() - start_time)
                 start_time = time.time()
 
-            self.configer.update(['val_loss'], self.val_losses.avg)
-            self.module_runner.save_net(self.pose_net, save_mode='val_loss')
+            self.runner_state['val_loss'] = self.val_losses.avg
+            RunnerHelper.save_net(self, self.pose_net, val_loss=self.val_losses.avg)
             Log.info('Loss Heatmap:{}, Loss Asso: {}'.format(self.val_loss_heatmap.avg, self.val_loss_associate.avg))
             # Print the log info & reset the states.
             Log.info(
@@ -196,16 +196,6 @@ class OpenPose(object):
             self.val_loss_heatmap.reset()
             self.val_loss_associate.reset()
             self.pose_net.train()
-
-    def train(self):
-        cudnn.benchmark = True
-        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
-            self.__val()
-
-        while self.configer.get('epoch') < self.configer.get('solver', 'max_epoch'):
-            self.__train()
-            if self.configer.get('epoch') == self.configer.get('solver', 'max_epoch'):
-                break
 
 
 if __name__ == "__main__":

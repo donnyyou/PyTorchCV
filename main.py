@@ -13,6 +13,7 @@ import time
 import argparse
 
 from methods.method_selector import MethodSelector
+from methods.tools.controller import Controller
 from utils.tools.configer import Configer
 from utils.tools.logger import Logger as Log
 
@@ -44,6 +45,8 @@ if __name__ == "__main__":
                         dest='data:data_dir', help='The Directory of the data.')
     parser.add_argument('--workers', default=None, type=int,
                         dest='data:workers', help='The number of workers to load data.')
+    parser.add_argument('--drop_last', type=str2bool, nargs='?', default=False,
+                        dest='data:drop_last', help='Fix bug for syncbn.')
     parser.add_argument('--train_batch_size', default=None, type=int,
                         dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
@@ -132,27 +135,26 @@ if __name__ == "__main__":
              rewrite=configer.get('logging', 'rewrite'))
 
     method_selector = MethodSelector(configer)
-    model = None
+    runner = None
     if configer.get('task') == 'pose':
-        model = method_selector.select_pose_method()
+        runner = method_selector.select_pose_method()
     elif configer.get('task') == 'seg':
-        model = method_selector.select_seg_method()
+        runner = method_selector.select_seg_method()
     elif configer.get('task') == 'det':
-        model = method_selector.select_det_method()
+        runner = method_selector.select_det_method()
     elif configer.get('task') == 'cls':
-        model = method_selector.select_cls_method()
-    elif configer.get('task') == 'multitask':
-        model = method_selector.select_multitask_method()
+        runner = method_selector.select_cls_method()
     else:
         Log.error('Task: {} is not valid.'.format(configer.get('task')))
         exit(1)
 
+    Controller.init(runner)
     if configer.get('phase') == 'train':
-        model.train()
+        Controller.train(runner)
     elif configer.get('phase') == 'debug':
-        model.debug()
+        Controller.debug(runner)
     elif configer.get('phase') == 'test' and configer.get('network', 'resume') is not None:
-        model.test()
+        Controller.test(runner)
     else:
         Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
         exit(1)

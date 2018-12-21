@@ -89,20 +89,22 @@ def collate(batch, trans_dict):
                         batch[i]['polygons'].data[object_id][polygon_id][0::2] *= w_scale_ratio
                         batch[i]['polygons'].data[object_id][polygon_id][1::2] *= h_scale_ratio
 
-            scaled_size = (int(round(height * h_scale_ratio)), int(round(width * w_scale_ratio)))
+            scaled_size = (int(round(width * w_scale_ratio)), int(round(height * h_scale_ratio)))
             if 'meta' in data_keys and 'aug_img_size' in batch[i]['meta'].data:
                 batch[i]['meta'].data['aug_img_size'] = scaled_size
 
-            batch[i]['img'] = DataContainer(F.interpolate(batch[i]['img'].data.unsqueeze(0),
-                                            scaled_size, mode='bilinear', align_corners=False).squeeze(0), stack=True)
+            scaled_size_hw = (scaled_size[1], scaled_size[0])
+
+            batch[i]['img'] = DataContainer(F.interpolate(batch[i]['img'].data.unsqueeze(0), scaled_size_hw,
+                                                          mode='bilinear', align_corners=False).squeeze(0), stack=True)
             if 'labelmap' in data_keys:
                 labelmap = batch[i]['labelmap'].data.unsqueeze(0).unsqueeze(0).float()
-                labelmap = F.interpolate(labelmap, scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
+                labelmap = F.interpolate(labelmap, scaled_size_hw, mode='nearest').long().squeeze(0).squeeze(0)
                 batch[i]['labelmap'] = DataContainer(labelmap, stack=True)
 
             if 'maskmap' in data_keys:
                 maskmap = batch[i]['maskmap'].data.unsqueeze(0).unsqueeze(0).float()
-                maskmap = F.interpolate(maskmap, scaled_size, mode='nearest').long().squeeze(0).squeeze(0)
+                maskmap = F.interpolate(maskmap, scaled_size_hw, mode='nearest').long().squeeze(0).squeeze(0)
                 batch[i]['maskmap'].data = DataContainer(maskmap, stack=True)
 
         pad_width = target_width - scaled_size[0]
