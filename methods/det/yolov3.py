@@ -16,7 +16,7 @@ from datasets.det_data_loader import DetDataLoader
 from loss.loss_manager import LossManager
 from methods.det.yolov3_test import YOLOv3Test
 from methods.tools.runner_helper import RunnerHelper
-from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.trainer import Trainer
 from models.det_model_manager import DetModelManager
 from utils.layers.det.yolo_detection_layer import YOLODetectionLayer
 from utils.layers.det.yolo_target_generator import YOLOTargetGenerator
@@ -43,7 +43,6 @@ class YOLOv3(object):
         self.yolo_detection_layer = YOLODetectionLayer(configer)
         self.yolo_target_generator = YOLOTargetGenerator(configer)
         self.det_running_score = DetRunningScore(configer)
-        self.optim_scheduler = OptimScheduler(configer)
 
         self.det_net = None
         self.train_loader = None
@@ -58,7 +57,7 @@ class YOLOv3(object):
         self.det_net = self.det_model_manager.object_detector()
         self.det_net = RunnerHelper.load_net(self, self.det_net)
 
-        self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
+        self.optimizer, self.scheduler = Trainer.init(self, self._get_parameters())
 
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
@@ -88,11 +87,10 @@ class YOLOv3(object):
         start_time = time.time()
         # Adjust the learning rate after every epoch.
         self.runner_state['epoch'] += 1
-        self.scheduler.step(self.runner_state['epoch'])
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            RunnerHelper.warm_lr(self)
+            Trainer.update(self, backbone_list=(1, ))
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
@@ -136,9 +134,12 @@ class YOLOv3(object):
                 self.data_time.reset()
                 self.train_losses.reset()
 
+            if self.configer.get('lr', 'metric') == 'iters' \
+                    and self.runner_state['iters'] == self.configer.get('solver', 'max_iters'):
+                break
+
             # Check to val the current model.
-            if self.val_loader is not None and \
-               self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
+            if self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
                 self.val()
 
     def val(self):

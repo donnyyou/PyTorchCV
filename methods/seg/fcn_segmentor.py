@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 from datasets.seg_data_loader import SegDataLoader
 from loss.loss_manager import LossManager
 from methods.tools.runner_helper import RunnerHelper
-from methods.tools.optim_scheduler import OptimScheduler
+from methods.tools.trainer import Trainer
 from models.seg_model_manager import SegModelManager
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
@@ -38,7 +38,6 @@ class FCNSegmentor(object):
         self.seg_loss_manager = LossManager(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
-        self.optim_scheduler = OptimScheduler(configer)
 
         self.seg_net = None
         self.train_loader = None
@@ -53,7 +52,7 @@ class FCNSegmentor(object):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
         self.seg_net = RunnerHelper.load_net(self, self.seg_net)
 
-        self.optimizer, self.scheduler = self.optim_scheduler.init_optimizer(self._get_parameters())
+        self.optimizer, self.scheduler = Trainer.init(self, self._get_parameters())
 
         self.train_loader = self.seg_data_loader.get_trainloader()
         self.val_loader = self.seg_data_loader.get_valloader()
@@ -82,9 +81,8 @@ class FCNSegmentor(object):
         start_time = time.time()
         # Adjust the learning rate after every epoch.
 
-        self.scheduler.step(self.runner_state['epoch'])
-
         for i, data_dict in enumerate(self.train_loader):
+            Trainer.step(self, backbone_list=(1, ))
             inputs = data_dict['img']
             targets = data_dict['labelmap']
             self.data_time.update(time.time() - start_time)
@@ -121,9 +119,12 @@ class FCNSegmentor(object):
                 self.data_time.reset()
                 self.train_losses.reset()
 
+            if self.configer.get('lr', 'metric') == 'iters' \
+                    and self.runner_state['iters'] == self.configer.get('solver', 'max_iters'):
+                break
+
             # Check to val the current model.
-            if self.val_loader is not None and \
-               self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
+            if self.runner_state['iters'] % self.configer.get('solver', 'test_interval') == 0:
                 self.val()
 
         self.runner_state['epoch'] += 1

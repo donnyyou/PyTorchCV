@@ -41,11 +41,18 @@ class Controller(object):
         if runner.configer.get('network', 'resume') is not None and runner.configer.get('network', 'resume_val'):
             runner.val()
 
-        while runner.configer.get('epoch') < runner.configer.get('solver', 'max_epoch'):
-            runner.train()
-            if runner.configer.get('epoch') == runner.configer.get('solver', 'max_epoch'):
-                runner.val()
-                break
+        if runner.configer.get('lr', 'metric') == 'epoch':
+            while runner.runner_state['epoch'] < runner.configer.get('solver', 'max_epoch'):
+                runner.train()
+                if runner.runner_state['epoch'] == runner.configer.get('solver', 'max_epoch'):
+                    runner.val()
+                    break
+        else:
+            while runner.runner_state['iters'] < runner.configer.get('solver', 'max_iters'):
+                runner.train()
+                if runner.runner_state['iters'] == runner.configer.get('solver', 'max_iters'):
+                    runner.val()
+                    break
 
         Log.info('Training end...')
 
@@ -53,7 +60,7 @@ class Controller(object):
     def debug(runner):
         Log.info('Debugging start..')
         base_dir = os.path.join(runner.configer.get('project_dir'), 'vis/results',
-                                runner.configer.get('task'), runner.configer.get('dataset'), 'debug')
+                                runner.configer.get('task'), runner.configer.get('network', 'model_name'))
 
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
@@ -65,7 +72,8 @@ class Controller(object):
     def test(runner):
         Log.info('Testing start...')
         base_dir = os.path.join(runner.configer.get('project_dir'),
-                                'val/results', runner.configer.get('task'), runner.configer.get('dataset'))
+                                'val/results', runner.configer.get('task'),
+                                runner.configer.get('network', 'model_name'))
 
         test_img = runner.configer.get('test_img')
         test_dir = runner.configer.get('test_dir')

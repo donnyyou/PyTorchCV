@@ -140,6 +140,8 @@ class RunnerHelper(object):
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 
+        latest_name = '{}_latest.pth'.format(runner.configer.get('checkpoints', 'checkpoints_name'))
+        torch.save(state, os.path.join(checkpoints_dir, latest_name))
         if performance is not None:
             if performance > runner.runner_state['max_performance']:
                 latest_name = '{}_max_performance.pth'.format(runner.configer.get('checkpoints', 'checkpoints_name'))
@@ -210,37 +212,4 @@ class RunnerHelper(object):
     def get_lr(optimizer):
 
         return [param_group['lr'] for param_group in optimizer.param_groups]
-
-    @staticmethod
-    def warm_lr(runner, backbone_list=(0, ), bb_scale=1.0):
-        """Sets the learning rate
-        # Adapted from PyTorch Imagenet example:
-        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
-        """
-        if not runner.configer.exists('lr', 'is_warm') or not runner.configer.get('lr', 'is_warm'):
-            return
-
-        warm_iters = runner.configer.get('lr', 'warm')['warm_epoch'] * len(runner.train_loader)
-        if runner.runner_state['iters'] < warm_iters:
-            if runner.configer.get('lr', 'warm')['freeze_backbone']:
-                for backbone_index in backbone_list:
-                    runner.optimizer.param_groups[backbone_index]['lr'] = 0.0
-
-            else:
-                lr_ratio = (runner.configer.get('iters') + 1) / warm_iters
-
-                base_lr_list = runner.scheduler.get_lr()
-                for param_group, base_lr in zip(runner.optimizer.param_groups, base_lr_list):
-                    param_group['lr'] = base_lr * (lr_ratio ** 4)
-
-        elif runner.runner_state['iters'] == warm_iters:
-            try:
-                base_lr_list = runner.scheduler.get_lr()
-                for param_group, base_lr in zip(runner.optimizer.param_groups, base_lr_list):
-                    param_group['lr'] = base_lr
-
-            except AttributeError:
-                bb_lr = runner.configer.get('lr', 'base_lr') * bb_scale
-                for backbone_index in backbone_list:
-                    runner.optimizer.param_groups[backbone_index]['lr'] = bb_lr
 
