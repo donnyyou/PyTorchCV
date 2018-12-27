@@ -54,6 +54,7 @@ class ClsDataLoader(object):
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                drop_last=self.configer.get('data', 'drop_last'),
                 collate_fn=lambda *args: collate(
                     *args, trans_dict=self.configer.get('train', 'data_transformer')
                 )
@@ -73,6 +74,7 @@ class ClsDataLoader(object):
                              img_transform=self.img_transform, configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
+                drop_last=self.configer.get('data', 'drop_last'),
                 collate_fn=lambda *args: collate(
                     *args, trans_dict=self.configer.get('val', 'data_transformer')
                 )

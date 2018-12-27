@@ -10,7 +10,6 @@ from __future__ import print_function
 
 import time
 import torch
-import torch.backends.cudnn as cudnn
 
 from datasets.det_data_loader import DetDataLoader
 from loss.loss_manager import LossManager
@@ -22,7 +21,6 @@ from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
-from utils.helpers.dc_helper import DCHelper
 from val.scripts.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
 

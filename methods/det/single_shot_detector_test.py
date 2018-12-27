@@ -19,12 +19,10 @@ from methods.tools.blob_helper import BlobHelper
 from methods.tools.runner_helper import RunnerHelper
 from models.det_model_manager import DetModelManager
 from utils.helpers.det_helper import DetHelper
-from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.layers.det.ssd_target_generator import SSDTargetGenerator
-from utils.helpers.dc_helper import DCHelper
 from utils.tools.logger import Logger as Log
 from vis.parser.det_parser import DetParser
 from vis.visualizer.det_visualizer import DetVisualizer

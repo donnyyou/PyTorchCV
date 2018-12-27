@@ -13,7 +13,8 @@ from loss.modules.det_modules import FRDetLoss
 from loss.modules.det_modules import SSDMultiBoxLoss
 from loss.modules.det_modules import YOLOv3DetLoss
 from loss.modules.pose_modules import OPPoseLoss
-from loss.modules.seg_modules import FCNSegLoss
+from loss.modules.seg_modules import FSCELoss, FSAuxCELoss, FSAuxEncCELoss
+from loss.modules.seg_modules import FSAuxOhemCELoss
 from utils.tools.logger import Logger as Log
 
 
@@ -32,7 +33,10 @@ POSE_LOSS_DICT = {
 }
 
 SEG_LOSS_DICT = {
-    'fcn_seg_loss': FCNSegLoss
+    'fs_ce_loss': FSCELoss,
+    'fs_auxce_loss':FSAuxCELoss,
+    'fs_auxencce_loss': FSAuxEncCELoss,
+    'fs_auxohemce_loss': FSAuxOhemCELoss
 }
 
 

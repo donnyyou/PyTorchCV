@@ -10,7 +10,6 @@ from __future__ import print_function
 
 import time
 import torch
-import torch.backends.cudnn as cudnn
 
 from datasets.seg_data_loader import SegDataLoader
 from loss.loss_manager import LossManager

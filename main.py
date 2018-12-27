@@ -37,16 +37,18 @@ if __name__ == "__main__":
                         dest='hypes', help='The file of the hyper parameters.')
     parser.add_argument('--phase', default='train', type=str,
                         dest='phase', help='The phase of module.')
-    parser.add_argument('--gpu', default=None, nargs='+', type=int,
+    parser.add_argument('--gpu', default=[0, 1, 2, 3], nargs='+', type=int,
                         dest='gpu', help='The gpu list used.')
 
     # ***********  Params for data.  **********
     parser.add_argument('--data_dir', default=None, type=str,
                         dest='data:data_dir', help='The Directory of the data.')
-    parser.add_argument('--workers', default=None, type=int,
-                        dest='data:workers', help='The number of workers to load data.')
+    parser.add_argument('--include_val', type=str2bool, nargs='?', default=False,
+                        dest='data:include_val', help='Include validation set for final training.')
     parser.add_argument('--drop_last', type=str2bool, nargs='?', default=False,
                         dest='data:drop_last', help='Fix bug for syncbn.')
+    parser.add_argument('--workers', default=None, type=int,
+                        dest='data:workers', help='The number of workers to load data.')
     parser.add_argument('--train_batch_size', default=None, type=int,
                         dest='train:batch_size', help='The batch size of training.')
     parser.add_argument('--val_batch_size', default=None, type=int,
@@ -67,6 +69,10 @@ if __name__ == "__main__":
                         dest='network:model_name', help='The name of model.')
     parser.add_argument('--backbone', default=None, type=str,
                         dest='network:backbone', help='The base network of model.')
+    parser.add_argument('--bn_type', default=None, type=str,
+                        dest='network:bn_type', help='The BN type of the network.')
+    parser.add_argument('--multi_grid', default=None, nargs='+', type=int,
+                        dest='network:multi_grid', help='The multi_grid for resnet backbone.')
     parser.add_argument('--pretrained', type=str, default=None,
                         dest='network:pretrained', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
@@ -87,12 +93,18 @@ if __name__ == "__main__":
                         dest='optim:optim_method', help='The optim method that used.')
     parser.add_argument('--base_lr', default=None, type=float,
                         dest='lr:base_lr', help='The learning rate.')
+    parser.add_argument('--bb_mult', default=None, type=float,
+                        dest='lr:bb_mult', help='The backbone mult ratio of learning rate.')
     parser.add_argument('--lr_policy', default=None, type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
+    parser.add_argument('--loss_type', default=None, type=str,
+                        dest='loss:loss_type', help='The loss type of the network.')
 
     # ***********  Params for display.  **********
     parser.add_argument('--max_epoch', default=None, type=int,
                         dest='solver:max_epoch', help='The max epoch of training.')
+    parser.add_argument('--max_iters', default=None, type=int,
+                        dest='solver:max_iters', help='The max iters of training.')
     parser.add_argument('--display_iter', default=None, type=int,
                         dest='solver:display_iter', help='The display iteration of train logs.')
     parser.add_argument('--test_interval', default=None, type=int,
@@ -105,12 +117,10 @@ if __name__ == "__main__":
                         dest='logging:stdout_level', help='To set the level to print to screen.')
     parser.add_argument('--log_file', default=None, type=str,
                         dest='logging:log_file', help='The path of log files.')
-
-    # ***********  Params for test or submission.  **********
-    parser.add_argument('--test_img', default=None, type=str,
-                        dest='test_img', help='The test path of image.')
-    parser.add_argument('--test_dir', default=None, type=str,
-                        dest='test_dir', help='The test directory of images.')
+    parser.add_argument('--rewrite', type=str2bool, nargs='?', default=True,
+                        dest='logging:rewrite', help='Whether to rewrite files.')
+    parser.add_argument('--log_to_file', type=str2bool, nargs='?', default=True,
+                        dest='logging:log_to_file', help='Whether to write logging into files.')
 
     args_parser = parser.parse_args()
 
