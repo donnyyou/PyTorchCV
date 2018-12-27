@@ -151,6 +151,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "is_warm": true,
       "warm": {
         "warm_epoch": 0.1
@@ -192,8 +193,11 @@
       "val_conf_thre": 0.05,
       "vis_conf_thre": 0.5
     },
-    "fr_loss": {
-      "rpn_sigma": 3.0,
-      "roi_sigma": 1.0
+    "loss": {
+      "loss_type": "fr_loss",
+      "params": {
+        "rpn_sigma": 3.0,
+        "roi_sigma": 1.0
+      }
     }
 }

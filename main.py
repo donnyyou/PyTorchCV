@@ -93,7 +93,7 @@ if __name__ == "__main__":
                         dest='optim:optim_method', help='The optim method that used.')
     parser.add_argument('--base_lr', default=None, type=float,
                         dest='lr:base_lr', help='The learning rate.')
-    parser.add_argument('--bb_mult', default=None, type=float,
+    parser.add_argument('--bb_mult', default=1.0, type=float,
                         dest='lr:bb_mult', help='The backbone mult ratio of learning rate.')
     parser.add_argument('--lr_policy', default=None, type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
