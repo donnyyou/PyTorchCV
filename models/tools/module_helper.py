@@ -43,7 +43,16 @@ class ModuleHelper(object):
         if all_match:
             Log.info('Loading pretrained model:{}'.format(pretrained))
             pretrained_dict = torch.load(pretrained)
-            model.load_state_dict(pretrained_dict)
+            model_dict = model.state_dict()
+            load_dict = dict()
+            for k, v in pretrained_dict.items():
+                if 'prefix.{}'.format(k) in model_dict:
+                    load_dict['prefix.{}'.format(k)] = v
+                else:
+                    load_dict[k] = v
+
+            # load_dict = {k: v for k, v in pretrained_dict.items() if 'resinit.{}'.format(k) not in model_dict}
+            model.load_state_dict(load_dict)
 
         else:
             Log.info('Loading pretrained model:{}'.format(pretrained))

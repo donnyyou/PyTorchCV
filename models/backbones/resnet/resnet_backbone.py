@@ -18,9 +18,7 @@ class NormalResnetBackbone(nn.Module):
 
         self.num_features = 2048
         # take pretrained resnet, except AvgPool and FC
-        self.conv1 = orig_resnet.conv1
-        self.bn1 = orig_resnet.bn1
-        self.relu = orig_resnet.relu
+        self.prefix = orig_resnet.prefix
         self.maxpool = orig_resnet.maxpool
         self.layer1 = orig_resnet.layer1
         self.layer2 = orig_resnet.layer2
@@ -32,9 +30,7 @@ class NormalResnetBackbone(nn.Module):
 
     def forward(self, x):
         tuple_features = list()
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
+        x = self.prefix(x)
         x = self.maxpool(x)
 
         x = self.layer1(x)
@@ -50,7 +46,7 @@ class NormalResnetBackbone(nn.Module):
 
 
 class DilatedResnetBackbone(nn.Module):
-    def __init__(self, orig_resnet, dilate_scale=8, multi_grid=None):
+    def __init__(self, orig_resnet, dilate_scale=8, multi_grid=(1, 2, 4)):
         super(DilatedResnetBackbone, self).__init__()
 
         self.num_features = 2048
@@ -62,19 +58,17 @@ class DilatedResnetBackbone(nn.Module):
                 orig_resnet.layer4.apply(partial(self._nostride_dilate, dilate=4))
             else:
                 for i, r in enumerate(multi_grid):
-                    orig_resnet.layer4[i].apply(partial(self._nostride_dilate, dilate=4*r))
+                    orig_resnet.layer4[i].apply(partial(self._nostride_dilate, dilate=int(4 * r)))
 
         elif dilate_scale == 16:
             if multi_grid is None:
                 orig_resnet.layer4.apply(partial(self._nostride_dilate, dilate=2))
             else:
                 for i, r in enumerate(multi_grid):
-                    orig_resnet.layer4[i].apply(partial(self._nostride_dilate, dilate=2 * r))
+                    orig_resnet.layer4[i].apply(partial(self._nostride_dilate, dilate=int(2 * r)))
 
         # Take pretrained resnet, except AvgPool and FC
-        self.conv1 = orig_resnet.conv1
-        self.bn1 = orig_resnet.bn1
-        self.relu = orig_resnet.relu
+        self.prefix = orig_resnet.prefix
         self.maxpool = orig_resnet.maxpool
         self.layer1 = orig_resnet.layer1
         self.layer2 = orig_resnet.layer2
@@ -88,8 +82,8 @@ class DilatedResnetBackbone(nn.Module):
             if m.stride == (2, 2):
                 m.stride = (1, 1)
                 if m.kernel_size == (3, 3):
-                    m.dilation = (dilate//2, dilate//2)
-                    m.padding = (dilate//2, dilate//2)
+                    m.dilation = (dilate // 2, dilate // 2)
+                    m.padding = (dilate // 2, dilate // 2)
             # other convoluions
             else:
                 if m.kernel_size == (3, 3):
@@ -101,9 +95,7 @@ class DilatedResnetBackbone(nn.Module):
 
     def forward(self, x):
         tuple_features = list()
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
+        x = self.prefix(x)
         x = self.maxpool(x)
 
         x = self.layer1(x)

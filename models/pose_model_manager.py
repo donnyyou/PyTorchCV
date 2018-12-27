@@ -9,10 +9,9 @@ from __future__ import division
 from __future__ import print_function
 
 from models.pose.multi.open_pose_org import get_open_pose_org
-from models.pose.multi.open_pose import OpenPose
-from models.pose.single.cpm_net import CPMNet
+from models.pose.nets.cpm_net import CPMNet
+from models.pose.nets.open_pose import OpenPose
 from utils.tools.logger import Logger as Log
-
 
 MULTI_POSE_MODEL_DICT = {
     'open_pose': OpenPose,

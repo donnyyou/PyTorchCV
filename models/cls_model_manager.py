@@ -8,11 +8,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.cls.img.vgg import VGG
-from models.cls.img.shufflenetv2 import ShuffleNetV2, ShuffleResNetV2
 from models.cls.img.mobilenet import MobileNet
+from models.cls.img.vgg import VGG
+from models.cls.nets.shufflenetv2 import ShuffleNetV2, ShuffleResNetV2
 from utils.tools.logger import Logger as Log
-
 
 CLS_MODEL_DICT = {
     'vgg11': VGG,
