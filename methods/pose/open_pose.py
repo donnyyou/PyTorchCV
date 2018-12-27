@@ -64,7 +64,7 @@ class OpenPose(object):
         self.val_loader = self.pose_data_loader.get_valloader()
 
         self.weights = self.configer.get('network', 'loss_weights')
-        self.mse_loss = self.pose_loss_manager.get_pose_loss('op_pose_loss')
+        self.mse_loss = self.pose_loss_manager.get_pose_loss()
 
     def _get_parameters(self):
         lr_1 = []

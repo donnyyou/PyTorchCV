@@ -56,7 +56,7 @@ class ConvPoseMachine(object):
         self.train_loader = self.pose_data_loader.get_trainloader()
         self.val_loader = self.pose_data_loader.get_valloader()
 
-        self.mse_loss = self.pose_loss_manager.get_pose_loss('cpm_pose_loss')
+        self.mse_loss = self.pose_loss_manager.get_pose_loss()
 
     def _get_parameters(self):
 

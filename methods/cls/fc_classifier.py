@@ -57,7 +57,7 @@ class FCClassifier(object):
         self.train_loader = self.cls_data_loader.get_trainloader()
         self.val_loader = self.cls_data_loader.get_valloader()
 
-        self.ce_loss = self.cls_loss_manager.get_cls_loss('fc_cls_loss')
+        self.ce_loss = self.cls_loss_manager.get_cls_loss()
 
     def _get_parameters(self):
 

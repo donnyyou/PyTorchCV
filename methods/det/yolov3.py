@@ -61,7 +61,7 @@ class YOLOv3(object):
         self.train_loader = self.det_data_loader.get_trainloader()
         self.val_loader = self.det_data_loader.get_valloader()
 
-        self.det_loss = self.det_loss_manager.get_det_loss('yolov3_det_loss')
+        self.det_loss = self.det_loss_manager.get_det_loss()
 
     def _get_parameters(self):
         lr_1 = []

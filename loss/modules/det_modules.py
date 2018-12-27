@@ -15,16 +15,6 @@ from torch.autograd import Variable
 from utils.tools.logger import Logger as Log
 
 
-class SSDDetLoss(nn.Module):
-    def __init__(self, configer):
-        super(SSDDetLoss, self).__init__()
-        self.ssd_loss = SSDMultiBoxLoss(configer)
-
-    def forward(self, outputs, *targets, **kwargs):
-
-        return self.ssd_loss(outputs, *targets, **kwargs)
-
-
 class SSDFocalLoss(nn.Module):
     def __init__(self, configer):
         super(SSDFocalLoss, self).__init__()
@@ -216,9 +206,9 @@ class SSDMultiBoxLoss(nn.Module):
         return loc_loss + conf_loss
 
 
-class YOLOv3DetLoss(nn.Module):
+class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
-        super(YOLOv3DetLoss, self).__init__()
+        super(YOLOv3Loss, self).__init__()
         self.configer = configer
         self.mse_loss = nn.MSELoss(reduction='sum')  # 'sum'
         self.bce_loss = nn.BCELoss(reduction='sum')
@@ -288,10 +278,10 @@ class FRLocLoss(nn.Module):
         return y.sum()
 
 
-class FRDetLoss(nn.Module):
+class FRLoss(nn.Module):
 
     def __init__(self, configer):
-        super(FRDetLoss, self).__init__()
+        super(FRLoss, self).__init__()
         self.configer = configer
         self.fr_loc_loss = FRLocLoss(configer)
 

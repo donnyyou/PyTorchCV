@@ -13,11 +13,15 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-class OPPoseLoss(nn.Module):
+class OPMseLoss(nn.Module):
     def __init__(self, configer):
-        super(OPPoseLoss, self).__init__()
+        super(OPMseLoss, self).__init__()
         self.configer = configer
-        self.mse_loss = nn.MSELoss(reduction=self.configer.get('mse_loss', 'reduction'))
+        reduction = 'elementwise_mean'
+        if self.configer.exists('loss', 'params') and 'mse_reduction' in self.configer.get('loss', 'params'):
+            reduction = self.configer.get('loss', 'params')['mse_reduction']
+
+        self.mse_loss = nn.MSELoss(reduction=reduction)
 
     def forward(self, inputs, *targets, mask=None, weights=None):
         loss = 0.0
