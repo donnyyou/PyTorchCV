@@ -86,7 +86,7 @@ class SingleShotDetector(object):
 
         # data_tuple: (inputs, heatmap, maskmap, vecmap)
         for i, data_dict in enumerate(self.train_loader):
-            Trainer.update(self, backbone_list=(1,))
+            Trainer.update(self, backbone_list=(0,))
             inputs = data_dict['img']
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']

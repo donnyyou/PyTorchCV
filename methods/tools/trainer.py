@@ -93,29 +93,31 @@ class Trainer(object):
                 assert runner.configer.get('lr', 'metric') == 'iters'
                 runner.scheduler.step(runner.runner_state['iters'])
 
-        warm_iters = runner.configer.get('lr', 'warm')['warm_epoch'] * len(runner.train_loader)
-        if runner.runner_state['iters'] < warm_iters:
+        if runner.runner_state['iters'] < runner.configer.get('lr', 'warm')['warm_iters']:
             if runner.configer.get('lr', 'warm')['freeze_backbone']:
                 for backbone_index in backbone_list:
                     runner.optimizer.param_groups[backbone_index]['lr'] = 0.0
 
             else:
-                lr_ratio = (runner.runner_state['iters'] + 1) / warm_iters
+                lr_ratio = (runner.runner_state['iters'] + 1) / runner.configer.get('lr', 'warm')['warm_iters']
 
                 base_lr_list = runner.scheduler.get_lr()
                 for param_group, base_lr in zip(runner.optimizer.param_groups, base_lr_list):
                     param_group['lr'] = base_lr * (lr_ratio ** 4)
 
-        elif runner.runner_state['iters'] == warm_iters:
+        elif runner.runner_state['iters'] == runner.configer.get('lr', 'warm')['warm_iters']:
             try:
                 base_lr_list = runner.scheduler.get_lr()
                 for param_group, base_lr in zip(runner.optimizer.param_groups, base_lr_list):
                     param_group['lr'] = base_lr
 
             except AttributeError:
-                bb_lr = runner.configer.get('lr', 'base_lr') * runner.configer.get('lr', 'bb_mult')
-                for backbone_index in backbone_list:
-                    runner.optimizer.param_groups[backbone_index]['lr'] = bb_lr
+                nbb_lr = runner.configer.get('lr', 'base_lr') * runner.configer.get('lr', 'nbb_mult')
+                for i, param_group in enumerate(runner.optimizer.param_groups):
+                    if i in backbone_list:
+                        continue
+
+                    param_group[i]['lr'] = nbb_lr
 
         else:
             if runner.configer.get('lr', 'metric') == 'epoch':

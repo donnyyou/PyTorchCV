@@ -81,7 +81,7 @@ class FCNSegmentor(object):
         # Adjust the learning rate after every epoch.
 
         for i, data_dict in enumerate(self.train_loader):
-            Trainer.step(self, backbone_list=(1, ))
+            Trainer.update(self, backbone_list=(0, ))
             inputs = data_dict['img']
             targets = data_dict['labelmap']
             self.data_time.update(time.time() - start_time)
