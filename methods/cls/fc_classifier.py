@@ -78,10 +78,9 @@ class FCClassifier(object):
             labels = data_dict['label']
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, labels = RunnerHelper.to_device(inputs, labels)
+            inputs, labels = RunnerHelper.to_device(self, inputs, labels)
             # Forward pass.
             outputs = self.cls_net(inputs)
-            outputs = RunnerHelper.gather(self, outputs)
             # Compute the loss of the train batch & backward.
 
             loss = self.ce_loss(outputs, labels)
@@ -131,7 +130,7 @@ class FCClassifier(object):
                 inputs = data_dict['img']
                 labels = data_dict['label']
                 # Change the data type.
-                inputs, labels = RunnerHelper.to_device(inputs, labels)
+                inputs, labels = RunnerHelper.to_device(self, inputs, labels)
                 # Forward pass.
                 outputs = self.cls_net(inputs)
                 outputs = RunnerHelper.gather(self, outputs)

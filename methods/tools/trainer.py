@@ -93,6 +93,8 @@ class Trainer(object):
                 assert runner.configer.get('lr', 'metric') == 'iters'
                 runner.scheduler.step(runner.runner_state['iters'])
 
+            return
+
         if runner.runner_state['iters'] < runner.configer.get('lr', 'warm')['warm_iters']:
             if runner.configer.get('lr', 'warm')['freeze_backbone']:
                 for backbone_index in backbone_list:

@@ -8,6 +8,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import torch
+
 from loss.modules.cls_modules import FCCELoss, FCCenterLoss
 from loss.modules.det_modules import FRLoss, SSDMultiBoxLoss, YOLOv3Loss, SSDFocalLoss
 from loss.modules.pose_modules import OPMseLoss
@@ -45,7 +47,7 @@ class LossManager(object):
         self.configer = configer
 
     def _parallel(self, loss):
-        if self.configer.get('network', 'loss_balance') and len(self.configer.get('gpu')) > 1:
+        if self.configer.get('network', 'loss_balance') and len(range(torch.cuda.device_count())) > 1:
             from extensions.parallel.data_parallel import DataParallelCriterion
             loss = DataParallelCriterion(loss)
 

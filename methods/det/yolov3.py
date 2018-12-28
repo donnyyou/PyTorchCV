@@ -97,14 +97,14 @@ class YOLOv3(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs = RunnerHelper.to_device(inputs)
+            inputs = RunnerHelper.to_device(self, inputs)
 
             # Forward pass.
             feat_list, predictions, _ = self.det_net(inputs)
 
             targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
                                                                      batch_gt_labels, input_size)
-            targets, objmask, noobjmask = RunnerHelper.to_device(targets, objmask, noobjmask)
+            targets, objmask, noobjmask = RunnerHelper.to_device(self, targets, objmask, noobjmask)
             # Compute the loss of the train batch & backward.
             loss = self.det_loss(predictions, targets, objmask, noobjmask)
 
@@ -154,12 +154,12 @@ class YOLOv3(object):
                 batch_gt_labels = data_dict['labels']
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
-                inputs = RunnerHelper.to_device(inputs)
+                inputs = RunnerHelper.to_device(self, inputs)
                 feat_list, predictions, detections = self.det_net(inputs)
 
                 targets, objmask, noobjmask = self.yolo_target_generator(feat_list, batch_gt_bboxes,
                                                                          batch_gt_labels, input_size)
-                targets, objmask, noobjmask = RunnerHelper.to_device(targets, objmask, noobjmask)
+                targets, objmask, noobjmask = RunnerHelper.to_device(self, targets, objmask, noobjmask)
 
                 # Compute the loss of the val batch.
                 loss = self.det_loss(predictions, targets, objmask, noobjmask)

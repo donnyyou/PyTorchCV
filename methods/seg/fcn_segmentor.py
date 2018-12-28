@@ -87,7 +87,7 @@ class FCNSegmentor(object):
             self.data_time.update(time.time() - start_time)
             # Change the data type.
 
-            inputs, targets = RunnerHelper.to_device(inputs, targets)
+            inputs, targets = RunnerHelper.to_device(self, inputs, targets)
 
             # Forward pass.
             outputs = self.seg_net(inputs)
@@ -141,7 +141,7 @@ class FCNSegmentor(object):
 
             with torch.no_grad():
                 # Change the data type.
-                inputs, targets = RunnerHelper.to_device(inputs, targets)
+                inputs, targets = RunnerHelper.to_device(self, inputs, targets)
                 # Forward pass.
                 outputs = self.seg_net(inputs)
                 # Compute the loss of the val batch.

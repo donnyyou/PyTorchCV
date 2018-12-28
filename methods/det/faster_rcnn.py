@@ -146,7 +146,7 @@ class FasterRCNN(object):
                 data_dict['labels'] = DCHelper.todc(batch_gt_labels, gpu_list=self.configer.get('gpu'), cpu_only=True)
                 data_dict['meta'] = DCHelper.todc(metas, gpu_list=self.configer.get('gpu'), cpu_only=True)
                 # Forward pass.
-                inputs = RunnerHelper.to_device(inputs)
+                inputs = RunnerHelper.to_device(self, inputs)
                 loss, test_group = self.det_net(data_dict)
                 # Compute the loss of the train batch & backward.
                 loss = loss.mean()

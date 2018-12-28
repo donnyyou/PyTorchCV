@@ -100,7 +100,7 @@ class OpenPose(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(inputs, heatmap, maskmap, vecmap)
+            inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(self, inputs, heatmap, maskmap, vecmap)
 
             # Forward pass.
             paf_out, heatmap_out = self.pose_net(inputs)
@@ -165,7 +165,7 @@ class OpenPose(object):
                 heatmap = data_dict['heatmap']
                 vecmap = data_dict['vecmap']
                 # Change the data type.
-                inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(inputs, heatmap, maskmap, vecmap)
+                inputs, heatmap, maskmap, vecmap = RunnerHelper.to_device(self, inputs, heatmap, maskmap, vecmap)
 
                 # Forward pass.
                 paf_out, heatmap_out = self.pose_net(inputs)

@@ -13,7 +13,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models import vgg16
 
-from loss.modules.det_modules import FRDetLoss
+from loss.modules.det_modules import FRLoss
 from utils.layers.det.fr_roi_generator import FRROIGenerator
 from utils.layers.det.fr_roi_sampler import FRROISampler
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
@@ -67,7 +67,7 @@ class FasterRCNN(nn.Module):
         self.roi_generator = FRROIGenerator(configer)
         self.roi_sampler = FRROISampler(configer)
         self.bbox_head = BBoxHead(configer, self.classifier)
-        self.det_loss = FRDetLoss(self.configer)
+        self.det_loss = FRLoss(self.configer)
 
     def forward(self, data_dict):
         """Forward Faster R-CNN.

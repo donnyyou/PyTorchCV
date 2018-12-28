@@ -32,7 +32,7 @@ class RunnerHelper(object):
 
     @staticmethod
     def _make_parallel(runner, net):
-        if len(runner.configer.get('gpu')) == 1:
+        if len(runner.configer.get('gpu')) == 1 or len(range(torch.cuda.device_count())) == 1:
             runner.configer.update(['network', 'gathered'], True)
 
         return DataParallelModel(net, gather_=runner.configer.get('network', 'gathered'))

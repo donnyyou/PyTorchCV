@@ -91,7 +91,7 @@ class SingleShotDetector(object):
             batch_gt_bboxes = data_dict['bboxes']
             batch_gt_labels = data_dict['labels']
             # Change the data type.
-            inputs = RunnerHelper.to_device(inputs)
+            inputs = RunnerHelper.to_device(self, inputs)
 
             self.data_time.update(time.time() - start_time)
             # Forward pass.
@@ -152,7 +152,7 @@ class SingleShotDetector(object):
                 inputs = data_dict['img']
                 batch_gt_bboxes = data_dict['bboxes']
                 batch_gt_labels = data_dict['labels']
-                inputs = RunnerHelper.to_device(inputs)
+                inputs = RunnerHelper.to_device(self, inputs)
                 input_size = [inputs.size(3), inputs.size(2)]
                 # Forward pass.
                 outputs = self.det_net(inputs)

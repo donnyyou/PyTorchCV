@@ -79,7 +79,7 @@ class ConvPoseMachine(object):
 
             self.data_time.update(time.time() - start_time)
             # Change the data type.
-            inputs, heatmap = RunnerHelper.to_device(inputs, heatmap)
+            inputs, heatmap = RunnerHelper.to_device(self, inputs, heatmap)
             # self.pose_visualizer.vis_peaks(heatmap[0], inputs[0], name='cpm')
 
             # Forward pass.
@@ -132,7 +132,7 @@ class ConvPoseMachine(object):
                 inputs = data_dict['img']
                 heatmap = data_dict['heatmap']
                 # Change the data type.
-                inputs, heatmap = RunnerHelper.to_device(inputs, heatmap)
+                inputs, heatmap = RunnerHelper.to_device(self, inputs, heatmap)
 
                 # Forward pass.
                 outputs = self.pose_net(inputs)

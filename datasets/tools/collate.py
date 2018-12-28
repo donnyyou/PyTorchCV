@@ -8,9 +8,11 @@ from __future__ import division
 from __future__ import print_function
 
 import random
+import collections
 import torch
 import torch.nn.functional as F
 from torch.utils.data.dataloader import default_collate
+from torch._six import string_classes, int_classes
 
 from extensions.parallel.data_container import DataContainer
 from utils.tools.logger import Logger as Log
@@ -19,7 +21,10 @@ from utils.tools.logger import Logger as Log
 def stack(batch, data_key=None):
     if isinstance(batch[0][data_key], DataContainer):
         if batch[0][data_key].stack:
-            assert isinstance(batch[0][data_key].data, torch.Tensor)
+            assert isinstance(batch[0][data_key].data, torch.Tensor) or \
+                   isinstance(batch[0], int_classes) or isinstance(batch[0], float) or \
+                   isinstance(batch[0], string_classes) or isinstance(batch[0], collections.Mapping) or\
+                   isinstance(batch[0], collections.Sequence)
             samples = [sample[data_key].data for sample in batch]
             return default_collate(samples)
 
