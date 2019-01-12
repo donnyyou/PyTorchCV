@@ -38,7 +38,7 @@ elif [ "$1"x == "val"x ]; then
                        --test_dir ${DATA_DIR}/val/image --out_dir val >> ${LOG_FILE} 2>&1
   cd val/scripts/det/
   ${PYTHON} -u voc_evaluator.py --hypes "../../../"${HYPES_FILE} \
-                                --json_dir ../../../results/voc/test_dir/${CHECKPOINTS_NAME}/val/label \
+                                --json_dir ../../../out/results/voc/test_dir/${CHECKPOINTS_NAME}/val/label \
                                 --gt_dir ${DATA_DIR}/val/label  >> "../../../"${LOG_FILE} 2>&1
 
 else

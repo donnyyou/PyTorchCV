@@ -59,7 +59,7 @@ class Controller(object):
     @staticmethod
     def debug(runner):
         Log.info('Debugging start..')
-        base_dir = os.path.join(runner.configer.get('project_dir'), 'vis/results',
+        base_dir = os.path.join(runner.configer.get('project_dir'), 'out/vis',
                                 runner.configer.get('task'), runner.configer.get('network', 'model_name'))
 
         if not os.path.exists(base_dir):
@@ -72,8 +72,9 @@ class Controller(object):
     def test(runner):
         Log.info('Testing start...')
         base_dir = os.path.join(runner.configer.get('project_dir'),
-                                'val/results', runner.configer.get('task'),
-                                runner.configer.get('network', 'model_name'))
+                                'out/results', runner.configer.get('task'),
+                                runner.configer.get('network', 'checkpoints_name'),
+                                runner.configer.get('test', 'out_dir'))
 
         test_img = runner.configer.get('test_img')
         test_dir = runner.configer.get('test_dir')
