@@ -45,9 +45,9 @@ class Configer(object):
 
             for key, value in self.args_dict.items():
                 if not self.exists(*key.split(':')):
-                    self.add_key_value(key.split(':'), value)
+                    self.add(key.split(':'), value)
                 elif value is not None:
-                    self.update_value(key.split(':'), value)
+                    self.update(key.split(':'), value)
 
     def _get_caller(self):
         filename = os.path.basename(sys._getframe().f_back.f_back.f_code.co_filename)
@@ -86,7 +86,7 @@ class Configer(object):
 
         return False
 
-    def add_key_value(self, key_tuple, value):
+    def add(self, key_tuple, value):
         if self.exists(*key_tuple):
             Log.error('{} Key: {} existed!!!'.format(self._get_caller(), key_tuple))
             exit(1)
@@ -104,7 +104,7 @@ class Configer(object):
             Log.error('{} KeyError: {}.'.format(self._get_caller(), key_tuple))
             exit(1)
 
-    def update_value(self, key_tuple, value):
+    def update(self, key_tuple, value):
         if not self.exists(*key_tuple):
             Log.error('{} Key: {} not existed!!!'.format(self._get_caller(), key_tuple))
             exit(1)
@@ -155,8 +155,8 @@ if __name__ == '__main__':
 
     configer = Configer(args_parser=args_parser)
 
-    configer.add_key_value(('project_dir',), 'root')
-    configer.update_value(('project_dir', ), 'root1')
+    configer.add(('project_dir',), 'root')
+    configer.update(('project_dir',), 'root1')
 
     print (configer.get('project_dir'))
     print (configer.get('network', 'resume'))

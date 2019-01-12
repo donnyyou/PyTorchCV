@@ -13,18 +13,25 @@
     "train": {
       "batch_size": 1,
       "data_transformer": {
-        "size_mode": "random_size"
+        "size_mode": "random_size",
+        "fit_stride": 16,
+        "align_method": "only_pad",
+        "pad_mode": "pad_right_down"
       }
     },
     "val": {
       "batch_size": 1,
       "use_07_metric": true,
       "data_transformer": {
-        "size_mode": "random_size"
+        "size_mode": "random_size",
+        "fit_stride": 16,
+        "align_method": "only_pad",
+        "pad_mode": "pad_right_down"
       }
     },
     "test": {
-      "resize_bound": [600, 1000]
+      "resize_bound": [600, 1000],
+      "fit_stride": 16
     },
     "train_trans": {
       "trans_seq": ["random_hflip", "random_resize"],
@@ -125,6 +132,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "base_lr": 0.001,
       "lr_policy": "step",
       "step": {
@@ -158,8 +166,11 @@
       "val_conf_thre": 0.05,
       "vis_conf_thre": 0.5
     },
-    "fr_loss": {
-      "rpn_sigma": 3.0,
-      "roi_sigma": 1.0
+    "loss": {
+      "loss_type": "fr_loss",
+      "params": {
+        "rpn_sigma": 3.0,
+        "roi_sigma": 1.0
+      }
     }
 }

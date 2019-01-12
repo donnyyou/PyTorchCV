@@ -24,25 +24,23 @@ class RPNTargetAssigner(object):
         self.configer = configer
         self.fr_proirbox_layer = FRPriorBoxLayer(configer)
 
-    def __call__(self, feat_list, gt_bboxes, input_size):
-        anchor_boxes = self.fr_proirbox_layer(feat_list, input_size)
+    def __call__(self, feat_list, gt_bboxes, meta):
+        anchor_boxes = self.fr_proirbox_layer(feat_list, meta[0]['input_size'])
         n_sample = self.configer.get('rpn', 'loss')['n_sample']
         pos_iou_thresh = self.configer.get('rpn', 'loss')['pos_iou_thresh']
         neg_iou_thresh = self.configer.get('rpn', 'loss')['neg_iou_thresh']
         pos_ratio = self.configer.get('rpn', 'loss')['pos_ratio']
         # Calc indicies of anchors which are located completely inside of the image
         # whose size is speficied.
-
-        index_inside = (((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2) >= 0)
-                        & ((anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2) >= 0)
-                        & ((anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2) < input_size[0])
-                        & ((anchor_boxes[:, 1] + anchor_boxes[:, 3] / 2) < input_size[1]))
-        index_inside = index_inside.nonzero().contiguous().view(-1,)
-
-        default_boxes = anchor_boxes[index_inside]
         target_bboxes = list()
         target_labels = list()
         for i in range(len(gt_bboxes)):
+            index_inside = (((anchor_boxes[:, 0] - anchor_boxes[:, 2] / 2) >= 0)
+                            & ((anchor_boxes[:, 1] - anchor_boxes[:, 3] / 2) >= 0)
+                            & ((anchor_boxes[:, 0] + anchor_boxes[:, 2] / 2) < meta[i]['aug_img_size'][0])
+                            & ((anchor_boxes[:, 1] + anchor_boxes[:, 3] / 2) < meta[i]['aug_img_size'][1]))
+            index_inside = index_inside.nonzero().contiguous().view(-1, )
+            default_boxes = anchor_boxes[index_inside]
             loc = torch.zeros_like(default_boxes)
             label = torch.ones((default_boxes.size(0),)).mul_(-1).long()
 

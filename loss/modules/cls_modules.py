@@ -12,33 +12,22 @@ import torch
 import torch.nn as nn
 
 
-class FCClsLoss(nn.Module):
-    def __init__(self, configer):
-        super(FCClsLoss, self).__init__()
-        self.configer = configer
-        self.ce_loss = CrossEntropyLoss(self.configer)
-
-    def forward(self, inputs, *targets, **kwargs):
-
-        return self.ce_loss(inputs, targets[0])
-
-
-class CrossEntropyLoss(nn.Module):
+class FCCELoss(nn.Module):
     def __init__(self, configer=None):
-        super(CrossEntropyLoss, self).__init__()
+        super(FCCELoss, self).__init__()
         self.configer = configer
         weight = None
-        if self.configer.exists('cross_entropy_loss', 'weight'):
-            weight = self.configer.get('cross_entropy_loss', 'weight')
+        if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
+            weight = self.configer.get('loss', 'params')['ce_weight']
             weight = torch.FloatTensor(weight).cuda()
 
         reduction = 'elementwise_mean'
-        if self.configer.exists('cross_entropy_loss', 'reduction'):
-            reduction = self.configer.get("cross_entropy_loss", "reduction")
+        if self.configer.exists('loss', 'params') and 'ce_reduction' in self.configer.get('loss', 'params'):
+            reduction = self.configer.get('loss', 'params')['ce_reduction']
 
         ignore_index = -100
-        if self.configer.exists('cross_entropy_loss', 'ignore_index'):
-            ignore_index = self.configer.get('cross_entropy_loss', 'ignore_index')
+        if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
+            ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
 
         self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction=reduction)
 
@@ -46,9 +35,9 @@ class CrossEntropyLoss(nn.Module):
         return self.ce_loss(inputs, targets[0])
 
 
-class CenterLoss(nn.Module):
+class FCCenterLoss(nn.Module):
     def __init__(self, dim_hidden, num_classes, lambda_c=1.0, use_cuda=True):
-        super(CenterLoss, self).__init__()
+        super(FCCenterLoss, self).__init__()
         self.dim_hidden = dim_hidden
         self.num_classes = num_classes
         self.lambda_c = lambda_c

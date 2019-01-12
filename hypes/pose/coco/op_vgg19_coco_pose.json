@@ -115,6 +115,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "is_warm": true,
       "warm": {
         "warm_epoch": 5,
@@ -160,9 +161,6 @@
       "theta": 1.0,
       "method": "gaussian"
     },
-    "mse_loss":{
-      "reduction": "sum"
-    },
     "res": {
       "num_threshold":3,
       "avg_threshold": 0.2,
@@ -172,5 +170,11 @@
       "limb_threshold": 0.05,
       "mid_point_num": 10,
       "limb_pos_ratio": 0.8
+    },
+    "loss": {
+      "loss_type": "op_mse_loss",
+      "params": {
+        "mse_reduction": "sum"
+      }
     }
 }

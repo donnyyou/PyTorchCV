@@ -64,22 +64,15 @@ class RandomPad(object):
         left_pad = random.randint(0, pad_width)  # pad_left
         up_pad = random.randint(0, pad_height)  # pad_up
 
-        expand_image = np.zeros((h, w, channels), dtype=img.dtype)
-        expand_image[:, :, :] = self.mean
-        expand_image[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = img
-        img = expand_image
-
+        img = cv2.copyMakeBorder(img, up_pad, pad_height-up_pad, left_pad, pad_width-left_pad,
+                                 cv2.BORDER_CONSTANT, value=self.mean)
         if labelmap is not None:
-            expand_labelmap = np.zeros((h, w), dtype=labelmap.dtype)
-            expand_labelmap[:, :] = 255
-            expand_labelmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = labelmap
-            labelmap = expand_labelmap
+            labelmap = cv2.copyMakeBorder(labelmap, up_pad, pad_height - up_pad, left_pad, pad_width - left_pad,
+                                          cv2.BORDER_CONSTANT, value=255)
 
         if maskmap is not None:
-            expand_maskmap = np.zeros((h, w), dtype=maskmap.dtype)
-            expand_maskmap[:, :] = 1
-            expand_maskmap[int(up_pad):int(up_pad + height), int(left_pad):int(left_pad + width)] = maskmap
-            maskmap = expand_maskmap
+            maskmap = cv2.copyMakeBorder(maskmap, up_pad, pad_height - up_pad, left_pad, pad_width - left_pad,
+                                         cv2.BORDER_CONSTANT, value=1)
 
         if polygons is not None:
             for object_id in range(len(polygons)):
@@ -1100,6 +1093,7 @@ class Resize(object):
                     polygons[object_id][polygon_id][0::2] *= w_scale_ratio
                     polygons[object_id][polygon_id][1::2] *= h_scale_ratio
 
+        target_size = tuple(target_size)
         img = cv2.resize(img, target_size, interpolation=cv2.INTER_CUBIC)
         if labelmap is not None:
             labelmap = cv2.resize(labelmap, target_size, interpolation=cv2.INTER_NEAREST)

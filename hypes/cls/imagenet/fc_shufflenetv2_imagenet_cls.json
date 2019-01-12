@@ -93,6 +93,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "base_lr": 0.5,
       "lr_policy": "lambda_linear",
       "step": {
@@ -118,7 +119,10 @@
         "nesterov": false
       }
     },
-    "cross_entropy_loss": {
-      "reduction": "elementwise_mean"
+    "loss": {
+      "loss_type": "fc_ce_loss",
+      "params": {
+        "ce_reduction": "elementwise_mean"
+      }
     }
 }

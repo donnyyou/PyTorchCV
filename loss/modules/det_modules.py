@@ -15,16 +15,6 @@ from torch.autograd import Variable
 from utils.tools.logger import Logger as Log
 
 
-class SSDDetLoss(nn.Module):
-    def __init__(self, configer):
-        super(SSDDetLoss, self).__init__()
-        self.ssd_loss = SSDMultiBoxLoss(configer)
-
-    def forward(self, outputs, *targets, **kwargs):
-
-        return self.ssd_loss(outputs, *targets, **kwargs)
-
-
 class SSDFocalLoss(nn.Module):
     def __init__(self, configer):
         super(SSDFocalLoss, self).__init__()
@@ -216,9 +206,9 @@ class SSDMultiBoxLoss(nn.Module):
         return loc_loss + conf_loss
 
 
-class YOLOv3DetLoss(nn.Module):
+class YOLOv3Loss(nn.Module):
     def __init__(self, configer):
-        super(YOLOv3DetLoss, self).__init__()
+        super(YOLOv3Loss, self).__init__()
         self.configer = configer
         self.mse_loss = nn.MSELoss(reduction='sum')  # 'sum'
         self.bce_loss = nn.BCELoss(reduction='sum')
@@ -288,10 +278,10 @@ class FRLocLoss(nn.Module):
         return y.sum()
 
 
-class FRDetLoss(nn.Module):
+class FRLoss(nn.Module):
 
     def __init__(self, configer):
-        super(FRDetLoss, self).__init__()
+        super(FRLoss, self).__init__()
         self.configer = configer
         self.fr_loc_loss = FRLocLoss(configer)
 
@@ -302,13 +292,13 @@ class FRDetLoss(nn.Module):
         gt_rpn_labels = gt_rpn_labels.contiguous().view(-1)
         pred_rpn_scores = pred_rpn_scores.contiguous().view(-1, 2)
         rpn_loc_loss = self.fr_loc_loss(pred_rpn_locs, gt_rpn_locs,
-                                        gt_rpn_labels, self.configer.get('fr_loss', 'rpn_sigma'))
+                                        gt_rpn_labels, self.configer.get('loss', 'params')['rpn_sigma'])
 
         # NOTE: default value of ignore_index is -100 ...
         rpn_cls_loss = F.cross_entropy(pred_rpn_scores, gt_rpn_labels, ignore_index=-1)
 
         roi_loc_loss = self.fr_loc_loss(pred_roi_cls_locs, gt_roi_cls_locs,
-                                        gt_roi_labels, self.configer.get('fr_loss', 'roi_sigma'))
+                                        gt_roi_labels, self.configer.get('loss', 'params')['roi_sigma'])
         roi_cls_loss = F.cross_entropy(pred_roi_scores, gt_roi_labels, ignore_index=-1)
         # Log.info('rpn loc {}'.format(rpn_loc_loss))
         # Log.info('rpn cls {}'.format(rpn_cls_loss))

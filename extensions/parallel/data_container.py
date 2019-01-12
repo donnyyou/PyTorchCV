@@ -70,3 +70,7 @@ class DataContainer(object):
     @assert_tensor_type
     def dim(self):
         return self.data.dim()
+
+    @assert_tensor_type
+    def numel(self):
+        return self.data.numel()

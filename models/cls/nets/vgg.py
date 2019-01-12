@@ -5,6 +5,7 @@
 
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 
 cfg = {
@@ -26,6 +27,7 @@ class VGG(nn.Module):
         out = self.features(x)
         out = F.avg_pool2d(out, out.size()[2:])
         out = out.view(out.size(0), -1)
+        # out = torch.cat([out, out, out, out, out, out, out, out], 0)
         out = self.classifier(out)
         return out
 

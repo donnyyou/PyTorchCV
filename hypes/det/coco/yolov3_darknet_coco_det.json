@@ -144,6 +144,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "is_warm": true,
       "warm": {
         "warm_epoch": 0.2
@@ -184,5 +185,8 @@
     "res": {
       "val_conf_thre": 0.5,
       "vis_conf_thre": 0.5
+    },
+    "loss": {
+      "loss_type": "yolov3_loss"
     }
 }

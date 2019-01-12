@@ -16,9 +16,8 @@ from PIL import Image
 
 from datasets.seg_data_loader import SegDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_runner import ModuleRunner
+from methods.tools.runner_helper import RunnerHelper
 from models.seg_model_manager import SegModelManager
-from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 from vis.parser.seg_parser import SegParser
@@ -33,7 +32,6 @@ class FCNSegmentorTest(object):
         self.seg_parser = SegParser(configer)
         self.seg_model_manager = SegModelManager(configer)
         self.seg_data_loader = SegDataLoader(configer)
-        self.module_runner = ModuleRunner(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
         self.seg_net = None
 
@@ -41,7 +39,7 @@ class FCNSegmentorTest(object):
 
     def _init_model(self):
         self.seg_net = self.seg_model_manager.semantic_segmentor()
-        self.seg_net = self.module_runner.load_net(self.seg_net)
+        self.seg_net = RunnerHelper.load_net(self, self.seg_net)
         self.seg_net.eval()
 
     def _get_blob(self, ori_image, scale=None):
@@ -80,7 +78,7 @@ class FCNSegmentorTest(object):
 
         return image, border_hw
 
-    def __test_img(self, image_path, label_path, vis_path, raw_path):
+    def test_img(self, image_path, label_path, vis_path, raw_path):
         Log.info('Image Path: {}'.format(image_path))
         ori_image = ImageHelper.read_image(image_path,
                                            tool=self.configer.get('data', 'image_tool'),
@@ -237,54 +235,7 @@ class FCNSegmentorTest(object):
 
         return label_dst
 
-    def test(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'val/results/seg', self.configer.get('dataset'))
-
-        test_img = self.configer.get('test_img')
-        test_dir = self.configer.get('test_dir')
-        if test_img is None and test_dir is None:
-            Log.error('test_img & test_dir not exists.')
-            exit(1)
-
-        if test_img is not None and test_dir is not None:
-            Log.error('Either test_img or test_dir.')
-            exit(1)
-
-        if test_img is not None:
-            base_dir = os.path.join(base_dir, 'test_img')
-            filename = test_img.rstrip().split('/')[-1]
-            label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
-            raw_path = os.path.join(base_dir, 'raw', filename)
-            vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            FileHelper.make_dirs(label_path, is_file=True)
-            FileHelper.make_dirs(raw_path, is_file=True)
-            FileHelper.make_dirs(vis_path, is_file=True)
-
-            self.__test_img(test_img, label_path, vis_path, raw_path)
-
-        else:
-            base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            FileHelper.make_dirs(base_dir)
-
-            for filename in FileHelper.list_dir(test_dir):
-                image_path = os.path.join(test_dir, filename)
-                label_path = os.path.join(base_dir, 'label', '{}.png'.format('.'.join(filename.split('.')[:-1])))
-                raw_path = os.path.join(base_dir, 'raw', filename)
-                vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                FileHelper.make_dirs(label_path, is_file=True)
-                FileHelper.make_dirs(raw_path, is_file=True)
-                FileHelper.make_dirs(vis_path, is_file=True)
-
-                self.__test_img(image_path, label_path, vis_path, raw_path)
-
-    def debug(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'vis/results/seg', self.configer.get('dataset'), 'debug')
-
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
+    def debug(self, vis_dir):
         count = 0
         for i, data_dict in enumerate(self.seg_data_loader.get_trainloader()):
             inputs = data_dict['img']
@@ -297,7 +248,7 @@ class FCNSegmentorTest(object):
                 image_bgr = self.blob_helper.tensor2bgr(inputs[j])
                 label_map = targets[j].numpy()
                 image_canvas = self.seg_parser.colorize(label_map, image_canvas=image_bgr)
-                cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
+                cv2.imwrite(os.path.join(vis_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)
                 cv2.waitKey()
 

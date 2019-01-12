@@ -11,6 +11,7 @@ import os
 import numpy as np
 from torch.utils import data
 
+from extensions.parallel.data_container import DataContainer
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
@@ -48,7 +49,10 @@ class FSDataLoader(data.Dataset):
         if self.label_transform is not None:
             labelmap = self.label_transform(labelmap)
 
-        return img, labelmap
+        return dict(
+            img=DataContainer(img, stack=True),
+            labelmap=DataContainer(labelmap, stack=True),
+        )
 
     def _reduce_zero_label(self, labelmap):
         if not self.configer.get('data', 'reduce_zero_label'):

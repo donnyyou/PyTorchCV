@@ -8,12 +8,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.seg.semantic.deeplabv3 import DeepLabV3
-from models.seg.semantic.pspnet import PSPNet
-from models.seg.semantic.embednet import EmbedNet
-from models.seg.semantic.denseassp import DenseASPP
+from models.seg.nets.denseassp import DenseASPP
+from models.seg.nets.deeplabv3 import DeepLabV3
+from models.seg.nets.embednet import EmbedNet
+from models.seg.nets.pspnet import PSPNet
 from utils.tools.logger import Logger as Log
-
 
 SEG_MODEL_DICT = {
     'deeplabv3': DeepLabV3,

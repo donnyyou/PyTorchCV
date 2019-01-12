@@ -147,6 +147,7 @@
       "rewrite": true
     },
     "lr": {
+      "metric": "epoch",
       "base_lr": 0.001,
       "lr_policy": "step",
       "step": {
@@ -180,8 +181,11 @@
       "val_conf_thre": 0.01,
       "vis_conf_thre": 0.5
     },
-    "fr_loss": {
-      "rpn_sigma": 3.0,
-      "roi_sigma": 1.0
+    "loss": {
+      "loss_type": "fr_loss",
+      "params": {
+        "rpn_sigma": 3.0,
+        "roi_sigma": 1.0
+      }
     }
 }

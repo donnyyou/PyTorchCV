@@ -8,14 +8,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from models.det.img.vgg300_ssd import Vgg300SSD
-from models.det.img.vgg512_ssd import Vgg512SSD
-from models.det.img.darknet_yolov2 import DarkNetYolov2
-from models.det.img.darknet_yolov3 import DarkNetYolov3
-from models.det.img.faster_rcnn import FasterRCNN
-
+from models.det.nets.darknet_yolov2 import DarkNetYolov2
+from models.det.nets.darknet_yolov3 import DarkNetYolov3
+from models.det.nets.vgg300_ssd import Vgg300SSD
+from models.det.nets.vgg512_ssd import Vgg512SSD
+from models.det.nets.faster_rcnn import FasterRCNN
 from utils.tools.logger import Logger as Log
-
 
 DET_MODEL_DICT = {
     'vgg300_ssd': Vgg300SSD,

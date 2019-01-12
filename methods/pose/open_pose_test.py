@@ -17,9 +17,8 @@ from scipy.ndimage.filters import gaussian_filter
 
 from datasets.pose_data_loader import PoseDataLoader
 from methods.tools.blob_helper import BlobHelper
-from methods.tools.module_runner import ModuleRunner
+from methods.tools.runner_helper import RunnerHelper
 from models.pose_model_manager import PoseModelManager
-from utils.helpers.file_helper import FileHelper
 from utils.helpers.image_helper import ImageHelper
 from utils.helpers.json_helper import JsonHelper
 from utils.layers.pose.heatmap_generator import HeatmapGenerator
@@ -37,7 +36,6 @@ class OpenPoseTest(object):
         self.pose_parser = PoseParser(configer)
         self.pose_model_manager = PoseModelManager(configer)
         self.pose_data_loader = PoseDataLoader(configer)
-        self.module_runner = ModuleRunner(configer)
         self.heatmap_generator = HeatmapGenerator(configer)
         self.paf_generator = PafGenerator(configer)
         self.device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
@@ -47,7 +45,7 @@ class OpenPoseTest(object):
 
     def _init_model(self):
         self.pose_net = self.pose_model_manager.multi_pose_detector()
-        self.pose_net = self.module_runner.load_net(self.pose_net)
+        self.pose_net = RunnerHelper.load_net(self, self.pose_net)
         self.pose_net.eval()
 
     def _get_blob(self, ori_image, scale=None):
@@ -304,59 +302,7 @@ class OpenPoseTest(object):
 
         return subset, candidate
 
-    def test(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'val/results/pose', self.configer.get('dataset'))
-
-        test_img = self.configer.get('test_img')
-        test_dir = self.configer.get('test_dir')
-        if test_img is None and test_dir is None:
-            Log.error('test_img & test_dir not exists.')
-            exit(1)
-
-        if test_img is not None and test_dir is not None:
-            Log.error('Either test_img or test_dir.')
-            exit(1)
-
-        if test_img is not None:
-            base_dir = os.path.join(base_dir, 'test_img')
-            filename = test_img.rstrip().split('/')[-1]
-            json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
-            raw_path = os.path.join(base_dir, 'raw', filename)
-            vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-            FileHelper.make_dirs(json_path, is_file=True)
-            FileHelper.make_dirs(raw_path, is_file=True)
-            FileHelper.make_dirs(vis_path, is_file=True)
-
-            self.__test_img(test_img, json_path, raw_path, vis_path)
-
-        else:
-            base_dir = os.path.join(base_dir, 'test_dir', test_dir.rstrip('/').split('/')[-1])
-            FileHelper.make_dirs(base_dir)
-
-            img_count = 0
-            for filename in FileHelper.list_dir(test_dir):
-                img_count += 1
-                if img_count > 1200:
-                    break
-
-                image_path = os.path.join(test_dir, filename)
-                json_path = os.path.join(base_dir, 'json', '{}.json'.format('.'.join(filename.split('.')[:-1])))
-                raw_path = os.path.join(base_dir, 'raw', filename)
-                vis_path = os.path.join(base_dir, 'vis', '{}_vis.png'.format('.'.join(filename.split('.')[:-1])))
-                FileHelper.make_dirs(json_path, is_file=True)
-                FileHelper.make_dirs(raw_path, is_file=True)
-                FileHelper.make_dirs(vis_path, is_file=True)
-                self.__test_img(image_path, json_path, raw_path, vis_path)
-
-    def debug(self):
-        base_dir = os.path.join(self.configer.get('project_dir'),
-                                'vis/results/pose', self.configer.get('dataset'), 'debug')
-
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
-        count = 0
+    def debug(self, vis_dir):
         for i, data_dict in enumerate(self.pose_data_loader.get_trainloader()):
             inputs = data_dict['img']
             maskmap = data_dict['maskmap']
@@ -389,7 +335,7 @@ class OpenPoseTest(object):
                 json_dict = self.__get_info_tree(image_bgr, subset, candidate)
                 image_canvas = self.pose_parser.draw_points(image_bgr, json_dict)
                 image_canvas = self.pose_parser.link_points(image_canvas, json_dict)
-                cv2.imwrite(os.path.join(base_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
+                cv2.imwrite(os.path.join(vis_dir, '{}_{}_vis.png'.format(i, j)), image_canvas)
                 cv2.imshow('main', image_canvas)
                 cv2.waitKey()
 

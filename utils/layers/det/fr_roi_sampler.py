@@ -21,7 +21,7 @@ class FRROISampler(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def __call__(self, indices_and_rois, gt_bboxes, gt_labels, input_size, gt_polygons=None):
+    def __call__(self, indices_and_rois, gt_bboxes, gt_labels, meta, gt_polygons=None):
         n_sample = self.configer.get('roi', 'loss')['n_sample']
         pos_iou_thresh = self.configer.get('roi', 'loss')['pos_iou_thresh']
         neg_iou_thresh_hi = self.configer.get('roi', 'loss')['neg_iou_thresh_hi']
@@ -41,7 +41,7 @@ class FRROISampler(object):
 
             if temp_gt_bboxes.numel() == 0:
                 min_size = self.configer.get('rpn', 'min_size')
-                roi_size = random.randint(min_size, min(input_size))
+                roi_size = random.randint(min_size, min(meta[i]['aug_img_size']))
                 sample_roi = torch.zeros((1, 4), requires_grad=True).float().to(indices_and_rois.device)
                 sample_roi[0, 2:] = roi_size
                 gt_roi_loc = torch.zeros((1, 4), requires_grad=True).float().to(sample_roi.device)

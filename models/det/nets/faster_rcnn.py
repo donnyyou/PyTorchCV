@@ -13,7 +13,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models import vgg16
 
-from loss.modules.det_modules import FRDetLoss
+from loss.modules.det_modules import FRLoss
 from utils.layers.det.fr_roi_generator import FRROIGenerator
 from utils.layers.det.fr_roi_sampler import FRROISampler
 from utils.layers.det.rpn_detection_layer import RPNDetectionLayer
@@ -67,9 +67,9 @@ class FasterRCNN(nn.Module):
         self.roi_generator = FRROIGenerator(configer)
         self.roi_sampler = FRROISampler(configer)
         self.bbox_head = BBoxHead(configer, self.classifier)
-        self.det_loss = FRDetLoss(self.configer)
+        self.det_loss = FRLoss(self.configer)
 
-    def forward(self, *inputs):
+    def forward(self, data_dict):
         """Forward Faster R-CNN.
         Scaling paramter :obj:`scale` is used by RPN to determine the
         threshold to select small objects, which are going to be
@@ -98,43 +98,42 @@ class FasterRCNN(nn.Module):
             * **roi_indices**: Batch indices of RoIs. Its shape is \
                 :math:`(R',)`.
         """
-        input_size = [inputs[0].size(3), inputs[0].size(2)]
         if self.configer.get('phase') == 'test' and not self.training:
-            x, img_scale = inputs
-            x = self.backbone(inputs[0])
+            x = self.backbone(data_dict['img'])
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
 
             indices_and_rois, test_rois_num = self.roi_generator(feat_list, rpn_locs, rpn_scores,
                                                                  self.configer.get('rpn', 'n_test_pre_nms'),
                                                                  self.configer.get('rpn', 'n_test_post_nms'),
-                                                                 input_size, [img_scale])
-            roi_cls_locs, roi_scores = self.bbox_head(x, indices_and_rois, input_size)
+                                                                 data_dict['meta'])
+            roi_cls_locs, roi_scores = self.bbox_head(x, indices_and_rois, data_dict['meta'])
             return indices_and_rois, roi_cls_locs, roi_scores, test_rois_num
 
         elif self.configer.get('phase') == 'train' and not self.training:
-            x, gt_bboxes, gt_labels, img_scale = inputs
-            x = self.backbone(x)
+            x = self.backbone(data_dict['img'])
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
-            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, data_dict['bboxes'], data_dict['meta'])
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
             gt_rpn_labels = gt_rpn_labels.to(rpn_scores.device)
 
             test_indices_and_rois, test_rois_num = self.roi_generator(feat_list, rpn_locs, rpn_scores,
                                                                       self.configer.get('rpn', 'n_test_pre_nms'),
                                                                       self.configer.get('rpn', 'n_test_post_nms'),
-                                                                      input_size, img_scale)
-            test_roi_cls_locs, test_roi_scores = self.bbox_head(x, test_indices_and_rois, input_size)
+                                                                      data_dict['meta'])
+            test_roi_cls_locs, test_roi_scores = self.bbox_head(x, test_indices_and_rois, data_dict['meta'])
 
             test_group = [test_indices_and_rois, test_roi_cls_locs, test_roi_scores, test_rois_num]
             train_indices_and_rois, _ = self.roi_generator(feat_list, rpn_locs, rpn_scores,
                                                            self.configer.get('rpn', 'n_train_pre_nms'),
                                                            self.configer.get('rpn', 'n_train_post_nms'),
-                                                           input_size, img_scale)
+                                                           data_dict['meta'])
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
-                                                                         gt_bboxes, gt_labels, input_size)
+                                                                         data_dict['bboxes'],
+                                                                         data_dict['labels'],
+                                                                         data_dict['meta'])
 
-            sample_roi_locs, sample_roi_scores = self.bbox_head(x, sample_rois, input_size)
+            sample_roi_locs, sample_roi_scores = self.bbox_head(x, sample_rois, data_dict['meta'])
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
@@ -145,22 +144,23 @@ class FasterRCNN(nn.Module):
             return self.det_loss(train_group, target_group), test_group
 
         elif self.configer.get('phase') == 'train' and self.training:
-            x, gt_bboxes, gt_labels, img_scale = inputs
-            x = self.backbone(x)
+            x = self.backbone(data_dict['img'])
             feat_list, rpn_locs, rpn_scores = self.rpn(x)
-            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, gt_bboxes, input_size)
+            gt_rpn_locs, gt_rpn_labels = self.rpn_target_assigner(feat_list, data_dict['bboxes'], data_dict['meta'])
             gt_rpn_locs = gt_rpn_locs.to(rpn_scores.device)
             gt_rpn_labels = gt_rpn_labels.to(rpn_scores.device)
 
             train_indices_and_rois, _ = self.roi_generator(feat_list, rpn_locs, rpn_scores,
                                                            self.configer.get('rpn', 'n_train_pre_nms'),
                                                            self.configer.get('rpn', 'n_train_post_nms'),
-                                                           input_size, img_scale)
+                                                           data_dict['meta'])
 
             sample_rois, gt_roi_bboxes, gt_roi_labels = self.roi_sampler(train_indices_and_rois,
-                                                                         gt_bboxes, gt_labels, input_size)
+                                                                         data_dict['bboxes'],
+                                                                         data_dict['labels'],
+                                                                         data_dict['meta'])
 
-            sample_roi_locs, sample_roi_scores = self.bbox_head(x, sample_rois, input_size)
+            sample_roi_locs, sample_roi_scores = self.bbox_head(x, sample_rois, data_dict['meta'])
             sample_roi_locs = sample_roi_locs.contiguous().view(-1, self.configer.get('data', 'num_classes'), 4)
             sample_roi_locs = sample_roi_locs[
                 torch.arange(0, sample_roi_locs.size()[0]).long().to(sample_roi_locs.device),
@@ -215,7 +215,6 @@ class BBoxHead(nn.Module):
         self.classifier = classifier
         self.cls_loc = nn.Linear(4096, self.configer.get('data', 'num_classes') * 4)
         self.score = nn.Linear(4096, self.configer.get('data', 'num_classes'))
-        # self.roi_layer = ROIPoolingLayer(self.configer)
         from extensions.roipool.module import RoIPool2D
         self.roi_pool = RoIPool2D(pooled_height=int(self.configer.get('roi', 'pooled_height')),
                                   pooled_width=int(self.configer.get('roi', 'pooled_width')),
@@ -224,7 +223,7 @@ class BBoxHead(nn.Module):
         normal_init(self.cls_loc, 0, 0.001)
         normal_init(self.score, 0, 0.01)
 
-    def forward(self, x, indices_and_rois, input_size):
+    def forward(self, x, indices_and_rois, meta):
         """Forward the chain.
         We assume that there are :math:`N` batches.
         Args:
@@ -239,7 +238,7 @@ class BBoxHead(nn.Module):
                 which bounding boxes correspond to. Its shape is :math:`(R',)`.
         """
         # in case roi_indices is  ndarray
-        scale = x.size(2) / input_size[1]
+        scale = x.size(2) / meta[0]['input_size'][1]
         pool = self.roi_pool(x, indices_and_rois, scale)
         pool = pool.view(pool.size(0), -1)
         fc7 = self.classifier(pool)
