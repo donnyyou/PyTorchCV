@@ -16,14 +16,14 @@ from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
 
-class FSDataLoader(data.Dataset):
-    def __init__(self, root_dir, aug_transform=None,
+class DefaultLoader(data.Dataset):
+    def __init__(self, root_dir, dataset=None, aug_transform=None,
                  img_transform=None, label_transform=None, configer=None):
-        self.img_list, self.label_list = self.__list_dirs(root_dir)
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
         self.label_transform = label_transform
+        self.img_list, self.label_list = self.__list_dirs(root_dir, dataset)
 
     def __len__(self):
         return len(self.img_list)
@@ -32,6 +32,7 @@ class FSDataLoader(data.Dataset):
         img = ImageHelper.read_image(self.img_list[index],
                                      tool=self.configer.get('data', 'image_tool'),
                                      mode=self.configer.get('data', 'input_mode'))
+        img_size = ImageHelper.get_size(img)
         labelmap = ImageHelper.read_image(self.label_list[index],
                                           tool=self.configer.get('data', 'image_tool'), mode='P')
         if self.configer.exists('data', 'label_list'):
@@ -40,8 +41,13 @@ class FSDataLoader(data.Dataset):
         if self.configer.exists('data', 'reduce_zero_label'):
             labelmap = self._reduce_zero_label(labelmap)
 
+        ori_target = ImageHelper.tonp(labelmap)
+        ori_target[ori_target == 255] = -1
+
         if self.aug_transform is not None:
             img, labelmap = self.aug_transform(img, labelmap=labelmap)
+
+        border_size = ImageHelper.get_size(img)
 
         if self.img_transform is not None:
             img = self.img_transform(img)
@@ -49,9 +55,15 @@ class FSDataLoader(data.Dataset):
         if self.label_transform is not None:
             labelmap = self.label_transform(labelmap)
 
+        meta = dict(
+            ori_img_size=img_size,
+            border_size=border_size,
+            ori_target=ori_target
+        )
         return dict(
             img=DataContainer(img, stack=True),
             labelmap=DataContainer(labelmap, stack=True),
+            meta=DataContainer(meta, stack=False, cpu_only=True),
         )
 
     def _reduce_zero_label(self, labelmap):
@@ -79,21 +91,37 @@ class FSDataLoader(data.Dataset):
 
         return encoded_labelmap
 
-    def __list_dirs(self, root_dir):
+    def __list_dirs(self, root_dir, dataset):
         img_list = list()
         label_list = list()
-        image_dir = os.path.join(root_dir, 'image')
-        label_dir = os.path.join(root_dir, 'label')
+        image_dir = os.path.join(root_dir, dataset, 'image')
+        label_dir = os.path.join(root_dir, dataset, 'label')
         img_extension = os.listdir(image_dir)[0].split('.')[-1]
 
         for file_name in os.listdir(label_dir):
             image_name = '.'.join(file_name.split('.')[:-1])
-            img_list.append(os.path.join(image_dir, '{}.{}'.format(image_name, img_extension)))
+            img_path = os.path.join(image_dir, '{}.{}'.format(image_name, img_extension))
             label_path = os.path.join(label_dir, file_name)
+            if not os.path.exists(label_path) or not os.path.exists(img_path):
+                Log.warn('Label Path: {} not exists.'.format(label_path))
+                continue
+
+            img_list.append(img_path)
             label_list.append(label_path)
-            if not os.path.exists(label_path):
-                Log.error('Label Path: {} not exists.'.format(label_path))
-                exit(1)
+
+        if dataset == 'train' and self.configer.get('data', 'include_val'):
+            image_dir = os.path.join(root_dir, 'val/image')
+            label_dir = os.path.join(root_dir, 'val/label')
+            for file_name in os.listdir(label_dir):
+                image_name = '.'.join(file_name.split('.')[:-1])
+                img_path = os.path.join(image_dir, '{}.{}'.format(image_name, img_extension))
+                label_path = os.path.join(label_dir, file_name)
+                if not os.path.exists(label_path) or not os.path.exists(img_path):
+                    Log.warn('Label Path: {} not exists.'.format(label_path))
+                    continue
+
+                img_list.append(img_path)
+                label_list.append(label_path)
 
         return img_list, label_list
 

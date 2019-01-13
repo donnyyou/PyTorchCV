@@ -30,8 +30,8 @@ class Controller(object):
         if not runner.configer.exists('network', 'bn_type'):
             runner.configer.add(['network', 'bn_type'], 'torchbn')
 
-        if len(runner.configer.get('gpu')) == 1:
-            runner.configer.update(['network', 'bn_type'], 'torchbn')
+        if runner.configer.get('phase') == 'train':
+            assert len(runner.configer.get('gpu')) > 1 or runner.configer.get('network', 'bn_type') == 'torchbn'
 
         Log.info('BN Type is {}.'.format(runner.configer.get('network', 'bn_type')))
 
@@ -73,11 +73,11 @@ class Controller(object):
         Log.info('Testing start...')
         base_dir = os.path.join(runner.configer.get('project_dir'),
                                 'out/results', runner.configer.get('task'),
-                                runner.configer.get('network', 'checkpoints_name'),
+                                runner.configer.get('checkpoints', 'checkpoints_name'),
                                 runner.configer.get('test', 'out_dir'))
 
-        test_img = runner.configer.get('test_img')
-        test_dir = runner.configer.get('test_dir')
+        test_img = runner.configer.get('test', 'test_img')
+        test_dir = runner.configer.get('test', 'test_dir')
         if test_img is None and test_dir is None:
             Log.error('test_img & test_dir not exists.')
             exit(1)

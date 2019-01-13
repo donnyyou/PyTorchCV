@@ -14,16 +14,16 @@ import torch.utils.data as data
 
 from extensions.parallel.data_container import DataContainer
 from utils.helpers.image_helper import ImageHelper
+from utils.tools.logger import Logger as Log
 
 
-class FCDataLoader(data.Dataset):
+class DefaultLoader(data.Dataset):
 
-    def __init__(self, root_dir=None, aug_transform=None, img_transform=None, configer=None):
-
-        self.img_list, self.label_list = self.__read_json_file(root_dir)
+    def __init__(self, root_dir=None, dataset=None, aug_transform=None, img_transform=None, configer=None):
+        self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
-        self.configer = configer
+        self.img_list, self.label_list = self.__read_json_file(root_dir, dataset)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -46,15 +46,32 @@ class FCDataLoader(data.Dataset):
 
         return len(self.img_list)
 
-    def __read_json_file(self, root_dir):
+    def __read_json_file(self, root_dir, dataset):
         img_list = list()
         label_list = list()
 
-        with open(os.path.join(root_dir, 'label.json'), 'r') as file_stream:
+        with open(os.path.join(root_dir, dataset, 'label.json'), 'r') as file_stream:
             items = json.load(file_stream)
             for item in items:
-                img_list.append(os.path.join(root_dir, item['image_path']))
+                img_path = os.path.join(root_dir, dataset, item['image_path'])
+                if not os.path.exists(img_path):
+                    Log.warn('Image Path: {} not exists.'.format(img_path))
+                    continue
+
+                img_list.append(img_path)
                 label_list.append(item['label'])
+
+        if dataset == 'train' and self.configer.get('data', 'include_val'):
+            with open(os.path.join(root_dir, 'val', 'label.json'), 'r') as file_stream:
+                items = json.load(file_stream)
+                for item in items:
+                    img_path = os.path.join(root_dir, 'val', item['image_path'])
+                    if not os.path.exists(img_path):
+                        Log.warn('Image Path: {} not exists.'.format(img_path))
+                        continue
+
+                    img_list.append(img_path)
+                    label_list.append(item['label'])
 
         return img_list, label_list
 

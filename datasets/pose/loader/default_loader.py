@@ -19,15 +19,15 @@ from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 
 
-class CPMDataLoader(data.Dataset):
+class DefaultLoader(data.Dataset):
 
-    def __init__(self, root_dir, aug_transform=None,
+    def __init__(self, root_dir, dataset=None, aug_transform=None,
                  img_transform=None, configer=None):
-        (self.img_list, self.json_list) = self.__list_dirs(root_dir)
         self.configer = configer
         self.aug_transform = aug_transform
         self.img_transform = img_transform
         self.heatmap_generator = HeatmapGenerator(self.configer)
+        (self.img_list, self.json_list) = self.__list_dirs(root_dir, dataset)
 
     def __getitem__(self, index):
         img = ImageHelper.read_image(self.img_list[index],
@@ -70,21 +70,38 @@ class CPMDataLoader(data.Dataset):
 
         return np.array(kpts).astype(np.float32), np.array(bboxes).astype(np.float32)
 
-    def __list_dirs(self, root_dir):
+    def __list_dirs(self, root_dir, dataset):
         img_list = list()
         json_list = list()
-        image_dir = os.path.join(root_dir, 'image')
-        json_dir = os.path.join(root_dir, 'json')
+        image_dir = os.path.join(root_dir, dataset, 'image')
+        json_dir = os.path.join(root_dir, dataset, 'json')
+
         img_extension = os.listdir(image_dir)[0].split('.')[-1]
 
         for file_name in os.listdir(json_dir):
             image_name = '.'.join(file_name.split('.')[:-1])
-            img_list.append(os.path.join(image_dir, '{}.{}'.format(image_name, img_extension)))
+            img_path = os.path.join(image_dir, '{}.{}'.format(image_name, img_extension))
             json_path = os.path.join(json_dir, file_name)
+            if not os.path.exists(json_path) or not os.path.exists(img_path):
+                Log.warn('Json Path: {} not exists.'.format(json_path))
+                continue
+
             json_list.append(json_path)
-            if not os.path.exists(json_path):
-                Log.error('Json Path: {} not exists.'.format(json_path))
-                exit(0)
+            img_list.append(img_path)
+
+        if dataset == 'train' and self.configer.get('data', 'include_val'):
+            image_dir = os.path.join(root_dir, 'val/image')
+            json_dir = os.path.join(root_dir, 'val/json')
+            for file_name in os.listdir(json_dir):
+                image_name = '.'.join(file_name.split('.')[:-1])
+                img_path = os.path.join(image_dir, '{}.{}'.format(image_name, img_extension))
+                json_path = os.path.join(json_dir, file_name)
+                if not os.path.exists(json_path) or not os.path.exists(img_path):
+                    Log.warn('Json Path: {} not exists.'.format(json_path))
+                    continue
+
+                json_list.append(json_path)
+                img_list.append(img_path)
 
         return img_list, json_list
 

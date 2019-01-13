@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
-# Class for the Pose Data Loader.
 
 
 from __future__ import absolute_import
@@ -11,16 +10,16 @@ from __future__ import print_function
 import os
 from torch.utils import data
 
-from datasets.pose.cpm_data_loader import CPMDataLoader
-from datasets.pose.op_data_loader import OPDataLoader
 import datasets.tools.pil_aug_transforms as pil_aug_trans
 import datasets.tools.cv2_aug_transforms as cv2_aug_trans
 import datasets.tools.transforms as trans
+from datasets.det.loader.fasterrcnn_loader import FasterRCNNLoader
+from datasets.det.loader.default_loader import DefaultLoader
 from datasets.tools.collate import collate
 from utils.tools.logger import Logger as Log
 
 
-class PoseDataLoader(object):
+class DataLoader(object):
 
     def __init__(self, configer):
         self.configer = configer
@@ -48,9 +47,9 @@ class PoseDataLoader(object):
                             std=self.configer.get('normalize', 'std')), ])
 
     def get_trainloader(self):
-        if self.configer.get('method') == 'conv_pose_machine':
+        if not self.configer.exists('train', 'loader') or self.configer.get('train', 'loader') == 'default':
             trainloader = data.DataLoader(
-                CPMDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
+                DefaultLoader(root_dir=self.configer.get('data', 'data_dir'), dataset='train',
                               aug_transform=self.aug_train_transform,
                               img_transform=self.img_transform,
                               configer=self.configer),
@@ -64,12 +63,12 @@ class PoseDataLoader(object):
 
             return trainloader
 
-        elif self.configer.get('method') == 'open_pose':
+        elif self.configer.get('train', 'loader') == 'fasterrcnn':
             trainloader = data.DataLoader(
-                OPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'train'),
-                             aug_transform=self.aug_train_transform,
-                             img_transform=self.img_transform,
-                             configer=self.configer),
+                FasterRCNNLoader(root_dir=self.configer.get('data', 'data_dir'), dataset='train',
+                                 aug_transform=self.aug_train_transform,
+                                 img_transform=self.img_transform,
+                                 configer=self.configer),
                 batch_size=self.configer.get('train', 'batch_size'), shuffle=True,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
                 drop_last=self.configer.get('data', 'drop_last'),
@@ -79,21 +78,20 @@ class PoseDataLoader(object):
             )
 
             return trainloader
-
         else:
-            Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
-            return None
+            Log.error('{} train loader is invalid.'.format(self.configer.get('train', 'loader')))
+            exit(1)
 
-    def get_valloader(self):
-        if self.configer.get('method') == 'conv_pose_machine':
+    def get_valloader(self, dataset=None):
+        dataset = 'val' if dataset is None else dataset
+        if not self.configer.exists('val', 'loader') or self.configer.get('val', 'loader') == 'default':
             valloader = data.DataLoader(
-                CPMDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
+                DefaultLoader(root_dir=self.configer.get('data', 'data_dir'), dataset=dataset,
                               aug_transform=self.aug_val_transform,
                               img_transform=self.img_transform,
                               configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=self.configer.get('data', 'drop_last'),
                 collate_fn=lambda *args: collate(
                     *args, trans_dict=self.configer.get('val', 'data_transformer')
                 )
@@ -101,15 +99,14 @@ class PoseDataLoader(object):
 
             return valloader
 
-        elif self.configer.get('method') == 'open_pose':
+        elif self.configer.get('val', 'loader') == 'fasterrcnn':
             valloader = data.DataLoader(
-                OPDataLoader(root_dir=os.path.join(self.configer.get('data', 'data_dir'), 'val'),
-                             aug_transform=self.aug_val_transform,
-                             img_transform=self.img_transform,
-                             configer=self.configer),
+                FasterRCNNLoader(root_dir=self.configer.get('data', 'data_dir'), dataset=dataset,
+                                 aug_transform=self.aug_val_transform,
+                                 img_transform=self.img_transform,
+                                 configer=self.configer),
                 batch_size=self.configer.get('val', 'batch_size'), shuffle=False,
                 num_workers=self.configer.get('data', 'workers'), pin_memory=True,
-                drop_last=self.configer.get('data', 'drop_last'),
                 collate_fn=lambda *args: collate(
                     *args, trans_dict=self.configer.get('val', 'data_transformer')
                 )
@@ -118,10 +115,6 @@ class PoseDataLoader(object):
             return valloader
 
         else:
-            Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
-            return None
+            Log.error('{} val loader is invalid.'.format(self.configer.get('val', 'loader')))
+            exit(1)
 
-
-if __name__ == "__main__":
-    # Test data loader.
-    pass
