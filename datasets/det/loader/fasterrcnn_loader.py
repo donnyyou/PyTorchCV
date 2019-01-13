@@ -47,7 +47,7 @@ class FasterRCNNLoader(data.Dataset):
 
         meta = dict(
             ori_img_size=img_size,
-            aug_img_size=ImageHelper.get_size(img),
+            border_size=ImageHelper.get_size(img),
             img_scale=img_scale,
         )
         if self.img_transform is not None:

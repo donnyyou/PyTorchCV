@@ -144,8 +144,8 @@ class FastRCNNTest(object):
             # tmp_cls_label = cls_label[batch_index]
             tmp_dst_bbox = dst_bbox[start_index:start_index+test_rois_num[i]]
             # clip bounding box
-            tmp_dst_bbox[:, :, 0::2] = tmp_dst_bbox[:, :, 0::2].clamp(min=0, max=metas[i]['aug_img_size'][0] - 1)
-            tmp_dst_bbox[:, :, 1::2] = tmp_dst_bbox[:, :, 1::2].clamp(min=0, max=metas[i]['aug_img_size'][1] - 1)
+            tmp_dst_bbox[:, :, 0::2] = tmp_dst_bbox[:, :, 0::2].clamp(min=0, max=metas[i]['border_size'][0] - 1)
+            tmp_dst_bbox[:, :, 1::2] = tmp_dst_bbox[:, :, 1::2].clamp(min=0, max=metas[i]['border_size'][1] - 1)
 
             tmp_cls_prob = cls_prob[start_index:start_index+test_rois_num[i]]
             tmp_cls_label = cls_label[start_index:start_index+test_rois_num[i]]
