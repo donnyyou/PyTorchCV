@@ -27,7 +27,7 @@ class Controller(object):
         runner.runner_state['max_performance'] = 0
         runner.runner_state['min_val_loss'] = 0
 
-        if not runner.configer.exists('network', 'bn_type'):
+        if not runner.configer.exists('network', 'bn_type') or runner.configer.get('network', 'bn_type') is None:
             runner.configer.add(['network', 'bn_type'], 'torchbn')
 
         if runner.configer.get('phase') == 'train':
