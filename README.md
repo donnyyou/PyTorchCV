@@ -16,9 +16,6 @@ This repository provides source code for some deep learning based cv problems. W
     - VGG: Very Deep Convolutional Networks for Large-Scale Image Recognition
     - ResNet: Deep Residual Learning for Image Recognition
     - DenseNet: Densely Connected Convolutional Networks
-    - MobileNetV2: Inverted Residuals and Linear Bottlenecks
-    - ResNeXt: Aggregated Residual Transformations for Deep Neural Networks
-    - SqueezeNet: AlexNet-level accuracy with 50x fewer parameters and <0.5MB model size
     - ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
     - ShuffleNet V2: Practical Guidelines for Ecient CNN Architecture Design
 
