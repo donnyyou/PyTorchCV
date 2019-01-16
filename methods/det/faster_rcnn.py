@@ -20,7 +20,7 @@ from models.det_model_manager import DetModelManager
 from utils.layers.det.fr_priorbox_layer import FRPriorBoxLayer
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
-from val.scripts.det.det_running_score import DetRunningScore
+from metric.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
 from utils.helpers.dc_helper import DCHelper
 

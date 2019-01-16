@@ -7,7 +7,7 @@ import os
 import numpy as np
 import argparse
 
-from val.scripts.seg.seg_running_score import SegRunningScore
+from metric.seg.seg_running_score import SegRunningScore
 from utils.helpers.image_helper import ImageHelper
 from utils.tools.logger import Logger as Log
 from utils.tools.configer import Configer

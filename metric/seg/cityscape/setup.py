@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Enable cython support for eval scripts
+# Enable cython support for eval metric
 # Run as
 # setup.py build_ext --inplace
 #
@@ -18,5 +18,5 @@ import numpy
 os.environ["CC"]  = "g++"
 os.environ["CXX"] = "g++"
 
-setup(ext_modules = cythonize("val/scripts/seg/cityscape/evaluation/addToConfusionMatrix.pyx"),
+setup(ext_modules = cythonize("metric/seg/cityscape/evaluation/addToConfusionMatrix.pyx"),
       include_dirs=[numpy.get_include()])

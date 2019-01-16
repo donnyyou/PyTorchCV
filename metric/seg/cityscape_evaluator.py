@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 # Evaluation of cityscape.
 
@@ -19,7 +19,7 @@ except ImportError:
     izip = zip
 
 # Cityscapes imports
-from val.scripts.seg.cityscape.evaluation.csHelpers import *
+from metric.seg.cityscape.evaluation.csHelpers import *
 
 # C Support
 # Enable the cython support for faster evaluation, this is necessary for speeding up your model results
@@ -28,7 +28,7 @@ CSUPPORT = True
 # Check if C-Support is available for better performance
 if CSUPPORT:
     try:
-        import val.scripts.seg.cityscape.evaluation.addToConfusionMatrix as addToConfusionMatrix
+        import metric.seg.cityscape.evaluation.addToConfusionMatrix as addToConfusionMatrix
     except:
         CSUPPORT = False
 
@@ -48,9 +48,9 @@ class CArgs(object):
                 raise ValueError("CITYSCAPES_EXPORT_DIR {} is not a directory".format(export_dir))
             self.exportFile = "{}/resultPixelLevelSemanticLabeling.json".format(export_dir)
         else:
-            self.exportFile = os.path.join(out_path, "evaluationResults", "resultPixelLevelSemanticLabeling.json")
+            self.exportFile = os.path.join(out_path, "../evaluationResults", "resultPixelLevelSemanticLabeling.json")
         # Parameters that should be modified by user
-        self.groundTruthSearch  = os.path.join( self.cityscapesPath, "*", "*_gtFine_labelIds.png" )
+        self.groundTruthSearch  = os.path.join( self.cityscapesPath, "*.png" )
 
         # Remaining params
         self.evalInstLevelScore = True
@@ -670,7 +670,7 @@ class CityScapeEvaluator(object):
         pred_path = pred_dir
         data_path = gt_dir
         print("evaluate the result...")
-        args = CArgs(data_path=data_path, out_path=data_path, predict_path=pred_path)
+        args = CArgs(data_path=data_path, out_path=pred_path, predict_path=pred_path)
         ob = EvalPixel(args)
         ob.run()
 

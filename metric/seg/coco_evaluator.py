@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: Donny You(youansheng@gmail.com)
+
+
 import os
 import json
 import argparse
