@@ -999,7 +999,6 @@ class RandomDetCrop(object):
             return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
         width, height = img.size
-
         while True:
             # randomly choose a mode
             mode = random.choice(self.sample_options)
@@ -1020,56 +1019,41 @@ class RandomDetCrop(object):
                 ratio = math.sqrt(random.uniform(min_ratio, max_ratio))
                 w = int(scale * ratio * width)
                 h = int((scale / ratio) * height)
-
                 left = random.randint(0, width - w)
                 top = random.randint(0, height - h)
-
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left+w), int(top+h)])
-
                 # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
                 overlap = self.jaccard_numpy(bboxes, rect)
-
                 # is min and max overlap constraint satisfied? if not try again
                 if overlap.min() < min_iou or max_iou < overlap.max():
                     continue
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (bboxes[:, :2] + bboxes[:, 2:]) / 2.0
-
                 # mask in all gt boxes that above and to the left of centers
                 m1 = (rect[0] < centers[:, 0]) * (rect[1] < centers[:, 1])
-
                 # mask in all gt boxes that under and to the right of centers
                 m2 = (rect[2] > centers[:, 0]) * (rect[3] > centers[:, 1])
-
                 # mask in that both m1 and m2 are true
                 mask = m1 * m2
-
                 # have any valid boxes? try again if not
                 if not mask.any():
                     continue
 
                 # take only matching gt boxes
                 current_boxes = bboxes[mask, :].copy()
-
                 # cut the crop from the image
                 current_img = img.crop((left, top, left + w, top + h))
-
                 # take only matching gt labels
                 current_labels = labels[mask]
-
                 # should we use the box left and top corner or the crop's
-                current_boxes[:, :2] = np.maximum(current_boxes[:, :2],
-                                                  rect[:2])
+                current_boxes[:, :2] = np.maximum(current_boxes[:, :2], rect[:2])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, :2] -= rect[:2]
-
-                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:],
-                                                  rect[2:])
+                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:], rect[2:])
                 # adjust to crop (by substracting crop's left,top)
                 current_boxes[:, 2:] -= rect[:2]
-
                 return current_img, labelmap, maskmap, kpts, current_boxes, current_labels, polygons
 
 
@@ -1124,6 +1108,27 @@ class Resize(object):
         return img, labelmap, maskmap, kpts, bboxes, labels, polygons
 
 
+PIL_AUGMENTATIONS_DICT = {
+    'random_saturation': RandomSaturation,
+    'random_hue': RandomHue,
+    'random_perm': RandomPerm,
+    'random_contrast': RandomContrast,
+    'random_brightness': RandomBrightness,
+    'random_gauss_blur': RandomGaussBlur,
+    'random_hsv': RandomHSV,
+    'random_pad': RandomPad,
+    'padding': Padding,
+    'random_hflip': RandomHFlip,
+    'random_resize': RandomResize,
+    'random_crop': RandomCrop,
+    'random_focus_crop': RandomFocusCrop,
+    'random_det_crop': RandomDetCrop,
+    'random_resized_crop': RandomResizedCrop,
+    'random_rotate': RandomRotate,
+    'resize': Resize
+}
+
+
 class PILAugCompose(object):
     """Composes several transforms together.
 
@@ -1152,349 +1157,14 @@ class PILAugCompose(object):
                 else:
                     shuffle_train_trans = self.configer.get('train_trans', 'shuffle_trans_seq')
 
-            if 'random_saturation' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_saturation'] = RandomSaturation(
-                    lower=self.configer.get('train_trans', 'random_saturation')['lower'],
-                    upper=self.configer.get('train_trans', 'random_saturation')['upper'],
-                    saturation_ratio=self.configer.get('train_trans', 'random_saturation')['ratio']
-                )
-
-            if 'random_hue' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_hue'] = RandomHue(
-                    delta=self.configer.get('train_trans', 'random_hue')['delta'],
-                    hue_ratio=self.configer.get('train_trans', 'random_hue')['ratio']
-                )
-
-            if 'random_perm' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_perm'] = RandomPerm(
-                    perm_ratio=self.configer.get('train_trans', 'random_perm')['ratio']
-                )
-
-            if 'random_contrast' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_contrast'] = RandomContrast(
-                    lower=self.configer.get('train_trans', 'random_contrast')['lower'],
-                    upper=self.configer.get('train_trans', 'random_contrast')['upper'],
-                    contrast_ratio=self.configer.get('train_trans', 'random_contrast')['ratio']
-                )
-
-            if 'random_pad' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_pad'] = RandomPad(
-                    up_scale_range=self.configer.get('train_trans', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('train_trans', 'random_pad')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value')
-                )
-
-            if 'padding' in self.configer.get('train_trans', 'trans_seq'):
-                self.transforms['padding'] = Padding(
-                    pad=self.configer.get('train_trans', 'padding')['pad'],
-                    pad_ratio=self.configer.get('train_trans', 'padding')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value'),
-                    allow_outside_center=self.configer.get('train_trans', 'padding')['allow_outside_center']
-                )
-
-            if 'random_brightness' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_brightness'] = RandomBrightness(
-                    shift_value=self.configer.get('train_trans', 'random_brightness')['shift_value'],
-                    brightness_ratio=self.configer.get('train_trans', 'random_brightness')['ratio']
-                )
-
-            if 'random_hsv' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_hsv'] = RandomHSV(
-                    h_range=self.configer.get('train_trans', 'random_hsv')['h_range'],
-                    s_range=self.configer.get('train_trans', 'random_hsv')['s_range'],
-                    v_range=self.configer.get('train_trans', 'random_hsv')['v_range'],
-                    hsv_ratio=self.configer.get('train_trans', 'random_hsv')['ratio']
-                )
-
-            if 'random_gauss_blur' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_gauss_blur'] = RandomGaussBlur(
-                    max_blur=self.configer.get('train_trans', 'random_gauss_blur')['max_blur'],
-                    blur_ratio=self.configer.get('train_trans', 'random_gauss_blur')['ratio']
-                )
-
-            if 'random_hflip'  in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_hflip'] = RandomHFlip(
-                    swap_pair=self.configer.get('train_trans', 'random_hflip')['swap_pair'],
-                    flip_ratio=self.configer.get('train_trans', 'random_hflip')['ratio']
-                )
-
-            if 'random_resize' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                if self.configer.get('train_trans', 'random_resize')['method'] == 'random':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('train_trans', 'random_resize')['method'],
-                        scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
-                    )
-
-                elif self.configer.get('train_trans', 'random_resize')['method'] == 'focus':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('train_trans', 'random_resize')['method'],
-                        scale_range=self.configer.get('train_trans', 'random_resize')['scale_range'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        target_size=self.configer.get('train_trans', 'random_resize')['target_size'],
-                        resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
-                    )
-
-                elif self.configer.get('train_trans', 'random_resize')['method'] == 'bound':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('train_trans', 'random_resize')['method'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        resize_bound=self.configer.get('train_trans', 'random_resize')['resize_bound'],
-                        resize_ratio=self.configer.get('train_trans', 'random_resize')['ratio']
-                    )
-
-                else:
-                    Log.error('Not Support Resize Method!')
-                    exit(1)
-
-            if 'random_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                if self.configer.get('train_trans', 'random_crop')['method'] == 'random':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('train_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('train_trans', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('train_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('train_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('train_trans', 'random_crop')['method'] == 'center':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('train_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('train_trans', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('train_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('train_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('train_trans', 'random_crop')['method'] == 'grid':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('train_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('train_trans', 'random_crop')['method'],
-                        grid=self.configer.get('train_trans', 'random_crop')['grid'],
-                        crop_ratio=self.configer.get('train_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('train_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('train_trans', 'random_crop')['method'] == 'focus':
-                    self.transforms['random_crop'] = RandomFocusCrop(
-                        crop_size=self.configer.get('train_trans', 'random_crop')['crop_size'],
-                        center_jitter=self.configer.get('train_trans', 'random_crop')['center_jitter'],
-                        crop_ratio=self.configer.get('train_trans', 'random_crop')['ratio'],
-                        mean=self.configer.get('normalize', 'mean_value'),
-                        allow_outside_center=self.configer.get('train_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('train_trans', 'random_crop')['method'] == 'det':
-                    self.transforms['random_crop'] = RandomDetCrop(
-                        det_crop_ratio=self.configer.get('train_trans', 'random_crop')['ratio'],
-                        mean = self.configer.get('normalize', 'mean_value')
-                    )
-
-                else:
-                    Log.error('Not Support Crop Method!')
-                    exit(1)
-
-            if 'random_resized_crop' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_resized_crop'] = RandomResizedCrop(
-                    size=self.configer.get('train_trans', 'random_resized_crop')['crop_size'],
-                    scale_range=self.configer.get('train_trans', 'random_resized_crop')['scale_range'],
-                    aspect_range=self.configer.get('train_trans', 'random_resized_crop')['aspect_range']
-                )
-
-            if 'random_rotate' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms['random_rotate'] = RandomRotate(
-                    max_degree=self.configer.get('train_trans', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('train_trans', 'random_rotate')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value')
-                )
-
-            if 'resize' in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                if 'target_size' in self.configer.get('train_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        target_size=self.configer.get('train_trans', 'resize')['target_size']
-                    )
-                if 'min_side_length' in self.configer.get('train_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        min_side_length=self.configer.get('train_trans', 'resize')['min_side_length']
-                    )
-                if 'max_side_length' in self.configer.get('train_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        max_side_length=self.configer.get('train_trans', 'resize')['max_side_length']
-                    )
+            for trans in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
+                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('train', trans))
 
         else:
-            if 'random_saturation' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_saturation'] = RandomSaturation(
-                    lower=self.configer.get('val_trans', 'random_saturation')['lower'],
-                    upper=self.configer.get('val_trans', 'random_saturation')['upper'],
-                    saturation_ratio=self.configer.get('val_trans', 'random_saturation')['ratio']
-                )
-
-            if 'random_hue' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_hue'] = RandomHue(
-                    delta=self.configer.get('val_trans', 'random_hue')['delta'],
-                    hue_ratio=self.configer.get('val_trans', 'random_hue')['ratio']
-                )
-
-            if 'random_perm' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_perm'] = RandomPerm(
-                    perm_ratio=self.configer.get('val_trans', 'random_perm')['ratio']
-                )
-
-            if 'random_contrast' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_contrast'] = RandomContrast(
-                    lower=self.configer.get('val_trans', 'random_contrast')['lower'],
-                    upper=self.configer.get('val_trans', 'random_contrast')['upper'],
-                    contrast_ratio=self.configer.get('val_trans', 'random_contrast')['ratio']
-                )
-
-            if 'random_pad' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_pad'] = RandomPad(
-                    up_scale_range=self.configer.get('val_trans', 'random_pad')['up_scale_range'],
-                    pad_ratio=self.configer.get('val_trans', 'random_pad')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value')
-                )
-
-            if 'padding' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['padding'] = Padding(
-                    pad=self.configer.get('val_trans', 'padding')['pad'],
-                    pad_ratio=self.configer.get('val_trans', 'padding')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value'),
-                    allow_outside_center=self.configer.get('val_trans', 'padding')['allow_outside_center']
-                )
-
-            if 'random_brightness' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_brightness'] = RandomBrightness(
-                    shift_value=self.configer.get('val_trans', 'random_brightness')['shift_value'],
-                    brightness_ratio=self.configer.get('val_trans', 'random_brightness')['ratio']
-                )
-
-            if 'random_hsv' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_hsv'] = RandomHSV(
-                    h_range=self.configer.get('val_trans', 'random_hsv')['h_range'],
-                    s_range=self.configer.get('val_trans', 'random_hsv')['s_range'],
-                    v_range=self.configer.get('val_trans', 'random_hsv')['v_range'],
-                    hsv_ratio=self.configer.get('val_trans', 'random_hsv')['ratio']
-                )
-
-            if 'random_gauss_blur' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_gauss_blur'] = RandomGaussBlur(
-                    max_blur=self.configer.get('val_trans', 'random_gauss_blur')['max_blur'],
-                    blur_ratio=self.configer.get('val_trans', 'random_gauss_blur')['ratio']
-                )
-
-            if 'random_hflip' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_hflip'] = RandomHFlip(
-                    swap_pair=self.configer.get('val_trans', 'random_hflip')['swap_pair'],
-                    flip_ratio=self.configer.get('val_trans', 'random_hflip')['ratio']
-                )
-
-            if 'random_resize' in self.configer.get('val_trans', 'trans_seq'):
-                if self.configer.get('val_trans', 'random_resize')['method'] == 'random':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('val_trans', 'random_resize')['method'],
-                        scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
-                    )
-
-                elif self.configer.get('val_trans', 'random_resize')['method'] == 'focus':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('val_trans', 'random_resize')['method'],
-                        scale_range=self.configer.get('val_trans', 'random_resize')['scale_range'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        target_size=self.configer.get('val_trans', 'random_resize')['target_size'],
-                        resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
-                    )
-
-                elif self.configer.get('val_trans', 'random_resize')['method'] == 'bound':
-                    self.transforms['random_resize'] = RandomResize(
-                        method=self.configer.get('val_trans', 'random_resize')['method'],
-                        aspect_range=self.configer.get('train_trans', 'random_resize')['aspect_range'],
-                        resize_bound=self.configer.get('val_trans', 'random_resize')['resize_bound'],
-                        resize_ratio=self.configer.get('val_trans', 'random_resize')['ratio']
-                    )
-
-                else:
-                    Log.error('Not Support Resize Method!')
-                    exit(1)
-
-            if 'random_crop' in self.configer.get('val_trans', 'trans_seq'):
-                if self.configer.get('val_trans', 'random_crop')['method'] == 'random':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('val_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('val_trans', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('val_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('val_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('val_trans', 'random_crop')['method'] == 'center':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('val_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('val_trans', 'random_crop')['method'],
-                        crop_ratio=self.configer.get('val_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('val_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('val_trans', 'random_crop')['method'] == 'grid':
-                    self.transforms['random_crop'] = RandomCrop(
-                        crop_size=self.configer.get('val_trans', 'random_crop')['crop_size'],
-                        method=self.configer.get('val_trans', 'random_crop')['method'],
-                        grid=self.configer.get('val_trans', 'random_crop')['grid'],
-                        crop_ratio=self.configer.get('val_trans', 'random_crop')['ratio'],
-                        allow_outside_center=self.configer.get('val_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('val_trans', 'random_crop')['method'] == 'focus':
-                    self.transforms['random_crop'] = RandomFocusCrop(
-                        crop_size=self.configer.get('val_trans', 'random_crop')['crop_size'],
-                        center_jitter=self.configer.get('val_trans', 'random_crop')['center_jitter'],
-                        crop_ratio=self.configer.get('val_trans', 'random_crop')['ratio'],
-                        mean=self.configer.get('normalize', 'mean_value'),
-                        allow_outside_center=self.configer.get('val_trans', 'random_crop')['allow_outside_center']
-                    )
-
-                elif self.configer.get('val_trans', 'random_crop')['method'] == 'det':
-                    self.transforms['random_crop'] = RandomDetCrop(
-                        det_crop_ratio=self.configer.get('val_trans', 'random_crop')['ratio']
-                    )
-
-                else:
-                    Log.error('Not Support Crop Method!')
-                    exit(1)
-
-            if 'random_rotate' in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms['random_rotate'] = RandomRotate(
-                    max_degree=self.configer.get('val_trans', 'random_rotate')['rotate_degree'],
-                    rotate_ratio=self.configer.get('val_trans', 'random_rotate')['ratio'],
-                    mean=self.configer.get('normalize', 'mean_value')
-                )
-
-            if 'resize' in self.configer.get('val_trans', 'trans_seq'):
-                if 'target_size' in self.configer.get('val_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        target_size=self.configer.get('val_trans', 'resize')['target_size']
-                    )
-                if 'min_side_length' in self.configer.get('val_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        min_side_length=self.configer.get('val_trans', 'resize')['min_side_length']
-                    )
-                if 'max_side_length' in self.configer.get('val_trans', 'resize'):
-                    self.transforms['resize'] = Resize(
-                        max_side_length=self.configer.get('val_trans', 'resize')['max_side_length']
-                    )
-
-    def __check_none(self, key_list, value_list):
-        for key, value in zip(key_list, value_list):
-            if value == 'y' and key is None:
-                return False
-
-            if value == 'n' and key is not None:
-                return False
-
-        return True
+            for trans in self.configer.get('val_trans', 'trans_seq'):
+                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('val', trans))
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
-
         if self.split == 'train':
             shuffle_trans_seq = []
             if self.configer.exists('train_trans', 'shuffle_trans_seq'):
@@ -1516,38 +1186,9 @@ class PILAugCompose(object):
                  bboxes, labels, polygons) = self.transforms[trans_key](img, labelmap, maskmap,
                                                                         kpts, bboxes, labels, polygons)
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'n', 'n', 'n']):
-            return img
+        out_list = [img]
+        for elem in [labelmap, maskmap, kpts, bboxes, labels, polygons]:
+            if elem is not None:
+                out_list.append(elem)
 
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['y', 'n', 'n', 'n', 'n', 'n']):
-            return img, labelmap
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'y', 'n', 'n']):
-            return img, bboxes
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'y', 'n', 'n', 'n']):
-            return img, kpts
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'y', 'y', 'n', 'n']):
-            return img, kpts, bboxes
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'y', 'y', 'n', 'n', 'n']):
-            return img, maskmap, kpts
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['y', 'y', 'y', 'n', 'n', 'n']):
-            return img, labelmap, maskmap, kpts
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'y', 'y', 'y', 'n', 'n']):
-            return img, maskmap, kpts, bboxes
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['y', 'y', 'y', 'y', 'n', 'n']):
-            return img, labelmap, maskmap, kpts, bboxes
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'y', 'y', 'n']):
-            return img, bboxes, labels
-
-        if self.__check_none([labelmap, maskmap, kpts, bboxes, labels, polygons], ['n', 'n', 'n', 'y', 'y', 'y']):
-            return img, bboxes, labels, polygons
-
-        Log.error('Params is not valid.')
-        exit(1)
+        return out_list if len(out_list) > 1 else out_list[0]
