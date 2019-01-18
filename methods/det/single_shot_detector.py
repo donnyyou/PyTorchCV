@@ -11,7 +11,7 @@ from __future__ import print_function
 import time
 import torch
 
-from datasets.det_data_loader import DetDataLoader
+from datasets.det.data_loader import DataLoader
 from loss.loss_manager import LossManager
 from methods.det.single_shot_detector_test import SingleShotDetectorTest
 from methods.tools.runner_helper import RunnerHelper
@@ -21,7 +21,7 @@ from utils.layers.det.ssd_priorbox_layer import SSDPriorBoxLayer
 from utils.layers.det.ssd_target_generator import SSDTargetGenerator
 from utils.tools.average_meter import AverageMeter
 from utils.tools.logger import Logger as Log
-from val.scripts.det.det_running_score import DetRunningScore
+from metric.det.det_running_score import DetRunningScore
 from vis.visualizer.det_visualizer import DetVisualizer
 
 
@@ -38,7 +38,7 @@ class SingleShotDetector(object):
         self.det_visualizer = DetVisualizer(configer)
         self.det_loss_manager = LossManager(configer)
         self.det_model_manager = DetModelManager(configer)
-        self.det_data_loader = DetDataLoader(configer)
+        self.det_data_loader = DataLoader(configer)
         self.ssd_target_generator = SSDTargetGenerator(configer)
         self.ssd_priorbox_layer = SSDPriorBoxLayer(configer)
         self.det_running_score = DetRunningScore(configer)
