@@ -78,40 +78,29 @@ This repository provides source code for some deep learning based cv problems. W
 
 ## Commands with PyTorchCV
 
-Take OpenPose as an example.
-- Train the openpose model
+Take PSPNet as an example. ("tag" could be any string, include an empty one.)
+- Training
 ```bash
-python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
-                --base_lr 0.001 \
-                --phase train \
-                --gpu 0 1
+cd scripts/seg/cityscapes/
+bash run_fs_pspnet_cityscapes_seg.sh train tag
 ```
 
-- Finetune the openpose model
+- Resume Training
 ```bash
-python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
-                --base_lr 0.001 \
-                --phase train \
-                --resume checkpoints/pose/coco/coco_open_pose_65000.pth \
-                --gpu 0 1
+cd scripts/seg/cityscapes/
+bash run_fs_pspnet_cityscapes_seg.sh train tag
 ```
 
-- Test the openpose model(test_img):
+- Validate
 ```bash
-python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
-                --phase test \
-                --resume checkpoints/pose/coco/coco_open_pose_65000.pth \
-                --test_img val/samples/ski.jpg \
-                --gpu 0
+cd scripts/seg/cityscapes/
+bash run_fs_pspnet_cityscapes_seg.sh val tag
 ```
 
-- Test the openpose model(test_dir):
+- Testing:
 ```bash
-python main.py  --hypes hypes/pose/coco/op_coco_pose.json \
-                --phase test \
-                --resume checkpoints/pose/coco/coco_open_pose_65000.pth \
-                --test_dir val/samples \
-                --gpu 0
+cd scripts/seg/cityscapes/
+bash run_fs_pspnet_cityscapes_seg.sh test tag
 ```
 
 ## Examples with PyTorchCV
