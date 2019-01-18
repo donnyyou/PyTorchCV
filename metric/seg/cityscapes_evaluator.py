@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
-# Evaluation of cityscape.
+# Evaluation of cityscapes.
 
 
 from __future__ import absolute_import
@@ -19,7 +19,7 @@ except ImportError:
     izip = zip
 
 # Cityscapes imports
-from metric.seg.cityscape.evaluation.csHelpers import *
+from metric.seg.cityscapes.evaluation.csHelpers import *
 
 # C Support
 # Enable the cython support for faster evaluation, this is necessary for speeding up your model results
@@ -28,7 +28,7 @@ CSUPPORT = True
 # Check if C-Support is available for better performance
 if CSUPPORT:
     try:
-        import metric.seg.cityscape.evaluation.addToConfusionMatrix as addToConfusionMatrix
+        import metric.seg.cityscapes.evaluation.addToConfusionMatrix as addToConfusionMatrix
     except:
         CSUPPORT = False
 
@@ -659,12 +659,12 @@ class EvalPixel():
         return groundTruthImgList, predictionImgList
 
 
-class CityScapeEvaluator(object):
+class CityscapesEvaluator(object):
 
     def evaluate(self, pred_dir=None, gt_dir=None):
         """
         :param pred_dir: directory of model output results(must be consistent with val directory)
-        :param gt_dir: directory of  cityscape data(root)
+        :param gt_dir: directory of  cityscapes data(root)
         :return:
         """
         pred_path = pred_dir
@@ -676,8 +676,8 @@ class CityScapeEvaluator(object):
 
 
 if __name__ == '__main__':
-    # python cityscape_evaluator.py --gt_dir ~/DataSet/CityScape/gtFine/val
-    #                               --pred_dir ~/Projects/PyTorchCV/val/results/seg/cityscape/test_dir/image/label
+    # python cityscapes_evaluator.py --gt_dir ~/DataSet/CityScape/gtFine/val
+    #                               --pred_dir ~/Projects/PyTorchCV/val/results/seg/cityscapes/test_dir/image/label
     parser = argparse.ArgumentParser()
     parser.add_argument('--gt_dir', default=None, type=str,
                         dest='gt_dir', help='The directory of ground truth.')
@@ -686,5 +686,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    cityscape_evaluator = CityScapeEvaluator()
-    cityscape_evaluator.evaluate(pred_dir=args.pred_dir, gt_dir=args.gt_dir)
+    cityscapes_evaluator = CityscapesEvaluator()
+    cityscapes_evaluator.evaluate(pred_dir=args.pred_dir, gt_dir=args.gt_dir)
