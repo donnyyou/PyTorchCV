@@ -66,14 +66,14 @@ class RPNTargetAssigner(object):
 
                 # subsample positive labels if we have too many
                 n_pos = int(pos_ratio * n_sample)
-                pos_index = (label == 1).nonzero().contiguous().view(-1, ).numpy()
+                pos_index = (label == 1).nonzero().contiguous().view(-1, ).cpu().numpy()
                 if len(pos_index) > n_pos:
                     disable_index = np.random.choice(pos_index, size=(len(pos_index) - n_pos), replace=False)
                     label[disable_index] = -1
 
                 # subsample negative labels if we have too many
                 n_neg = n_sample - torch.sum(label == 1).item()
-                neg_index = (label == 0).nonzero().contiguous().view(-1, ).numpy()
+                neg_index = (label == 0).nonzero().contiguous().view(-1, ).cpu().numpy()
 
                 if len(neg_index) > n_neg:
                     disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
