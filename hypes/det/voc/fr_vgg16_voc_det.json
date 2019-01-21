@@ -14,6 +14,7 @@
       "loader": "fasterrcnn",
       "batch_size": 1,
       "data_transformer": {
+        "samples_per_gpu": 1,
         "size_mode": "random_size",
         "fit_stride": 16,
         "align_method": "only_pad",
@@ -25,6 +26,7 @@
       "batch_size": 1,
       "use_07_metric": true,
       "data_transformer": {
+        "samples_per_gpu": 1,
         "size_mode": "random_size",
         "fit_stride": 16,
         "align_method": "only_pad",
