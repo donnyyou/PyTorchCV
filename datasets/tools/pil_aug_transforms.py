@@ -1158,11 +1158,11 @@ class PILAugCompose(object):
                     shuffle_train_trans = self.configer.get('train_trans', 'shuffle_trans_seq')
 
             for trans in self.configer.get('train_trans', 'trans_seq') + shuffle_train_trans:
-                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('train', trans))
+                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('train_trans', trans))
 
         else:
             for trans in self.configer.get('val_trans', 'trans_seq'):
-                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('val', trans))
+                self.transforms[trans] = PIL_AUGMENTATIONS_DICT[trans](**self.configer.get('val_trans', trans))
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         if self.split == 'train':
