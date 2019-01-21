@@ -28,11 +28,11 @@ class RandomPad(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, up_scale_range=None, pad_ratio=0.5, mean=(104, 117, 123)):
+    def __init__(self, up_scale_range=None, ratio=0.5, mean=(104, 117, 123)):
         # do something
         assert isinstance(up_scale_range, (list, tuple))
         self.up_scale_range = up_scale_range
-        self.ratio = pad_ratio
+        self.ratio = ratio
         self.mean = tuple(mean)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
@@ -101,9 +101,9 @@ class Padding(object):
             Returns::
                 img: Image object.
     """
-    def __init__(self, pad=None, pad_ratio=0.5, mean=(104, 117, 123), allow_outside_center=True):
+    def __init__(self, pad=None, ratio=0.5, mean=(104, 117, 123), allow_outside_center=True):
         self.pad = pad
-        self.ratio = pad_ratio
+        self.ratio = ratio
         self.mean = tuple(mean)
         self.allow_outside_center = allow_outside_center
 
@@ -173,9 +173,9 @@ class Padding(object):
 
 
 class RandomHFlip(object):
-    def __init__(self, swap_pair=None, flip_ratio=0.5):
+    def __init__(self, swap_pair=None, ratio=0.5):
         self.swap_pair = swap_pair
-        self.ratio = flip_ratio
+        self.ratio = ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, Image.Image)
@@ -216,10 +216,10 @@ class RandomHFlip(object):
 
 
 class RandomSaturation(object):
-    def __init__(self, lower=0.5, upper=1.5, saturation_ratio=0.5):
+    def __init__(self, lower=0.5, upper=1.5, ratio=0.5):
         self.lower = lower
         self.upper = upper
-        self.ratio = saturation_ratio
+        self.ratio = ratio
         assert self.upper >= self.lower, "saturation upper must be >= lower."
         assert self.lower >= 0, "saturation lower must be non-negative."
 
@@ -241,10 +241,10 @@ class RandomSaturation(object):
 
 
 class RandomHue(object):
-    def __init__(self, delta=18, hue_ratio=0.5):
+    def __init__(self, delta=18, ratio=0.5):
         assert 0 <= delta <= 360
         self.delta = delta
-        self.ratio = hue_ratio
+        self.ratio = ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, Image.Image)
@@ -266,8 +266,8 @@ class RandomHue(object):
 
 
 class RandomPerm(object):
-    def __init__(self, perm_ratio=0.5):
-        self.ratio = perm_ratio
+    def __init__(self, ratio=0.5):
+        self.ratio = ratio
         self.perms = ((0, 1, 2), (0, 2, 1),
                       (1, 0, 2), (1, 2, 0),
                       (2, 0, 1), (2, 1, 0))
@@ -287,10 +287,10 @@ class RandomPerm(object):
 
 
 class RandomContrast(object):
-    def __init__(self, lower=0.5, upper=1.5, contrast_ratio=0.5):
+    def __init__(self, lower=0.5, upper=1.5, ratio=0.5):
         self.lower = lower
         self.upper = upper
-        self.ratio = contrast_ratio
+        self.ratio = ratio
         assert self.upper >= self.lower, "contrast upper must be >= lower."
         assert self.lower >= 0, "contrast lower must be non-negative."
 
@@ -310,9 +310,9 @@ class RandomContrast(object):
 
 
 class RandomBrightness(object):
-    def __init__(self, shift_value=30, brightness_ratio=0.5):
+    def __init__(self, shift_value=30, ratio=0.5):
         self.shift_value = shift_value
-        self.ratio = brightness_ratio
+        self.ratio = ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, Image.Image)
@@ -334,9 +334,9 @@ class RandomBrightness(object):
 
 
 class RandomGaussBlur(object):
-    def __init__(self, max_blur=4, blur_ratio=0.5):
+    def __init__(self, max_blur=4, ratio=0.5):
         self.max_blur = max_blur
-        self.ratio = blur_ratio
+        self.ratio = ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, Image.Image)
@@ -366,14 +366,14 @@ class RandomHSV(object):
             v range: 0-255
     """
 
-    def __init__(self, h_range, s_range, v_range, hsv_ratio=0.5):
+    def __init__(self, h_range, s_range, v_range, ratio=0.5):
         assert isinstance(h_range, (list, tuple)) and \
                isinstance(s_range, (list, tuple)) and \
                isinstance(v_range, (list, tuple))
         self.h_range = h_range
         self.s_range = s_range
         self.v_range = v_range
-        self.ratio = hsv_ratio
+        self.ratio = ratio
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
         assert isinstance(img, Image.Image)
@@ -477,13 +477,13 @@ class RandomResize(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_range=(0.75, 1.25), aspect_range=(0.9, 1.1), target_size=None,
-                 resize_bound=None, method='random', resize_ratio=0.5):
+    def __init__(self, scale_range=(0.75, 1.25), aspect_range=(0.9, 1.1),
+                 target_size=None, resize_bound=None, method='random', ratio=0.5):
         self.scale_range = scale_range
         self.aspect_range = aspect_range
         self.resize_bound = resize_bound
         self.method = method
-        self.ratio = resize_ratio
+        self.ratio = ratio
 
         if target_size is not None:
             if isinstance(target_size, int):
@@ -581,10 +581,10 @@ class RandomRotate(object):
         degree (number): Desired rotate degree.
     """
 
-    def __init__(self, max_degree, rotate_ratio=0.5, mean=(104, 117, 123)):
+    def __init__(self, max_degree, ratio=0.5, mean=(104, 117, 123)):
         assert isinstance(max_degree, int)
         self.max_degree = max_degree
-        self.ratio = rotate_ratio
+        self.ratio = ratio
         self.mean = tuple(mean)
 
     def __call__(self, img, labelmap=None, maskmap=None, kpts=None, bboxes=None, labels=None, polygons=None):
@@ -686,8 +686,8 @@ class RandomCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, method='focus', grid=None, allow_outside_center=True):
-        self.ratio = crop_ratio
+    def __init__(self, crop_size, ratio=0.5, method='focus', grid=None, allow_outside_center=True):
+        self.ratio = ratio
         self.method = method
         self.grid = grid
         self.allow_outside_center = allow_outside_center
@@ -801,8 +801,8 @@ class RandomFocusCrop(object):
         size (int or tuple): Desired output size of the crop.(w, h)
     """
 
-    def __init__(self, crop_size, crop_ratio=0.5, center_jitter=None, mean=(104, 117, 123), allow_outside_center=True):
-        self.ratio = crop_ratio
+    def __init__(self, crop_size, ratio=0.5, center_jitter=None, mean=(104, 117, 123), allow_outside_center=True):
+        self.ratio = ratio
         self.center_jitter = center_jitter
         self.mean = mean
         self.allow_outside_center = allow_outside_center
@@ -948,8 +948,8 @@ class RandomDetCrop(object):
             boxes (Tensor): the adjusted bounding boxes in pt form
             labels (Tensor): the class labels for each bbox
     """
-    def __init__(self, det_crop_ratio=0.5, mean=(104, 117, 123)):
-        self.ratio = det_crop_ratio
+    def __init__(self, ratio=0.5, mean=(104, 117, 123)):
+        self.ratio = ratio
         self.mean = mean
         self.sample_options = (
             # using entire original input image
